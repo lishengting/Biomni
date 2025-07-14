@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  # 基础环境（快速启动）
+  biomni-basic:
+    build:
+      context: .
+      dockerfile: Dockerfile.basic
+    container_name: biomni-basic
+    ports:
+      - "8888:8888"  # Jupyter notebook
+      - "7860:7860"  # Gradio
+    volumes:
+      - ./data:/opt/biomni/data
+      - ./notebooks:/opt/biomni/notebooks
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+    command: jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --allow-root --NotebookApp.token='' --NotebookApp.password=''
+    profiles:
+      - basic
+
+  # 完整环境（包含所有生物信息学工具）
+  biomni-full:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: biomni-full
+    ports:
+      - "8889:8888"  # Jupyter notebook
+      - "7861:7860"  # Gradio
+    volumes:
+      - ./data:/opt/biomni/data
+      - ./notebooks:/opt/biomni/notebooks
+      - ./results:/opt/biomni/results
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+    command: jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --allow-root --NotebookApp.token='' --NotebookApp.password=''
+    profiles:
+      - full
+
+  # 开发环境（挂载源代码）
+  biomni-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.basic
+    container_name: biomni-dev
+    ports:
+      - "8890:8888"  # Jupyter notebook
+      - "7862:7860"  # Gradio
+    volumes:
+      - ./data:/opt/biomni/data
+      - ./notebooks:/opt/biomni/notebooks
+      - ../:/opt/biomni/src  # 挂载源代码
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+    command: jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --allow-root --NotebookApp.token='' --NotebookApp.password=''
+    profiles:
+      - dev
+
+volumes:
+  data:
+  notebooks:
+  results: 

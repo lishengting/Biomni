@@ -1,0 +1,66 @@
+# Biomni Basic Environment Dockerfile
+# 快速部署基础AI代理环境，不包含完整的生物信息学工具
+
+FROM python:3.11-slim
+
+# 设置环境变量
+ENV PYTHONUNBUFFERED=1
+ENV DEBIAN_FRONTEND=noninteractive
+
+# 设置工作目录
+WORKDIR /opt/biomni
+
+# 安装系统依赖
+RUN apt-get update && apt-get install -y \
+    wget curl git vim nano \
+    build-essential \
+    libz-dev libbz2-dev liblzma-dev \
+    libcurl4-openssl-dev libssl-dev \
+    libxml2-dev libpng-dev libjpeg-dev \
+    libfreetype6-dev libtiff5-dev \
+    libblas-dev liblapack-dev \
+    jq unzip zip bzip2 gzip \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# 创建biomni用户
+RUN useradd -m -s /bin/bash biomni && \
+    chown -R biomni:biomni /opt/biomni
+
+# 切换到biomni用户
+USER biomni
+
+# 升级pip
+RUN pip install --upgrade pip setuptools wheel
+
+# 安装基础Python包（对应environment.yml）
+RUN pip install \
+    # 基础科学计算
+    numpy==2.1 pandas matplotlib scipy statsmodels scikit-learn \
+    # AI/ML相关
+    gradio langchain langgraph==0.3.18 langchain_openai langchain_anthropic \
+    langchain_community langchain-google-genai langchain_ollama openai \
+    # 数据处理
+    beautifulsoup4 lxml tqdm seaborn networkx requests pyyaml \
+    # Jupyter环境
+    jupyter notebook ipykernel pytest
+
+# 创建启动脚本
+RUN echo '#!/bin/bash' > /opt/biomni/start.sh && \
+    echo 'echo "Biomni basic environment activated!"' >> /opt/biomni/start.sh && \
+    echo 'echo "Available Python packages:"' >> /opt/biomni/start.sh && \
+    echo 'pip list' >> /opt/biomni/start.sh && \
+    echo 'echo ""' >> /opt/biomni/start.sh && \
+    echo 'echo "To start Jupyter notebook, run:"' >> /opt/biomni/start.sh && \
+    echo 'echo "jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --allow-root"' >> /opt/biomni/start.sh && \
+    echo 'exec "$@"' >> /opt/biomni/start.sh && \
+    chmod +x /opt/biomni/start.sh
+
+# 暴露Jupyter端口
+EXPOSE 8888
+
+# 设置入口点
+ENTRYPOINT ["/opt/biomni/start.sh"]
+
+# 默认命令
+CMD ["/bin/bash"] 
