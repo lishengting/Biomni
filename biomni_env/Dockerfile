@@ -77,6 +77,9 @@ RUN . /opt/biomni/venv/bin/activate && \
     pip install beautifulsoup4 lxml tqdm seaborn networkx requests pyyaml && \
     pip install jupyter notebook ipykernel pytest
 
+# 开发模式安装biomni源码
+# RUN /opt/biomni/venv/bin/pip install -e /opt/biomni
+
 # 创建工具目录
 RUN mkdir -p /opt/biomni_tools/bin
 

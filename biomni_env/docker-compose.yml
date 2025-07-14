@@ -11,6 +11,7 @@ services:
       - "0.0.0.0:8888:8888"  # Jupyter notebook
       - "0.0.0.0:7860:7860"  # Gradio
     volumes:
+      - ../:/opt/biomni
       - ./data:/opt/biomni/data
       - ./notebooks:/opt/biomni/notebooks
     environment:
@@ -42,6 +43,7 @@ services:
       - "0.0.0.0:8889:8888"  # Jupyter notebook
       - "0.0.0.0:7861:7860"  # Gradio
     volumes:
+      - ../:/opt/biomni
       - ./data:/opt/biomni/data
       - ./notebooks:/opt/biomni/notebooks
       - ./results:/opt/biomni/results
@@ -74,9 +76,10 @@ services:
       - "0.0.0.0:8890:8888"  # Jupyter notebook
       - "0.0.0.0:7862:7860"  # Gradio
     volumes:
+      - ../:/opt/biomni
       - ./data:/opt/biomni/data
       - ./notebooks:/opt/biomni/notebooks
-      - ../:/opt/biomni/src  # 挂载源代码
+      - ../:/opt/biomni/src  # 挂载源代码（可去掉，已统一）
     environment:
       - JUPYTER_ENABLE_LAB=yes
       - JUPYTER_ALLOW_REMOTE_ACCESS=true

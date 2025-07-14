@@ -37,6 +37,9 @@ RUN pip install --upgrade pip setuptools wheel && \
     # Jupyter环境
     jupyter notebook ipykernel pytest
 
+# 开发模式安装biomni源码
+# RUN pip install -e /opt/biomni
+
 # 创建biomni用户
 RUN useradd -m -s /bin/bash biomni && \
     chown -R biomni:biomni /opt/biomni

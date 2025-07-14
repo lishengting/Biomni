@@ -2,6 +2,9 @@
 
 # Biomni 通用启动脚本
 
+# 开发模式安装本地biomni源码
+pip install -e /opt/biomni
+
 echo "Biomni environment activated!"
 echo "Available Python packages:"
 pip list
