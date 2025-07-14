@@ -102,14 +102,20 @@ start_service() {
 # 停止所有容器
 stop_containers() {
     echo -e "${YELLOW}停止所有Biomni容器...${NC}"
-    docker compose down
+    # 停止所有profile的容器
+    docker compose --profile basic down
+    docker compose --profile full down
+    docker compose --profile dev down
     echo -e "${GREEN}所有容器已停止！${NC}"
 }
 
 # 清理所有容器和镜像
 clean_all() {
     echo -e "${YELLOW}清理所有Biomni容器和镜像...${NC}"
-    docker compose down --rmi all --volumes --remove-orphans
+    # 清理所有profile的容器和镜像
+    docker compose --profile basic down --rmi all --volumes --remove-orphans
+    docker compose --profile full down --rmi all --volumes --remove-orphans
+    docker compose --profile dev down --rmi all --volumes --remove-orphans
     echo -e "${GREEN}清理完成！${NC}"
 }
 
