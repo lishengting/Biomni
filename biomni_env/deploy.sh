@@ -49,13 +49,13 @@ build_image() {
     
     case $profile in
         "basic")
-            docker-compose --profile basic build biomni-basic
+            docker compose --profile basic build biomni-basic
             ;;
         "full")
-            docker-compose --profile full build biomni-full
+            docker compose --profile full build biomni-full
             ;;
         "dev")
-            docker-compose --profile dev build biomni-dev
+            docker compose --profile dev build biomni-dev
             ;;
         *)
             echo -e "${RED}未知的环境类型: $profile${NC}"
@@ -75,19 +75,19 @@ start_service() {
     
     case $profile in
         "basic")
-            docker-compose --profile basic up -d biomni-basic
+            docker compose --profile basic up -d biomni-basic
             echo -e "${GREEN}基础环境已启动！${NC}"
             echo -e "${BLUE}Jupyter Notebook: http://localhost:8888${NC}"
             echo -e "${BLUE}Gradio: http://localhost:7860${NC}"
             ;;
         "full")
-            docker-compose --profile full up -d biomni-full
+            docker compose --profile full up -d biomni-full
             echo -e "${GREEN}完整环境已启动！${NC}"
             echo -e "${BLUE}Jupyter Notebook: http://localhost:8889${NC}"
             echo -e "${BLUE}Gradio: http://localhost:7861${NC}"
             ;;
         "dev")
-            docker-compose --profile dev up -d biomni-dev
+            docker compose --profile dev up -d biomni-dev
             echo -e "${GREEN}开发环境已启动！${NC}"
             echo -e "${BLUE}Jupyter Notebook: http://localhost:8890${NC}"
             echo -e "${BLUE}Gradio: http://localhost:7862${NC}"
@@ -102,14 +102,14 @@ start_service() {
 # 停止所有容器
 stop_containers() {
     echo -e "${YELLOW}停止所有Biomni容器...${NC}"
-    docker-compose down
+    docker compose down
     echo -e "${GREEN}所有容器已停止！${NC}"
 }
 
 # 清理所有容器和镜像
 clean_all() {
     echo -e "${YELLOW}清理所有Biomni容器和镜像...${NC}"
-    docker-compose down --rmi all --volumes --remove-orphans
+    docker compose down --rmi all --volumes --remove-orphans
     echo -e "${GREEN}清理完成！${NC}"
 }
 
@@ -118,13 +118,13 @@ show_logs() {
     local profile=$1
     case $profile in
         "basic")
-            docker-compose --profile basic logs -f biomni-basic
+            docker compose --profile basic logs -f biomni-basic
             ;;
         "full")
-            docker-compose --profile full logs -f biomni-full
+            docker compose --profile full logs -f biomni-full
             ;;
         "dev")
-            docker-compose --profile dev logs -f biomni-dev
+            docker compose --profile dev logs -f biomni-dev
             ;;
         *)
             echo -e "${RED}请指定环境类型: basic, full, 或 dev${NC}"
@@ -138,13 +138,13 @@ enter_shell() {
     local profile=$1
     case $profile in
         "basic")
-            docker-compose --profile basic exec biomni-basic /bin/bash
+            docker compose --profile basic exec biomni-basic /bin/bash
             ;;
         "full")
-            docker-compose --profile full exec biomni-full /bin/bash
+            docker compose --profile full exec biomni-full /bin/bash
             ;;
         "dev")
-            docker-compose --profile dev exec biomni-dev /bin/bash
+            docker compose --profile dev exec biomni-dev /bin/bash
             ;;
         *)
             echo -e "${RED}请指定环境类型: basic, full, 或 dev${NC}"
@@ -161,7 +161,7 @@ check_docker() {
         exit 1
     fi
     
-    if ! command -v docker-compose &> /dev/null; then
+    if ! command -v docker compose &> /dev/null; then
         echo -e "${RED}错误: Docker Compose未安装！${NC}"
         echo "请先安装Docker Compose: https://docs.docker.com/compose/install/"
         exit 1
