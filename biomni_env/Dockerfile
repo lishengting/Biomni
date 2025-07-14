@@ -130,18 +130,23 @@ RUN Rscript -e "install.packages(c('ggplot2', 'dplyr', 'tidyr', 'readr', 'string
     Rscript -e "install.packages('WGCNA', repos='https://cran.rstudio.com/')"
 
 # 创建启动脚本
-RUN echo '#!/bin/bash' > /opt/biomni/start.sh && \
-    echo 'export PATH="/opt/biomni_tools/bin:$PATH"' >> /opt/biomni/start.sh && \
-    echo 'export PATH="/opt/biomni/venv/bin:$PATH"' >> /opt/biomni/start.sh && \
-    echo 'export HOMER="/opt/biomni_tools/homer"' >> /opt/biomni/start.sh && \
-    echo 'echo "Biomni environment activated!"' >> /opt/biomni/start.sh && \
-    echo 'echo "Available tools:"' >> /opt/biomni/start.sh && \
-    echo 'ls -la /opt/biomni_tools/bin/' >> /opt/biomni/start.sh && \
-    echo 'echo "Python packages:"' >> /opt/biomni/start.sh && \
-    echo 'pip list' >> /opt/biomni/start.sh && \
-    echo 'echo "Switching to biomni user..."' >> /opt/biomni/start.sh && \
-    echo 'exec gosu biomni "$@"' >> /opt/biomni/start.sh && \
-    chmod +x /opt/biomni/start.sh
+# RUN echo '#!/bin/bash' > /opt/biomni/start.sh && \
+#     echo 'export PATH="/opt/biomni_tools/bin:$PATH"' >> /opt/biomni/start.sh && \
+#     echo 'export PATH="/opt/biomni/venv/bin:$PATH"' >> /opt/biomni/start.sh && \
+#     echo 'export HOMER="/opt/biomni_tools/homer"' >> /opt/biomni/start.sh && \
+#     echo 'echo "Biomni environment activated!"' >> /opt/biomni/start.sh && \
+#     echo 'echo "Available tools:"' >> /opt/biomni/start.sh && \
+#     echo 'ls -la /opt/biomni_tools/bin/' >> /opt/biomni/start.sh && \
+#     echo 'echo "Python packages:"' >> /opt/biomni/start.sh && \
+#     echo 'pip list' >> /opt/biomni/start.sh && \
+#     echo 'echo "Switching to biomni user..."' >> /opt/biomni/start.sh && \
+#     echo 'exec gosu biomni "$@"' >> /opt/biomni/start.sh && \
+#     chmod +x /opt/biomni/start.sh
+
+# 拷贝通用脚本
+COPY scripts/start.sh /opt/biomni/start.sh
+COPY scripts/gradio_app.py /opt/biomni/gradio_app.py
+RUN chmod +x /opt/biomni/start.sh
 
 # 设置环境变量
 ENV PATH="/opt/biomni_tools/bin:/opt/biomni/venv/bin:$PATH"
