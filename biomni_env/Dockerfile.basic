@@ -51,8 +51,8 @@ RUN echo '#!/bin/bash' > /opt/biomni/start.sh && \
     echo 'echo "jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --allow-root"' >> /opt/biomni/start.sh && \
     echo 'echo "To start Gradio app, run:"' >> /opt/biomni/start.sh && \
     echo 'echo "python /opt/biomni/gradio_app.py"' >> /opt/biomni/start.sh && \
-    echo 'echo "Switching to biomni user..."' >> /opt/biomni/start.sh && \
-    echo 'exec gosu biomni "$@"' >> /opt/biomni/start.sh && \
+    echo 'echo "Starting services..."' >> /opt/biomni/start.sh && \
+    echo 'exec "$@"' >> /opt/biomni/start.sh && \
     chmod +x /opt/biomni/start.sh
 
 # 创建简单的Gradio应用
