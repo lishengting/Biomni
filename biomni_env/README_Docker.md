@@ -90,16 +90,18 @@
 部署完成后，可以通过以下地址访问：
 
 - **基础环境**：
-  - Jupyter Notebook: http://localhost:8888
-  - Gradio: http://localhost:7860
+  - Jupyter Notebook: http://localhost:8888 或 http://你的IP:8888
+  - Gradio: http://localhost:7860 或 http://你的IP:7860
 
 - **完整环境**：
-  - Jupyter Notebook: http://localhost:8889
-  - Gradio: http://localhost:7861
+  - Jupyter Notebook: http://localhost:8889 或 http://你的IP:8889
+  - Gradio: http://localhost:7861 或 http://你的IP:7861
 
 - **开发环境**：
-  - Jupyter Notebook: http://localhost:8890
-  - Gradio: http://localhost:7862
+  - Jupyter Notebook: http://localhost:8890 或 http://你的IP:8890
+  - Gradio: http://localhost:7862 或 http://你的IP:7862
+
+**注意**：现在服务已配置为允许外部访问，你可以从任何网络设备访问这些服务。
 
 ### 管理容器
 
@@ -215,6 +217,31 @@ docker exec -it biomni-full /bin/bash
    # 检查Docker网络
    docker network ls
    docker network inspect biomni_env_default
+   ```
+
+5. **外部访问问题**
+   ```bash
+   # 检查防火墙设置
+   sudo ufw status
+   
+   # 如果需要，开放端口
+   sudo ufw allow 8888
+   sudo ufw allow 7860
+   
+   # 检查服务状态
+   docker ps
+   docker logs biomni-basic  # 或 biomni-full, biomni-dev
+   ```
+
+6. **服务启动失败**
+   ```bash
+   # 查看详细日志
+   docker logs -f biomni-basic
+   
+   # 重新构建镜像
+   ./deploy.sh clean
+   ./deploy.sh build basic
+   ./deploy.sh basic
    ```
 
 ### 日志查看

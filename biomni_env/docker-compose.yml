@@ -8,14 +8,24 @@ services:
       dockerfile: Dockerfile.basic
     container_name: biomni-basic
     ports:
-      - "8888:8888"  # Jupyter notebook
-      - "7860:7860"  # Gradio
+      - "0.0.0.0:8888:8888"  # Jupyter notebook
+      - "0.0.0.0:7860:7860"  # Gradio
     volumes:
       - ./data:/opt/biomni/data
       - ./notebooks:/opt/biomni/notebooks
     environment:
       - JUPYTER_ENABLE_LAB=yes
-    command: jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --allow-root --NotebookApp.token='' --NotebookApp.password=''
+      - JUPYTER_ALLOW_REMOTE_ACCESS=true
+    command: >
+      bash -c "
+        echo 'Starting Jupyter Notebook...' &&
+        jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --allow-root --NotebookApp.token='' --NotebookApp.password='' --NotebookApp.allow_origin='*' &
+        echo 'Starting Gradio App...' &&
+        python /opt/biomni/gradio_app.py &
+        wait
+      "
+    networks:
+      - biomni-network
     profiles:
       - basic
 
@@ -26,15 +36,25 @@ services:
       dockerfile: Dockerfile
     container_name: biomni-full
     ports:
-      - "8889:8888"  # Jupyter notebook
-      - "7861:7860"  # Gradio
+      - "0.0.0.0:8889:8888"  # Jupyter notebook
+      - "0.0.0.0:7861:7860"  # Gradio
     volumes:
       - ./data:/opt/biomni/data
       - ./notebooks:/opt/biomni/notebooks
       - ./results:/opt/biomni/results
     environment:
       - JUPYTER_ENABLE_LAB=yes
-    command: jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --allow-root --NotebookApp.token='' --NotebookApp.password=''
+      - JUPYTER_ALLOW_REMOTE_ACCESS=true
+    command: >
+      bash -c "
+        echo 'Starting Jupyter Notebook...' &&
+        jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --allow-root --NotebookApp.token='' --NotebookApp.password='' --NotebookApp.allow_origin='*' &
+        echo 'Starting Gradio App...' &&
+        python /opt/biomni/gradio_app.py &
+        wait
+      "
+    networks:
+      - biomni-network
     profiles:
       - full
 
@@ -45,19 +65,33 @@ services:
       dockerfile: Dockerfile.basic
     container_name: biomni-dev
     ports:
-      - "8890:8888"  # Jupyter notebook
-      - "7862:7860"  # Gradio
+      - "0.0.0.0:8890:8888"  # Jupyter notebook
+      - "0.0.0.0:7862:7860"  # Gradio
     volumes:
       - ./data:/opt/biomni/data
       - ./notebooks:/opt/biomni/notebooks
       - ../:/opt/biomni/src  # 挂载源代码
     environment:
       - JUPYTER_ENABLE_LAB=yes
-    command: jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --allow-root --NotebookApp.token='' --NotebookApp.password=''
+      - JUPYTER_ALLOW_REMOTE_ACCESS=true
+    command: >
+      bash -c "
+        echo 'Starting Jupyter Notebook...' &&
+        jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --allow-root --NotebookApp.token='' --NotebookApp.password='' --NotebookApp.allow_origin='*' &
+        echo 'Starting Gradio App...' &&
+        python /opt/biomni/gradio_app.py &
+        wait
+      "
+    networks:
+      - biomni-network
     profiles:
       - dev
 
 volumes:
   data:
   notebooks:
-  results: 
+  results:
+
+networks:
+  biomni-network:
+    driver: bridge 

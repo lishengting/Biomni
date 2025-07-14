@@ -145,8 +145,8 @@ RUN echo '#!/bin/bash' > /opt/biomni/start.sh && \
 ENV PATH="/opt/biomni_tools/bin:/opt/biomni/venv/bin:$PATH"
 ENV HOMER="/opt/biomni_tools/homer"
 
-# 暴露Jupyter端口
-EXPOSE 8888
+# 暴露Jupyter和Gradio端口
+EXPOSE 8888 7860
 
 # 设置入口点
 ENTRYPOINT ["/opt/biomni/start.sh"]
