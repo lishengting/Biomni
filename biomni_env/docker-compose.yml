@@ -22,7 +22,8 @@ services:
         jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --allow-root --NotebookApp.token='' --NotebookApp.password='' --NotebookApp.allow_origin='*' &
         echo 'Starting Gradio App...' &&
         python /opt/biomni/gradio_app.py &
-        wait
+        echo 'Services started. Switching to biomni user...' &&
+        exec gosu biomni bash
       "
     networks:
       - biomni-network

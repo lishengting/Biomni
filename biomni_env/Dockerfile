@@ -31,6 +31,7 @@ RUN apt-get update && apt-get install -y \
     libgsl-dev libhdf5-dev libnetcdf-dev \
     # 其他依赖
     jq unzip zip bzip2 gzip \
+    gosu \
     # 清理缓存
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
@@ -138,7 +139,8 @@ RUN echo '#!/bin/bash' > /opt/biomni/start.sh && \
     echo 'ls -la /opt/biomni_tools/bin/' >> /opt/biomni/start.sh && \
     echo 'echo "Python packages:"' >> /opt/biomni/start.sh && \
     echo 'pip list' >> /opt/biomni/start.sh && \
-    echo 'exec "$@"' >> /opt/biomni/start.sh && \
+    echo 'echo "Switching to biomni user..."' >> /opt/biomni/start.sh && \
+    echo 'exec gosu biomni "$@"' >> /opt/biomni/start.sh && \
     chmod +x /opt/biomni/start.sh
 
 # 设置环境变量

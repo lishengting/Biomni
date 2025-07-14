@@ -20,21 +20,13 @@ RUN apt-get update && apt-get install -y \
     libfreetype6-dev libtiff5-dev \
     libblas-dev liblapack-dev \
     jq unzip zip bzip2 gzip \
+    gosu \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# 创建biomni用户
-RUN useradd -m -s /bin/bash biomni && \
-    chown -R biomni:biomni /opt/biomni
-
-# 切换到biomni用户
-USER biomni
-
-# 升级pip
-RUN pip install --upgrade pip setuptools wheel
-
-# 安装基础Python包（对应environment.yml）
-RUN pip install \
+# 升级pip并安装基础Python包（对应environment.yml）
+RUN pip install --upgrade pip setuptools wheel && \
+    pip install \
     # 基础科学计算
     numpy==2.1 pandas matplotlib scipy statsmodels scikit-learn \
     # AI/ML相关
@@ -44,6 +36,10 @@ RUN pip install \
     beautifulsoup4 lxml tqdm seaborn networkx requests pyyaml \
     # Jupyter环境
     jupyter notebook ipykernel pytest
+
+# 创建biomni用户
+RUN useradd -m -s /bin/bash biomni && \
+    chown -R biomni:biomni /opt/biomni
 
 # 创建启动脚本
 RUN echo '#!/bin/bash' > /opt/biomni/start.sh && \
@@ -55,7 +51,8 @@ RUN echo '#!/bin/bash' > /opt/biomni/start.sh && \
     echo 'echo "jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --allow-root"' >> /opt/biomni/start.sh && \
     echo 'echo "To start Gradio app, run:"' >> /opt/biomni/start.sh && \
     echo 'echo "python /opt/biomni/gradio_app.py"' >> /opt/biomni/start.sh && \
-    echo 'exec "$@"' >> /opt/biomni/start.sh && \
+    echo 'echo "Switching to biomni user..."' >> /opt/biomni/start.sh && \
+    echo 'exec gosu biomni "$@"' >> /opt/biomni/start.sh && \
     chmod +x /opt/biomni/start.sh
 
 # 创建简单的Gradio应用

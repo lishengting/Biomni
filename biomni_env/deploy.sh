@@ -77,20 +77,20 @@ start_service() {
         "basic")
             docker compose --profile basic up -d biomni-basic
             echo -e "${GREEN}基础环境已启动！${NC}"
-            echo -e "${BLUE}Jupyter Notebook: http://localhost:8888${NC}"
-            echo -e "${BLUE}Gradio: http://localhost:7860${NC}"
+            echo -e "${BLUE}Jupyter Notebook: http://0.0.0.0:8888${NC}"
+            echo -e "${BLUE}Gradio: http://0.0.0.0:7860${NC}"
             ;;
         "full")
             docker compose --profile full up -d biomni-full
             echo -e "${GREEN}完整环境已启动！${NC}"
-            echo -e "${BLUE}Jupyter Notebook: http://localhost:8889${NC}"
-            echo -e "${BLUE}Gradio: http://localhost:7861${NC}"
+            echo -e "${BLUE}Jupyter Notebook: http://0.0.0.0:8889${NC}"
+            echo -e "${BLUE}Gradio: http://0.0.0.0:7861${NC}"
             ;;
         "dev")
             docker compose --profile dev up -d biomni-dev
             echo -e "${GREEN}开发环境已启动！${NC}"
-            echo -e "${BLUE}Jupyter Notebook: http://localhost:8890${NC}"
-            echo -e "${BLUE}Gradio: http://localhost:7862${NC}"
+            echo -e "${BLUE}Jupyter Notebook: http://0.0.0.0:8890${NC}"
+            echo -e "${BLUE}Gradio: http://0.0.0.0:7862${NC}"
             ;;
         *)
             echo -e "${RED}未知的环境类型: $profile${NC}"
