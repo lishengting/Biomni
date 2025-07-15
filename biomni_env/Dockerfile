@@ -100,7 +100,7 @@ COPY --chown=biomni:biomni cli_tools_config.json /opt/biomni/
 COPY --chown=biomni:biomni install_r_packages.R /opt/biomni/
 
 # 复制预下载的工具文件
-# COPY --chown=biomni:biomni downloads/ /opt/biomni/downloads/
+COPY --chown=biomni:biomni downloads/ /opt/biomni/downloads/
 
 # 安装命令行工具（使用预下载的文件）
 RUN cd /opt/biomni && \
@@ -159,9 +159,8 @@ RUN Rscript -e "install.packages(c('ggplot2', 'dplyr', 'tidyr', 'readr', 'string
 #     chmod +x /opt/biomni/start.sh
 
 # 拷贝通用脚本
-# COPY scripts/start.sh /opt/biomni/start.sh
-# COPY scripts/gradio_app.py /opt/biomni/gradio_app.py
-RUN chmod +x /opt/biomni/scripts/start.sh
+COPY --chown=biomni:biomni scripts/ /opt/biomni/scripts/
+#RUN chmod +x /opt/biomni/scripts/start.sh
 
 # 设置环境变量
 ENV PATH="/opt/biomni_tools/bin:/opt/biomni/venv/bin:$PATH"
@@ -170,8 +169,8 @@ ENV HOMER="/opt/biomni_tools/homer"
 # 暴露Jupyter和Gradio端口
 EXPOSE 8888 7860
 
-# 设置入口点（脚本通过docker-compose.yml挂载）
-ENTRYPOINT ["/opt/biomni/scripts/start.sh"]
+# 设置入口点（使用bash执行，避免权限问题）
+ENTRYPOINT ["/bin/bash", "/opt/biomni/scripts/start.sh"]
 
 # 默认命令
 CMD ["/bin/bash"] 
