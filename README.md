@@ -77,7 +77,8 @@ agent = A1(
     path='./data', 
     llm='custom-model-name',
     base_url='http://localhost:8000/v1',
-    api_key='your-api-key'
+    api_key='your-api-key',
+    source='Custom'
 )
 
 # Execute biomedical tasks using natural language
