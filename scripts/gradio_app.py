@@ -220,7 +220,7 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft()) as demo:
             # LLM Configuration
             llm_model = gr.Textbox(
                 label="Model Name",
-                value="gpt-4o",
+                value="QWQ-32B",
                 placeholder="e.g., gpt-4o, claude-3-5-sonnet-20241022, llama3:8b",
                 info="The model name to use"
             )
@@ -228,18 +228,20 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft()) as demo:
             source = gr.Dropdown(
                 label="Source Provider",
                 choices=["Auto-detect", "OpenAI", "Anthropic", "Gemini", "Ollama", "Custom"],
-                value="Auto-detect",
+                value="OpenAI",
                 info="Choose the model provider (Auto-detect will infer from model name)"
             )
             
             base_url = gr.Textbox(
                 label="Base URL (Optional)",
+                value="http://10.49.60.23:8684/v1",
                 placeholder="e.g., https://api.openai.com/v1 or http://localhost:8000/v1",
                 info="Custom API endpoint URL. Leave empty for default."
             )
             
             api_key = gr.Textbox(
                 label="API Key (Optional)",
+                value="token-abc123",
                 placeholder="Enter your API key",
                 type="password",
                 info="API key for the service. Can also be set via environment variables."
@@ -247,14 +249,14 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft()) as demo:
             
             data_path = gr.Textbox(
                 label="Data Path",
-                value="./data",
+                value="./biomni_data_test",
                 placeholder="./data",
                 info="Path where Biomni data will be stored"
             )
             
             verbose = gr.Checkbox(
                 label="Enable Verbose Logging",
-                value=False,
+                value=True,
                 info="Show detailed progress logs during execution (recommended for debugging)"
             )
             
