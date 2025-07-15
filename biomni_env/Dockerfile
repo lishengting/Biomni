@@ -39,6 +39,7 @@ RUN apt-get update && apt-get install -y \
     trimmomatic \
     # 其他依赖
     jq unzip zip bzip2 gzip \
+    gosu \
     # 清理缓存
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
