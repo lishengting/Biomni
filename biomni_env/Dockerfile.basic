@@ -41,7 +41,7 @@ RUN pip install --upgrade pip setuptools wheel && \
 # RUN pip install -e /opt/biomni
 
 # 创建biomni用户
-RUN useradd -u 1005 -g 1006 -m -s /bin/bash biomni && \
+RUN useradd -u 1005 -m -s /bin/bash biomni && \
     chown -R biomni:biomni /opt/biomni
 
 USER biomni
