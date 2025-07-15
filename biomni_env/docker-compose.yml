@@ -11,7 +11,7 @@ services:
       - "0.0.0.0:8888:8888"  # Jupyter notebook
       - "0.0.0.0:7860:7860"  # Gradio
     volumes:
-      - ../biomni:/opt/biomni/biomni
+      - ../:/opt/biomni
       - ../downloads:/opt/biomni/downloads
       - ./scripts:/opt/biomni/scripts
       - ./data:/opt/biomni/data
@@ -45,7 +45,7 @@ services:
       - "0.0.0.0:8889:8888"  # Jupyter notebook
       - "0.0.0.0:7861:7860"  # Gradio
     volumes:
-      - ../biomni:/opt/biomni/biomni
+      - ../:/opt/biomni
       - ../downloads:/opt/biomni/downloads
       - ./scripts:/opt/biomni/scripts
       - ./data:/opt/biomni/data
@@ -80,7 +80,7 @@ services:
       - "0.0.0.0:8890:8888"  # Jupyter notebook
       - "0.0.0.0:7862:7860"  # Gradio
     volumes:
-      - ../biomni:/opt/biomni/biomni
+      - ../:/opt/biomni
       - ../downloads:/opt/biomni/downloads
       - ./scripts:/opt/biomni/scripts
       - ./data:/opt/biomni/data
