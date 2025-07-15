@@ -32,14 +32,13 @@ RUN apt-get update && apt-get install -y \
     # 生物信息学命令行工具（对应bio_env.yml中的conda包）
     samtools bcftools bedtools fastqc bowtie2 bwa \
     # 序列分析工具
-    blast2 ncbi-blast+ \
+    ncbi-tools-bin ncbi-blast+ \
     # 序列比对工具  
     mafft \
     # 质量控制工具
     trimmomatic \
     # 其他依赖
     jq unzip zip bzip2 gzip \
-    gosu \
     # 清理缓存
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
@@ -99,7 +98,10 @@ COPY --chown=biomni:biomni install_cli_tools.sh /opt/biomni/
 COPY --chown=biomni:biomni cli_tools_config.json /opt/biomni/
 COPY --chown=biomni:biomni install_r_packages.R /opt/biomni/
 
-# 安装命令行工具
+# 复制预下载的工具文件
+# COPY --chown=biomni:biomni downloads/ /opt/biomni/downloads/
+
+# 安装命令行工具（使用预下载的文件）
 RUN cd /opt/biomni && \
     chmod +x install_cli_tools.sh && \
     # 设置环境变量
@@ -108,29 +110,25 @@ RUN cd /opt/biomni && \
     # 创建临时工作目录
     mkdir -p /opt/biomni/tmp_build && \
     # 安装PLINK2
-    wget -O /opt/biomni/tmp_build/plink2.zip "https://s3.amazonaws.com/plink2-assets/alpha6/plink2_linux_avx2_20250129.zip" && \
-    unzip /opt/biomni/tmp_build/plink2.zip -d /opt/biomni/tmp_build/ && \
+    unzip /opt/biomni/downloads/plink2_linux_avx2_20250129.zip -d /opt/biomni/tmp_build/ && \
     cp /opt/biomni/tmp_build/plink2 /opt/biomni_tools/bin/ && \
     chmod +x /opt/biomni_tools/bin/plink2 && \
     # 安装IQ-TREE
-    wget -O /opt/biomni/tmp_build/iqtree.tar.gz "https://github.com/iqtree/iqtree2/releases/download/v2.2.2.7/iqtree-2.2.2.7-Linux.tar.gz" && \
-    tar -xzf /opt/biomni/tmp_build/iqtree.tar.gz -C /opt/biomni/tmp_build/ && \
+    tar -xzf /opt/biomni/downloads/iqtree-2.2.2.7-Linux.tar.gz -C /opt/biomni/tmp_build/ && \
     cp /opt/biomni/tmp_build/iqtree-2.2.2.7-Linux/bin/iqtree2 /opt/biomni_tools/bin/ && \
     chmod +x /opt/biomni_tools/bin/iqtree2 && \
     # 安装GCTA
-    wget -O /opt/biomni/tmp_build/gcta.zip "https://yanglab.westlake.edu.cn/software/gcta/bin/gcta-1.94.4-linux-kernel-3-x86_64.zip" && \
-    unzip /opt/biomni/tmp_build/gcta.zip -d /opt/biomni/tmp_build/ && \
-    cp /opt/biomni/tmp_build/gcta64 /opt/biomni_tools/bin/ && \
+    unzip /opt/biomni/downloads/gcta-1.94.4-linux-kernel-3-x86_64.zip -d /opt/biomni/tmp_build/ && \
+    cp /opt/biomni/tmp_build/gcta-1.94.4-linux-kernel-3-x86_64/gcta64 /opt/biomni_tools/bin/ && \
     chmod +x /opt/biomni_tools/bin/gcta64 && \
     # 安装FastTree
-    wget -O /opt/biomni/tmp_build/FastTree.c "https://morgannprice.github.io/fasttree/FastTree.c" && \
-    gcc -O3 -finline-functions -funroll-loops -Wall -o /opt/biomni_tools/bin/FastTree /opt/biomni/tmp_build/FastTree.c -lm && \
+    gcc -O3 -finline-functions -funroll-loops -Wall -o /opt/biomni_tools/bin/FastTree /opt/biomni/downloads/FastTree.c -lm && \
     chmod +x /opt/biomni_tools/bin/FastTree && \
     # 安装MUSCLE
-    wget -O /opt/biomni_tools/bin/muscle "https://github.com/rcedgar/muscle/releases/download/v5.3/muscle-linux-x86.v5.3" && \
+    cp /opt/biomni/downloads/muscle-linux-x86.v5.3 /opt/biomni_tools/bin/muscle && \
     chmod +x /opt/biomni_tools/bin/muscle && \
     # 安装HOMER
-    wget -O /opt/biomni_tools/bin/configureHomer.pl "http://homer.ucsd.edu/homer/configureHomer.pl" && \
+    cp /opt/biomni/downloads/configureHomer.pl /opt/biomni_tools/bin/ && \
     chmod +x /opt/biomni_tools/bin/configureHomer.pl && \
     mkdir -p /opt/biomni_tools/homer && \
     /opt/biomni_tools/bin/configureHomer.pl -install -local /opt/biomni_tools/homer -b && \
@@ -162,7 +160,7 @@ RUN Rscript -e "install.packages(c('ggplot2', 'dplyr', 'tidyr', 'readr', 'string
 # 拷贝通用脚本
 # COPY scripts/start.sh /opt/biomni/start.sh
 # COPY scripts/gradio_app.py /opt/biomni/gradio_app.py
-# RUN chmod +x /opt/biomni/start.sh
+RUN chmod +x /opt/biomni/scripts/start.sh
 
 # 设置环境变量
 ENV PATH="/opt/biomni_tools/bin:/opt/biomni/venv/bin:$PATH"
@@ -172,7 +170,7 @@ ENV HOMER="/opt/biomni_tools/homer"
 EXPOSE 8888 7860
 
 # 设置入口点（脚本通过docker-compose.yml挂载）
-ENTRYPOINT ["/opt/biomni/start.sh"]
+ENTRYPOINT ["/opt/biomni/scripts/start.sh"]
 
 # 默认命令
 CMD ["/bin/bash"] 

@@ -20,7 +20,6 @@ RUN apt-get update && apt-get install -y \
     libfreetype6-dev libtiff5-dev \
     libblas-dev liblapack-dev \
     jq unzip zip bzip2 gzip \
-    gosu \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -80,13 +79,13 @@ USER biomni
 # 拷贝通用脚本
 # COPY scripts/start.sh /opt/biomni/start.sh
 # COPY scripts/gradio_app.py /opt/biomni/gradio_app.py
-# RUN chmod +x /opt/biomni/start.sh
+RUN chmod +x /opt/biomni/scripts/start.sh
 
 # 暴露Jupyter和Gradio端口
 EXPOSE 8888 7860
 
 # 设置入口点
-ENTRYPOINT ["/opt/biomni/start.sh"]
+ENTRYPOINT ["/opt/biomni/scripts/start.sh"]
 
 # 默认命令
 CMD ["/bin/bash"] 
