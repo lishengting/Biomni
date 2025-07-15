@@ -37,7 +37,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # 创建biomni用户
-RUN useradd -m -s /bin/bash biomni && \
+RUN useradd -u 1005 -g 1006 -m -s /bin/bash biomni && \
     chown -R biomni:biomni /opt/biomni
 
 # 切换到biomni用户
