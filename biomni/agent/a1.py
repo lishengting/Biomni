@@ -1250,6 +1250,10 @@ Each library is listed with its description to help you understand its functiona
             
         self.critic_count = 0
         self.user_task = prompt
+        
+        # Initialize real-time execution tracking
+        self.current_step = 0
+        self.intermediate_outputs = []  # Store intermediate outputs for real-time access
 
         if self.use_tool_retriever:
             self._log("EXEC", "🔍", "Using tool retriever for resource selection...")
@@ -1348,12 +1352,29 @@ Each library is listed with its description to help you understand its functiona
             out = pretty_print(message)
             self.log.append(out)
             
+            # Store intermediate output for real-time access
+            self.intermediate_outputs.append({
+                "step": step_count + 1,
+                "message_type": type(message).__name__,
+                "content": out,
+                "timestamp": datetime.now().strftime("%Y%m%d %H:%M:%S.%f")[:-3]
+            })
+            
             step_count += 1
+            self.current_step = step_count
             self._log("EXEC", "📝", f"Step {step_count}: {type(message).__name__}")
                 
         self._log("EXEC", "🎉", f"Task execution completed! Total steps: {step_count}")
 
         return self.log, message.content
+    
+    def get_intermediate_outputs(self) -> list:
+        """Get current intermediate outputs for real-time display."""
+        return getattr(self, 'intermediate_outputs', [])
+    
+    def get_current_step(self) -> int:
+        """Get current execution step number."""
+        return getattr(self, 'current_step', 0)
 
     def update_system_prompt_with_selected_resources(self, selected_resources):
         """Update the system prompt with the selected resources."""
