@@ -12,6 +12,8 @@ services:
       - "0.0.0.0:7860:7860"  # Gradio
     volumes:
       - ../:/opt/biomni
+      - ./downloads:/opt/biomni/downloads
+      - ./scripts:/opt/biomni/scripts
       - ./data:/opt/biomni/data
       - ./notebooks:/opt/biomni/notebooks
     environment:
@@ -44,6 +46,8 @@ services:
       - "0.0.0.0:7861:7860"  # Gradio
     volumes:
       - ../:/opt/biomni
+      - ./downloads:/opt/biomni/downloads
+      - ./scripts:/opt/biomni/scripts
       - ./data:/opt/biomni/data
       - ./notebooks:/opt/biomni/notebooks
       - ./results:/opt/biomni/results
@@ -77,6 +81,8 @@ services:
       - "0.0.0.0:7862:7860"  # Gradio
     volumes:
       - ../:/opt/biomni
+      - ./downloads:/opt/biomni/downloads
+      - ./scripts:/opt/biomni/scripts
       - ./data:/opt/biomni/data
       - ./notebooks:/opt/biomni/notebooks
     environment:
