@@ -32,7 +32,7 @@ def get_hpo_names(hpo_terms: list[str], data_lake_path: str) -> list[str]:
     return hpo_names
 
 
-def _query_claude_for_api(prompt, schema, system_template, api_key=None, model="claude-3-5-haiku-20241022"):
+def _query_claude_for_api(prompt, schema, system_template, api_key=None, base_url=None, model="claude-3-5-haiku-20241022"):
     """Helper function to query Claude for generating API calls based on natural language prompts.
 
     Parameters
@@ -41,6 +41,7 @@ def _query_claude_for_api(prompt, schema, system_template, api_key=None, model="
     schema (dict): API schema to include in the system prompt
     system_template (str): Template string for the system prompt (should have {schema} placeholder)
     api_key (str, optional): Anthropic API key. If None, will use ANTHROPIC_API_KEY env variable
+    base_url (str, optional): Custom base URL for Anthropic API. If None, will use ANTHROPIC_BASE_URL env variable
     model (str): Anthropic model to use
 
     Returns
@@ -48,8 +49,9 @@ def _query_claude_for_api(prompt, schema, system_template, api_key=None, model="
     dict: Dictionary with 'success', 'data' (if successful), 'error' (if failed), and optional 'raw_response'
 
     """
-    # Get API key
+    # Get API key and base URL
     api_key = api_key or os.environ.get("ANTHROPIC_API_KEY")
+    base_url = base_url or os.environ.get("ANTHROPIC_BASE_URL")
     if api_key is None:
         return {
             "success": False,
@@ -58,7 +60,10 @@ def _query_claude_for_api(prompt, schema, system_template, api_key=None, model="
 
     try:
         # Initialize Anthropic client
-        client = Anthropic(api_key=api_key)
+        if base_url:
+            client = Anthropic(api_key=api_key, base_url=base_url)
+        else:
+            client = Anthropic(api_key=api_key)
 
         if schema is not None:
             # Format the system prompt with the schema
@@ -451,6 +456,7 @@ def query_uniprot(
     prompt=None,
     endpoint=None,
     api_key=None,
+    base_url=None,
     model="claude-3-5-haiku-20241022",
     max_results=5,
 ):
@@ -519,6 +525,7 @@ def query_uniprot(
             schema=uniprot_schema,
             system_template=system_template,
             api_key=api_key,
+            base_url=base_url,
             model=model,
         )
 
