@@ -44,6 +44,8 @@ RUN pip install --upgrade pip setuptools wheel && \
 RUN useradd -m -s /bin/bash biomni && \
     chown -R biomni:biomni /opt/biomni
 
+USER biomni
+
 # 创建启动脚本
 # RUN echo '#!/bin/bash' > /opt/biomni/start.sh && \
 #     echo 'echo "Biomni basic environment activated!"' >> /opt/biomni/start.sh && \
@@ -76,9 +78,9 @@ RUN useradd -m -s /bin/bash biomni && \
 #     echo '    demo.launch(server_name="0.0.0.0", server_port=7860, share=False)' >> /opt/biomni/gradio_app.py
 
 # 拷贝通用脚本
-COPY scripts/start.sh /opt/biomni/start.sh
-COPY scripts/gradio_app.py /opt/biomni/gradio_app.py
-RUN chmod +x /opt/biomni/start.sh
+# COPY scripts/start.sh /opt/biomni/start.sh
+# COPY scripts/gradio_app.py /opt/biomni/gradio_app.py
+# RUN chmod +x /opt/biomni/start.sh
 
 # 暴露Jupyter和Gradio端口
 EXPOSE 8888 7860

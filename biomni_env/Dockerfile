@@ -147,9 +147,9 @@ RUN Rscript -e "install.packages(c('ggplot2', 'dplyr', 'tidyr', 'readr', 'string
 #     chmod +x /opt/biomni/start.sh
 
 # 拷贝通用脚本
-COPY scripts/start.sh /opt/biomni/start.sh
-COPY scripts/gradio_app.py /opt/biomni/gradio_app.py
-RUN chmod +x /opt/biomni/start.sh
+# COPY scripts/start.sh /opt/biomni/start.sh
+# COPY scripts/gradio_app.py /opt/biomni/gradio_app.py
+# RUN chmod +x /opt/biomni/start.sh
 
 # 设置环境变量
 ENV PATH="/opt/biomni_tools/bin:/opt/biomni/venv/bin:$PATH"
