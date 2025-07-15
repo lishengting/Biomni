@@ -49,8 +49,13 @@ def create_agent(llm_model: str, source: str, base_url: Optional[str], api_key: 
 
 def stop_execution():
     """Stop the current execution."""
-    global stop_flag
+    global stop_flag, agent
     stop_flag = True
+    
+    # Also call agent's stop method if agent exists
+    if agent:
+        agent.stop()
+    
     return "⏹️ Stopping execution...", "Execution stopped by user.", "Execution stopped."
 
 def ask_biomni_stream(question: str):
@@ -92,6 +97,9 @@ def ask_biomni_stream(question: str):
         
         while current_task.is_alive():
             if stop_flag:
+                # Call agent's stop method to actually stop execution
+                if agent:
+                    agent.stop()
                 # Stop showing updates
                 yield "⏹️ **Stopping execution...**", "Execution interrupted by user.", "\n".join([entry["formatted"] for entry in agent.get_execution_logs()])
                 current_task.join(timeout=1)  # Give it a moment to finish

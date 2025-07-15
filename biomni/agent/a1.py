@@ -64,6 +64,7 @@ class A1:
         self.verbose = verbose
         self.path = path
         self.execution_logs = []  # Store execution logs for retrieval
+        self.stop_execution = False  # Flag to stop execution
         
         self._log("INIT", "🚀", "Starting Biomni Agent initialization...")
         self._log("INIT", "📂", f"Data path: {path}")
@@ -190,9 +191,15 @@ class A1:
             return [log for log in self.execution_logs if log["category"] == category]
         return self.execution_logs
     
+    def stop(self):
+        """Stop the current execution."""
+        self.stop_execution = True
+        self._log("EXEC", "⏹️", "Execution stop requested")
+    
     def clear_execution_logs(self):
         """Clear all execution logs."""
         self.execution_logs = []
+        self.stop_execution = False  # Reset stop flag when clearing logs
 
     def add_tool(self, api):
         """Add a new tool to the agent's tool registry and make it available for retrieval.
@@ -303,8 +310,8 @@ class A1:
             import builtins
 
             if not hasattr(builtins, "_biomni_custom_functions"):
-                builtins._biomni_custom_functions = {}
-            builtins._biomni_custom_functions[schema["name"]] = api
+                setattr(builtins, "_biomni_custom_functions", {})
+            getattr(builtins, "_biomni_custom_functions")[schema["name"]] = api
 
             print(
                 f"Tool '{schema['name']}' successfully added and ready for use in both direct execution and retrieval"
@@ -369,8 +376,10 @@ class A1:
         # Remove from global namespace
         import builtins
 
-        if hasattr(builtins, "_biomni_custom_functions") and name in builtins._biomni_custom_functions:
-            del builtins._biomni_custom_functions[name]
+        if hasattr(builtins, "_biomni_custom_functions"):
+            custom_functions = getattr(builtins, "_biomni_custom_functions")
+            if name in custom_functions:
+                del custom_functions[name]
 
         # Remove from tool registry
         if hasattr(self, "tool_registry") and self.tool_registry is not None:
@@ -960,16 +969,16 @@ Each library is listed with its description to help you understand its functiona
 
         return formatted_prompt
 
-    def configure(self, self_critic=False, test_time_scale_round=0):
+    def configure(self, enable_self_critic=False, test_time_scale_round=0):
         """Configure the agent with the initial system prompt and workflow.
 
         Args:
-            self_critic: Whether to enable self-critic mode
+            enable_self_critic: Whether to enable self-critic mode
             test_time_scale_round: Number of rounds for test time scaling
 
         """
         # Store self_critic for later use
-        self.self_critic = self_critic
+        self.self_critic = enable_self_critic
 
         # Get data lake content
         data_lake_path = self.path + "/data_lake"
@@ -1029,7 +1038,7 @@ Each library is listed with its description to help you understand its functiona
             tool_desc=tool_desc,
             data_lake_content=data_lake_with_desc,
             library_content_list=library_content_list,
-            self_critic=self_critic,
+            self_critic=enable_self_critic,
             is_retrieval=False,
             custom_tools=custom_tools if custom_tools else None,
             custom_data=custom_data if custom_data else None,
@@ -1038,6 +1047,11 @@ Each library is listed with its description to help you understand its functiona
 
         # Define the nodes
         def generate(state: AgentState) -> AgentState:
+            # Check for stop flag before generating
+            if self.stop_execution:
+                state["next_step"] = "end"
+                return state
+                
             messages = [SystemMessage(content=self.system_prompt)] + state["messages"]
             response = self.llm.invoke(messages)
 
@@ -1058,6 +1072,11 @@ Each library is listed with its description to help you understand its functiona
 
             # Add the message to the state before checking for errors
             state["messages"].append(AIMessage(content=msg.strip()))
+
+            # Check for stop flag after processing
+            if self.stop_execution:
+                state["next_step"] = "end"
+                return state
 
             if answer_match:
                 state["next_step"] = "end"
@@ -1093,6 +1112,11 @@ Each library is listed with its description to help you understand its functiona
             return state
 
         def execute(state: AgentState) -> AgentState:
+            # Check for stop flag before executing
+            if self.stop_execution:
+                state["next_step"] = "end"
+                return state
+                
             last_message = state["messages"][-1].content
             # Only add the closing tag if it's not already there
             if "<execute>" in last_message and "</execute>" not in last_message:
@@ -1137,6 +1161,11 @@ Each library is listed with its description to help you understand its functiona
                     self._inject_custom_functions_to_repl()
                     result = run_with_timeout(run_python_repl, [code], timeout=timeout)
 
+                # Check for stop flag after execution
+                if self.stop_execution:
+                    state["next_step"] = "end"
+                    return state
+
                 if len(result) > 10000:
                     result = (
                         "The output is too long to be added to context. Here are the first 10K characters...\n"
@@ -1150,6 +1179,10 @@ Each library is listed with its description to help you understand its functiona
         def routing_function(
             state: AgentState,
         ) -> Literal["execute", "generate", "end"]:
+            # Check for stop flag first
+            if self.stop_execution:
+                return "end"
+                
             next_step = state.get("next_step")
             if next_step == "execute":
                 return "execute"
@@ -1163,6 +1196,10 @@ Each library is listed with its description to help you understand its functiona
         def routing_function_self_critic(
             state: AgentState,
         ) -> Literal["generate", "end"]:
+            # Check for stop flag first
+            if self.stop_execution:
+                return "end"
+                
             next_step = state.get("next_step")
             if next_step == "generate":
                 return "generate"
@@ -1172,6 +1209,11 @@ Each library is listed with its description to help you understand its functiona
                 raise ValueError(f"Unexpected next_step: {next_step}")
 
         def self_critic(state: AgentState) -> AgentState:
+            # Check for stop flag before criticism
+            if self.stop_execution:
+                state["next_step"] = "end"
+                return state
+                
             if self.critic_count < test_time_scale_round:
                 # Generate feedback based on message history
                 messages = state["messages"]
@@ -1205,7 +1247,7 @@ Each library is listed with its description to help you understand its functiona
         workflow.add_node("generate", generate)
         workflow.add_node("execute", execute)
 
-        if self_critic:
+        if enable_self_critic:
             workflow.add_node("self_critic", self_critic)
             # Add conditional edges
             workflow.add_conditional_edges(
@@ -1245,17 +1287,29 @@ Each library is listed with its description to help you understand its functiona
             prompt: The user's query
 
         """
+        # Record start time
+        start_time = time.time()
+        
         self._log("EXEC", "🚀", "Starting task execution...")
         self._log("EXEC", "📝", f"User prompt: {prompt[:100]}{'...' if len(prompt) > 100 else ''}")
             
         self.critic_count = 0
         self.user_task = prompt
+        self.stop_execution = False  # Reset stop flag at start
         
         # Initialize real-time execution tracking
         self.current_step = 0
         self.intermediate_outputs = []  # Store intermediate outputs for real-time access
 
         if self.use_tool_retriever:
+            if self.stop_execution:
+                # Calculate and log total execution time
+                end_time = time.time()
+                total_time = end_time - start_time
+                self._log("EXEC", "⏹️", "Execution stopped during tool retrieval setup")
+                self._log("EXEC", "⏱️", f"Total execution time: {total_time:.2f} seconds")
+                return [], "Execution stopped by user"
+                
             self._log("EXEC", "🔍", "Using tool retriever for resource selection...")
                 
             # Gather all available resources
@@ -1307,6 +1361,14 @@ Each library is listed with its description to help you understand its functiona
                 "libraries": library_descriptions,
             }
             
+            if self.stop_execution:
+                # Calculate and log total execution time
+                end_time = time.time()
+                total_time = end_time - start_time
+                self._log("EXEC", "⏹️", "Execution stopped during resource preparation")
+                self._log("EXEC", "⏱️", f"Total execution time: {total_time:.2f} seconds")
+                return [], "Execution stopped by user"
+            
             self._log("EXEC", "🔍", "Starting prompt-based resource retrieval...")
                 
             # Use prompt-based retrieval with the agent's LLM
@@ -1340,6 +1402,14 @@ Each library is listed with its description to help you understand its functiona
         else:
             self._log("EXEC", "⚠️", "Tool retriever disabled, using all available tools")
 
+        if self.stop_execution:
+            # Calculate and log total execution time
+            end_time = time.time()
+            total_time = end_time - start_time
+            self._log("EXEC", "⏹️", "Execution stopped before workflow start")
+            self._log("EXEC", "⏱️", f"Total execution time: {total_time:.2f} seconds")
+            return [], "Execution stopped by user"
+
         self._log("EXEC", "🎯", "Starting agent execution workflow...")
             
         inputs = {"messages": [HumanMessage(content=prompt)], "next_step": None}
@@ -1348,6 +1418,20 @@ Each library is listed with its description to help you understand its functiona
         
         step_count = 0
         for s in self.app.stream(inputs, stream_mode="values", config=config):
+            # Check for stop flag at each step
+            if self.stop_execution:
+                # Calculate and log total execution time
+                end_time = time.time()
+                total_time = end_time - start_time
+                self._log("EXEC", "⏹️", f"Execution stopped at step {step_count + 1}")
+                self._log("EXEC", "⏱️", f"Total execution time: {total_time:.2f} seconds")
+                final_message = f"Execution stopped by user at step {step_count + 1}"
+                return self.log, final_message
+            
+            # Also check if there are any messages and if the execution should continue
+            if "messages" not in s or not s["messages"]:
+                continue
+                
             message = s["messages"][-1]
             out = pretty_print(message)
             self.log.append(out)
@@ -1363,8 +1447,21 @@ Each library is listed with its description to help you understand its functiona
             step_count += 1
             self.current_step = step_count
             self._log("EXEC", "📝", f"Step {step_count}: {type(message).__name__}")
-                
+            
+            # Check for stop flag again after processing each message
+            if self.stop_execution:
+                # Calculate and log total execution time
+                end_time = time.time()
+                total_time = end_time - start_time
+                self._log("EXEC", "⏹️", f"Execution stopped at step {step_count}")
+                self._log("EXEC", "⏱️", f"Total execution time: {total_time:.2f} seconds")
+                final_message = f"Execution stopped by user at step {step_count}"
+                return self.log, final_message
+        # Calculate and log total execution time
+        end_time = time.time()
+        total_time = end_time - start_time
         self._log("EXEC", "🎉", f"Task execution completed! Total steps: {step_count}")
+        self._log("EXEC", "⏱️", f"Total execution time: {total_time:.2f} seconds")
 
         return self.log, message.content
     
@@ -1521,5 +1618,5 @@ Each library is listed with its description to help you understand its functiona
             import builtins
 
             if not hasattr(builtins, "_biomni_custom_functions"):
-                builtins._biomni_custom_functions = {}
-            builtins._biomni_custom_functions.update(self._custom_functions)
+                setattr(builtins, "_biomni_custom_functions", {})
+            getattr(builtins, "_biomni_custom_functions").update(self._custom_functions)
