@@ -6,7 +6,7 @@ from typing import Optional
 agent = None
 agent_error = None
 
-def create_agent(llm_model: str, source: str, base_url: Optional[str], api_key: Optional[str], data_path: str):
+def create_agent(llm_model: str, source: str, base_url: Optional[str], api_key: Optional[str], data_path: str, verbose: bool):
     """Create a new Biomni agent with the specified configuration."""
     global agent, agent_error
     
@@ -17,6 +17,7 @@ def create_agent(llm_model: str, source: str, base_url: Optional[str], api_key: 
         agent_params = {
             "path": data_path,
             "llm": llm_model,
+            "verbose": verbose,
         }
         
         # Add source if specified
@@ -34,7 +35,8 @@ def create_agent(llm_model: str, source: str, base_url: Optional[str], api_key: 
         agent = A1(**agent_params)
         agent_error = None
         
-        return "✅ Agent created successfully!", f"Current configuration:\n- Model: {llm_model}\n- Source: {source}\n- Base URL: {base_url or 'Default'}\n- Data Path: {data_path}"
+        verbose_status = "enabled" if verbose else "disabled"
+        return "✅ Agent created successfully!", f"Current configuration:\n- Model: {llm_model}\n- Source: {source}\n- Base URL: {base_url or 'Default'}\n- Data Path: {data_path}\n- Verbose logging: {verbose_status}"
         
     except Exception as e:
         agent = None
@@ -46,22 +48,47 @@ def ask_biomni(question: str):
     global agent, agent_error
     
     if agent is None:
-        return f"❌ Biomni agent not initialized. Please configure and create an agent first.\nError: {agent_error or 'No agent created'}"
+        return f"❌ Biomni agent not initialized. Please configure and create an agent first.\nError: {agent_error or 'No agent created'}", "", ""
     
     if not question.strip():
-        return "❌ Please enter a question."
+        return "❌ Please enter a question.", "", ""
     
     try:
+        # Clear previous execution logs
+        agent.clear_execution_logs()
+        
+        # Execute the task
         result = agent.go(question.strip())
+        
         # Extract the final response from the log
         if isinstance(result, tuple) and len(result) == 2:
             log, final_response = result
-            return f"🤖 Biomni Response:\n\n{final_response}"
+            
+            # Format the full execution log
+            execution_log = "\n".join([entry["formatted"] for entry in agent.get_execution_logs()])
+            
+            # Extract intermediate results from the log
+            intermediate_results = []
+            for entry in log:
+                if isinstance(entry, str):
+                    # Look for specific patterns in the log entries
+                    if "================================" in entry:
+                        intermediate_results.append(entry)
+                    elif "<execute>" in entry or "<observation>" in entry:
+                        intermediate_results.append(entry)
+                    elif "Human Message" in entry or "Ai Message" in entry:
+                        intermediate_results.append(entry)
+            
+            intermediate_output = "\n".join(intermediate_results) if intermediate_results else "No intermediate results available."
+            
+            return f"🤖 **Final Response:**\n\n{final_response}", intermediate_output, execution_log
         else:
-            return f"🤖 Biomni Response:\n\n{str(result)}"
+            execution_log = "\n".join([entry["formatted"] for entry in agent.get_execution_logs()])
+            return f"🤖 **Biomni Response:**\n\n{str(result)}", "No intermediate results available.", execution_log
             
     except Exception as e:
-        return f"❌ Error processing question: {str(e)}"
+        execution_log = "\n".join([entry["formatted"] for entry in agent.get_execution_logs()])
+        return f"❌ Error processing question: {str(e)}", "", execution_log
 
 def reset_agent():
     """Reset the agent."""
@@ -114,6 +141,12 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft()) as demo:
                 info="Path where Biomni data will be stored"
             )
             
+            verbose = gr.Checkbox(
+                label="Enable Verbose Logging",
+                value=False,
+                info="Show detailed progress logs during execution (recommended for debugging)"
+            )
+            
             # Control buttons
             with gr.Row():
                 create_btn = gr.Button("🚀 Create Agent", variant="primary")
@@ -144,11 +177,29 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft()) as demo:
             
             ask_btn = gr.Button("🤖 Ask Biomni", variant="primary")
             
-            response = gr.Textbox(
-                label="Biomni Response",
-                lines=15,
-                interactive=False
-            )
+            # Multiple output areas
+            with gr.Tab("Final Response"):
+                response = gr.Textbox(
+                    label="Final Response",
+                    lines=10,
+                    interactive=False
+                )
+            
+            with gr.Tab("Intermediate Results"):
+                intermediate_results = gr.Textbox(
+                    label="Intermediate Results & Execution Steps",
+                    lines=15,
+                    interactive=False,
+                    placeholder="Intermediate results will appear here..."
+                )
+            
+            with gr.Tab("Execution Log"):
+                execution_log = gr.Textbox(
+                    label="Detailed Execution Log",
+                    lines=15,
+                    interactive=False,
+                    placeholder="Detailed execution logs will appear here..."
+                )
             
             # Examples
             gr.Markdown("### 📝 Example Questions:")
@@ -165,7 +216,7 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft()) as demo:
     # Event handlers
     create_btn.click(
         fn=create_agent,
-        inputs=[llm_model, source, base_url, api_key, data_path],
+        inputs=[llm_model, source, base_url, api_key, data_path, verbose],
         outputs=[status_text, config_info]
     )
     
@@ -177,14 +228,14 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft()) as demo:
     ask_btn.click(
         fn=ask_biomni,
         inputs=[question],
-        outputs=[response]
+        outputs=[response, intermediate_results, execution_log]
     )
     
     # Also allow Enter key to submit question
     question.submit(
         fn=ask_biomni,
         inputs=[question],
-        outputs=[response]
+        outputs=[response, intermediate_results, execution_log]
     )
 
 if __name__ == "__main__":

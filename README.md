@@ -72,13 +72,17 @@ agent = A1(path='./data')
 agent = A1(path='./data', llm='claude-3-5-sonnet-20241022')  # Anthropic Claude
 agent = A1(path='./data', llm='llama3:8b')                   # Ollama local model
 
+# Enable verbose logging for detailed progress information (recommended for debugging)
+agent = A1(path='./data', verbose=True)
+
 # Or use a custom API endpoint
 agent = A1(
     path='./data', 
     llm='custom-model-name',
     base_url='http://localhost:8000/v1',
     api_key='your-api-key',
-    source='Custom'
+    source='Custom',
+    verbose=True  # Show detailed execution logs
 )
 
 # Execute biomedical tasks using natural language

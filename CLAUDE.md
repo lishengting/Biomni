@@ -101,13 +101,17 @@ agent = A1(path='./data', llm='claude-3-5-sonnet-20241022')  # Anthropic
 agent = A1(path='./data', llm='gpt-4o')  # OpenAI  
 agent = A1(path='./data', llm='llama3:8b')  # Ollama
 
+# Enable verbose logging for detailed progress information
+agent = A1(path='./data', verbose=True)
+
 # Or use a custom API endpoint (e.g., local model server)
 agent = A1(
     path='./data', 
     llm='custom-model-name',
     base_url='http://localhost:8000/v1',
     api_key='your-api-key',
-    source='Custom'
+    source='Custom',
+    verbose=True  # Show detailed logs
 )
 
 # Execute tasks using natural language

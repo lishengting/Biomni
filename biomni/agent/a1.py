@@ -2,6 +2,8 @@ import glob
 import inspect
 import os
 import re
+import time
+from datetime import datetime
 from typing import Literal, TypedDict
 
 import pandas as pd
@@ -44,6 +46,7 @@ class A1:
         base_url: str | None = None,
         api_key: str = "EMPTY",
         source: SourceType | None = None,
+        verbose: bool = False,
     ):
         """Initialize the biomni agent.
 
@@ -55,15 +58,28 @@ class A1:
             base_url: Base URL for custom model serving (e.g., "http://localhost:8000/v1")
             api_key: API key for the custom LLM
             source: Source provider: "OpenAI", "Anthropic", "Custom", etc. If None, auto-detect from model
+            verbose: If True, print detailed progress logs during execution
 
         """
+        self.verbose = verbose
         self.path = path
+        self.execution_logs = []  # Store execution logs for retrieval
+        
+        self._log("INIT", "🚀", "Starting Biomni Agent initialization...")
+        self._log("INIT", "📂", f"Data path: {path}")
+        self._log("INIT", "🤖", f"LLM model: {llm}")
+        self._log("INIT", "🔧", f"Source: {source or 'Auto-detect'}")
+        self._log("INIT", "🌐", f"Base URL: {base_url or 'Default'}")
+        self._log("INIT", "🔍", f"Tool retriever: {use_tool_retriever}")
+        self._log("INIT", "⏱️", f"Timeout: {timeout_seconds}s")
 
         if not os.path.exists(path):
             os.makedirs(path)
-            print(f"Created directory: {path}")
+            self._log("INIT", "📁", f"Created directory: {path}")
 
         # --- Begin custom folder/file checks ---
+        self._log("INIT", "🔍", "Setting up data directories...")
+            
         benchmark_dir = os.path.join(path, "biomni_data", "benchmark")
         data_lake_dir = os.path.join(path, "biomni_data", "data_lake")
         
@@ -71,10 +87,18 @@ class A1:
         os.makedirs(benchmark_dir, exist_ok=True)
         os.makedirs(data_lake_dir, exist_ok=True)
         
+        self._log("INIT", "📁", f"Benchmark directory: {benchmark_dir}")
+        self._log("INIT", "📁", f"Data lake directory: {data_lake_dir}")
+        
         expected_data_lake_files = list(data_lake_dict.keys())
+        
+        self._log("INIT", "📋", f"Expected data lake files: {len(expected_data_lake_files)}")
         
         # Check and download missing data lake files
         print("Checking and downloading missing data lake files...")
+        self._log("DOWNLOAD", "🌐", "Starting data lake file check...")
+        self._log("DOWNLOAD", "🌐", "S3 bucket: https://biomni-release.s3.amazonaws.com")
+            
         download_results = check_and_download_s3_files(
             s3_bucket_url="https://biomni-release.s3.amazonaws.com",
             local_data_lake_path=data_lake_dir,
@@ -82,36 +106,93 @@ class A1:
             folder="data_lake"
         )
         
+        self._log("DOWNLOAD", "✅", "Data lake files check completed")
+        
         # Check if benchmark directory structure is complete
+        self._log("INIT", "🔍", "Checking benchmark directory structure...")
+            
         benchmark_ok = False
         if os.path.isdir(benchmark_dir):
             patient_gene_detection_dir = os.path.join(benchmark_dir, "hle")
             if os.path.isdir(patient_gene_detection_dir):
                 benchmark_ok = True
         
+        self._log("INIT", "📋", f"Benchmark directory OK: {benchmark_ok}")
+        
         if not benchmark_ok:
             print("Checking and downloading benchmark files...")
+            self._log("DOWNLOAD", "🌐", "Starting benchmark file download...")
+                
             benchmark_download_results = check_and_download_s3_files(
                 s3_bucket_url="https://biomni-release.s3.amazonaws.com",
                 local_data_lake_path=benchmark_dir,
                 expected_files=[],  # Empty list - will download entire folder
                 folder="benchmark"
-            )        
+            )
+            
+            self._log("DOWNLOAD", "✅", "Benchmark files download completed")
      
         self.path = os.path.join(path, "biomni_data")
+        
+        self._log("INIT", "📖", "Reading module2api configuration...")
+            
         module2api = read_module2api()
-
+        
+        self._log("INIT", "🤖", f"Initializing LLM: {llm}")
+            
         self.llm = get_llm(llm, stop_sequences=["</execute>", "</solution>"], base_url=base_url, api_key=api_key, source=source)
+        
+        self._log("INIT", "✅", "LLM initialized successfully")
+            
         self.module2api = module2api
         self.use_tool_retriever = use_tool_retriever
 
         if self.use_tool_retriever:
+            self._log("INIT", "🔧", "Setting up tool registry...")
+                
             self.tool_registry = ToolRegistry(module2api)
             self.retriever = ToolRetriever()
+            
+            self._log("INIT", "✅", "Tool registry initialized")
+        else:
+            self._log("INIT", "⚠️", "Tool retriever disabled")
 
         # Add timeout parameter
         self.timeout_seconds = timeout_seconds  # 10 minutes default timeout
+        
+        self._log("INIT", "⚙️", "Starting agent configuration...")
+            
         self.configure()
+        
+        self._log("INIT", "🎉", "Biomni Agent initialization completed!")
+    
+    def _log(self, category: str, icon: str, message: str):
+        """Custom logging method with timestamps and category."""
+        timestamp = datetime.now().strftime("%Y%m%d %H:%M:%S.%f")[:-3]  # Include milliseconds
+        log_entry = f"{icon} [{timestamp}][{category}] {message}"
+        
+        # Store in execution logs for retrieval
+        self.execution_logs.append({
+            "timestamp": timestamp,
+            "category": category,
+            "icon": icon,
+            "message": message,
+            "formatted": log_entry
+        })
+        
+        # Print if verbose mode is enabled
+        if self.verbose:
+            print(log_entry)
+    
+    def get_execution_logs(self, category: str | None = None) -> list:
+        """Get execution logs, optionally filtered by category."""
+        if category:
+            return [log for log in self.execution_logs if log["category"] == category]
+        return self.execution_logs
+    
+    def clear_execution_logs(self):
+        """Clear all execution logs."""
+        self.execution_logs = []
 
     def add_tool(self, api):
         """Add a new tool to the agent's tool registry and make it available for retrieval.
@@ -1164,18 +1245,27 @@ Each library is listed with its description to help you understand its functiona
             prompt: The user's query
 
         """
+        self._log("EXEC", "🚀", "Starting task execution...")
+        self._log("EXEC", "📝", f"User prompt: {prompt[:100]}{'...' if len(prompt) > 100 else ''}")
+            
         self.critic_count = 0
         self.user_task = prompt
 
         if self.use_tool_retriever:
+            self._log("EXEC", "🔍", "Using tool retriever for resource selection...")
+                
             # Gather all available resources
             # 1. Tools from the registry
             all_tools = self.tool_registry.tools if hasattr(self, "tool_registry") else []
+            
+            self._log("EXEC", "🔧", f"Available tools: {len(all_tools)}")
 
             # 2. Data lake items with descriptions
             data_lake_path = self.path + "/data_lake"
             data_lake_content = glob.glob(data_lake_path + "/*")
             data_lake_items = [x.split("/")[-1] for x in data_lake_content]
+            
+            self._log("EXEC", "📊", f"Data lake items: {len(data_lake_items)}")
 
             # Create data lake descriptions for retrieval
             data_lake_descriptions = []
@@ -1187,11 +1277,15 @@ Each library is listed with its description to help you understand its functiona
             if hasattr(self, "_custom_data") and self._custom_data:
                 for name, info in self._custom_data.items():
                     data_lake_descriptions.append({"name": name, "description": info["description"]})
+                    
+                self._log("EXEC", "📋", f"Added custom data items: {len(self._custom_data)}")
 
             # 3. Libraries with descriptions - use library_content_dict directly
             library_descriptions = []
             for lib_name, lib_desc in self.library_content_dict.items():
                 library_descriptions.append({"name": lib_name, "description": lib_desc})
+                
+            self._log("EXEC", "📚", f"Available libraries: {len(library_descriptions)}")
 
             # Add custom software items to retrieval if they exist
             if hasattr(self, "_custom_software") and self._custom_software:
@@ -1199,6 +1293,8 @@ Each library is listed with its description to help you understand its functiona
                     # Check if it's not already in the library descriptions to avoid duplicates
                     if not any(lib["name"] == name for lib in library_descriptions):
                         library_descriptions.append({"name": name, "description": info["description"]})
+                        
+                self._log("EXEC", "⚙️", f"Added custom software items: {len(self._custom_software)}")
 
             # Use retrieval to get relevant resources
             resources = {
@@ -1206,10 +1302,14 @@ Each library is listed with its description to help you understand its functiona
                 "data_lake": data_lake_descriptions,
                 "libraries": library_descriptions,
             }
-
+            
+            self._log("EXEC", "🔍", "Starting prompt-based resource retrieval...")
+                
             # Use prompt-based retrieval with the agent's LLM
             selected_resources = self.retriever.prompt_based_retrieval(prompt, resources, llm=self.llm)
             print("Using prompt-based retrieval with the agent's LLM")
+            
+            self._log("EXEC", "✅", f"Selected {len(selected_resources['tools'])} tools, {len(selected_resources['data_lake'])} data items, {len(selected_resources['libraries'])} libraries")
 
             # Extract the names from the selected resources for the system prompt
             selected_resources_names = {
@@ -1230,16 +1330,28 @@ Each library is listed with its description to help you understand its functiona
                     selected_resources_names["data_lake"].append(item)
 
             # Update the system prompt with the selected resources
+            self._log("EXEC", "📋", "Updating system prompt with selected resources...")
+                
             self.update_system_prompt_with_selected_resources(selected_resources_names)
+        else:
+            self._log("EXEC", "⚠️", "Tool retriever disabled, using all available tools")
 
+        self._log("EXEC", "🎯", "Starting agent execution workflow...")
+            
         inputs = {"messages": [HumanMessage(content=prompt)], "next_step": None}
         config = {"recursion_limit": 500, "configurable": {"thread_id": 42}}
         self.log = []
-
+        
+        step_count = 0
         for s in self.app.stream(inputs, stream_mode="values", config=config):
             message = s["messages"][-1]
             out = pretty_print(message)
             self.log.append(out)
+            
+            step_count += 1
+            self._log("EXEC", "📝", f"Step {step_count}: {type(message).__name__}")
+                
+        self._log("EXEC", "🎉", f"Task execution completed! Total steps: {step_count}")
 
         return self.log, message.content
 
