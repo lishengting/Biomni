@@ -5,10 +5,10 @@ import time
 from typing import Any
 
 import requests
-from anthropic import Anthropic
 from Bio.Blast import NCBIWWW, NCBIXML
 from Bio.Seq import Seq
 
+from biomni.llm import get_llm
 from biomni.utils import parse_hpo_obo
 
 
@@ -32,77 +32,78 @@ def get_hpo_names(hpo_terms: list[str], data_lake_path: str) -> list[str]:
     return hpo_names
 
 
-def _query_claude_for_api(prompt, schema, system_template, api_key=None, base_url=None, model="claude-3-5-haiku-20241022"):
-    """Helper function to query Claude for generating API calls based on natural language prompts.
+def _query_llm_for_api(prompt, schema, system_template, model="gpt-4o", api_key=None, base_url=None, source=None):
+    """Helper function to query any LLM for generating API calls based on natural language prompts.
 
     Parameters
     ----------
     prompt (str): Natural language query to process
     schema (dict): API schema to include in the system prompt
     system_template (str): Template string for the system prompt (should have {schema} placeholder)
-    api_key (str, optional): Anthropic API key. If None, will use ANTHROPIC_API_KEY env variable
-    base_url (str, optional): Custom base URL for Anthropic API. If None, will use ANTHROPIC_BASE_URL env variable
-    model (str): Anthropic model to use
+    model (str): Model name to use (default: "gpt-4o")
+    api_key (str, optional): API key. If None, will try to get from appropriate env variable
+    base_url (str, optional): Custom base URL for API. If None, will try to get from appropriate env variable
+    source (str, optional): Source provider: "OpenAI", "Anthropic", "Custom", etc. If None, auto-detect from model
 
     Returns
     -------
     dict: Dictionary with 'success', 'data' (if successful), 'error' (if failed), and optional 'raw_response'
 
     """
-    # Get API key and base URL
-    api_key = api_key or os.environ.get("ANTHROPIC_API_KEY")
-    base_url = base_url or os.environ.get("ANTHROPIC_BASE_URL")
-    if api_key is None:
-        return {
-            "success": False,
-            "error": "No API key provided. Set ANTHROPIC_API_KEY environment variable or provide api_key parameter.",
-        }
-
     try:
-        # Initialize Anthropic client
-        if base_url:
-            client = Anthropic(api_key=api_key, base_url=base_url)
-        else:
-            client = Anthropic(api_key=api_key)
+        # Get the LLM instance using the existing get_llm function
+        llm = get_llm(
+            model=model,
+            temperature=0.1,  # Lower temperature for more consistent API generation
+            source=source,
+            base_url=base_url,
+            api_key=api_key or "EMPTY"
+        )
 
+        # Format the system prompt with the schema
         if schema is not None:
-            # Format the system prompt with the schema
             schema_json = json.dumps(schema, indent=2)
             system_prompt = system_template.format(schema=schema_json)
         else:
             system_prompt = system_template
 
-        response = client.messages.create(
-            model=model,
-            system=system_prompt,
-            max_tokens=1000,
-            messages=[{"role": "user", "content": prompt}],
-        )
+        # Use LangChain's standard interface
+        from langchain_core.messages import HumanMessage, SystemMessage
+        
+        messages = [
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=prompt)
+        ]
+        
+        response = llm.invoke(messages)
+        
+        # Extract text from response
+        if hasattr(response, 'content'):
+            llm_text = response.content.strip()
+        else:
+            llm_text = str(response).strip()
 
-        # Parse Claude's response
-        claude_text = response.content[0].text.strip()
-
-        # Find JSON boundaries (in case Claude adds explanations)
-        json_start = claude_text.find("{")
-        json_end = claude_text.rfind("}") + 1
+        # Find JSON boundaries (in case LLM adds explanations)
+        json_start = llm_text.find("{")
+        json_end = llm_text.rfind("}") + 1
 
         if json_start >= 0 and json_end > json_start:
-            json_text = claude_text[json_start:json_end]
+            json_text = llm_text[json_start:json_end]
             result = json.loads(json_text)
         else:
             # If no JSON found, try the whole response
-            result = json.loads(claude_text)
+            result = json.loads(llm_text)
 
-        return {"success": True, "data": result, "raw_response": claude_text}
+        return {"success": True, "data": result, "raw_response": llm_text}
 
     except (json.JSONDecodeError, KeyError, IndexError) as e:
         return {
             "success": False,
-            "error": f"Failed to parse Claude's response: {str(e)}",
-            "raw_response": claude_text if "claude_text" in locals() else "No content found",
+            "error": f"Failed to parse LLM response: {str(e)}",
+            "raw_response": llm_text if "llm_text" in locals() else "No content found",
         }
     except Exception as e:
-        return {"success": False, "error": f"Error querying Claude: {str(e)}"}
+        return {"success": False, "error": f"Error querying LLM: {str(e)}"}
 
 
 def _query_rest_api(endpoint, method="GET", params=None, headers=None, json_data=None, description=None):
@@ -520,7 +521,7 @@ def query_uniprot(
         """
 
         # Query Claude to generate the API call
-        claude_result = _query_claude_for_api(
+        llm_result = _query_llm_for_api(
             prompt=prompt,
             schema=uniprot_schema,
             system_template=system_template,
@@ -529,18 +530,18 @@ def query_uniprot(
             model=model,
         )
 
-        if not claude_result["success"]:
-            return claude_result
+        if not llm_result["success"]:
+            return llm_result
 
         # Get the full URL from Claude's response
-        query_info = claude_result["data"]
+        query_info = llm_result["data"]
         endpoint = query_info.get("full_url", "")
         description = query_info.get("description", "")
 
         if not endpoint:
             return {
                 "error": "Failed to generate a valid endpoint from the prompt",
-                "claude_response": claude_result.get("raw_response", "No response"),
+                "claude_response": llm_result.get("raw_response", "No response"),
             }
     else:
         # Use provided endpoint directly
@@ -774,7 +775,7 @@ def query_interpro(
         """
 
         # Query Claude to generate the API call
-        claude_result = _query_claude_for_api(
+        llm_result = _query_llm_for_api(
             prompt=prompt,
             schema=interpro_schema,
             system_template=system_template,
@@ -782,18 +783,18 @@ def query_interpro(
             model=model,
         )
 
-        if not claude_result["success"]:
-            return claude_result
+        if not llm_result["success"]:
+            return llm_result
 
         # Extract the full URL from Claude's response
-        query_info = claude_result["data"]
+        query_info = llm_result["data"]
         endpoint = query_info.get("full_url", "")
         description = query_info.get("description", "")
 
         if not endpoint:
             return {
                 "error": "Failed to generate a valid endpoint from the prompt",
-                "claude_response": claude_result.get("raw_response", "No response"),
+                "claude_response": llm_result.get("raw_response", "No response"),
             }
     else:
         # Process provided endpoint
@@ -887,7 +888,7 @@ def query_pdb(
         """
 
         # Query Claude to generate the search query
-        claude_result = _query_claude_for_api(
+        llm_result = _query_llm_for_api(
             prompt=prompt,
             schema=schema,
             system_template=system_template,
@@ -895,14 +896,14 @@ def query_pdb(
             model=model,
         )
 
-        if not claude_result["success"]:
+        if not llm_result["success"]:
             return {
-                "error": claude_result["error"],
-                "claude_response": claude_result.get("raw_response", "No response"),
+                "error": llm_result["error"],
+                "claude_response": llm_result.get("raw_response", "No response"),
             }
 
         # Get the query from Claude's response
-        query_json = claude_result["data"]
+        query_json = llm_result["data"]
     else:
         # Use provided query directly
         query_json = (
@@ -1108,7 +1109,7 @@ def query_kegg(prompt, endpoint=None, api_key=None, model="claude-3-5-haiku-2024
         """
 
         # Query Claude to generate the API call
-        claude_result = _query_claude_for_api(
+        llm_result = _query_llm_for_api(
             prompt=prompt,
             schema=kegg_schema,
             system_template=system_template,
@@ -1116,18 +1117,18 @@ def query_kegg(prompt, endpoint=None, api_key=None, model="claude-3-5-haiku-2024
             model=model,
         )
 
-        if not claude_result["success"]:
-            return claude_result
+        if not llm_result["success"]:
+            return llm_result
 
             # Extract the query info from Claude's response
-        query_info = claude_result["data"]
+        query_info = llm_result["data"]
         endpoint = query_info["full_url"]
         description = query_info["description"]
 
         if not endpoint:
             return {
                 "error": "Failed to generate a valid endpoint from the prompt",
-                "claude_response": claude_result.get("raw_response", "No response"),
+                "claude_response": llm_result.get("raw_response", "No response"),
             }
 
     if endpoint:
@@ -1214,7 +1215,7 @@ def query_stringdb(
         """
 
         # Query Claude to generate the API call
-        claude_result = _query_claude_for_api(
+        llm_result = _query_llm_for_api(
             prompt=prompt,
             schema=stringdb_schema,
             system_template=system_template,
@@ -1222,11 +1223,11 @@ def query_stringdb(
             model=model,
         )
 
-        if not claude_result["success"]:
-            return claude_result
+        if not llm_result["success"]:
+            return llm_result
 
         # Get the full URL from Claude's response
-        query_info = claude_result["data"]
+        query_info = llm_result["data"]
         endpoint = query_info.get("full_url", "")
         description = query_info.get("description", "")
         output_format = query_info.get("output_format", "json")
@@ -1234,7 +1235,7 @@ def query_stringdb(
         if not endpoint:
             return {
                 "error": "Failed to generate a valid endpoint from the prompt",
-                "claude_response": claude_result.get("raw_response", "No response"),
+                "claude_response": llm_result.get("raw_response", "No response"),
             }
     else:
         # Use direct endpoint
@@ -1388,7 +1389,7 @@ def query_iucn(
         """
 
         # Query Claude to generate the API call
-        claude_result = _query_claude_for_api(
+        llm_result = _query_llm_for_api(
             prompt=prompt,
             schema=iucn_schema,
             system_template=system_template,
@@ -1396,18 +1397,18 @@ def query_iucn(
             model=model,
         )
 
-        if not claude_result["success"]:
-            return claude_result
+        if not llm_result["success"]:
+            return llm_result
 
         # Get the full URL from Claude's response
-        query_info = claude_result["data"]
+        query_info = llm_result["data"]
         endpoint = query_info.get("full_url", "")
         description = query_info.get("description", "")
 
         if not endpoint:
             return {
                 "error": "Failed to generate a valid endpoint from the prompt",
-                "claude_response": claude_result.get("raw_response", "No response"),
+                "claude_response": llm_result.get("raw_response", "No response"),
             }
     else:
         # Process provided endpoint
@@ -1496,7 +1497,7 @@ def query_paleobiology(
         """
 
         # Query Claude to generate the API call
-        claude_result = _query_claude_for_api(
+        llm_result = _query_llm_for_api(
             prompt=prompt,
             schema=pbdb_schema,
             system_template=system_template,
@@ -1504,18 +1505,18 @@ def query_paleobiology(
             model=model,
         )
 
-        if not claude_result["success"]:
-            return claude_result
+        if not llm_result["success"]:
+            return llm_result
 
         # Get the full URL from Claude's response
-        query_info = claude_result["data"]
+        query_info = llm_result["data"]
         endpoint = query_info.get("full_url", "")
         description = query_info.get("description", "")
 
         if not endpoint:
             return {
                 "error": "Failed to generate a valid endpoint from the prompt",
-                "claude_response": claude_result.get("raw_response", "No response"),
+                "claude_response": llm_result.get("raw_response", "No response"),
             }
     else:
         # Process provided endpoint
@@ -1627,7 +1628,7 @@ def query_jaspar(
         """
 
         # Query Claude to generate the API call
-        claude_result = _query_claude_for_api(
+        llm_result = _query_llm_for_api(
             prompt=prompt,
             schema=jaspar_schema,
             system_template=system_template,
@@ -1635,18 +1636,18 @@ def query_jaspar(
             model=model,
         )
 
-        if not claude_result["success"]:
-            return claude_result
+        if not llm_result["success"]:
+            return llm_result
 
         # Get the full URL from Claude's response
-        query_info = claude_result["data"]
+        query_info = llm_result["data"]
         endpoint = query_info.get("full_url", "")
         description = query_info.get("description", "")
 
         if not endpoint:
             return {
                 "error": "Failed to generate a valid endpoint from the prompt",
-                "claude_response": claude_result.get("raw_response", "No response"),
+                "claude_response": llm_result.get("raw_response", "No response"),
             }
     else:
         # Process provided endpoint
@@ -1737,7 +1738,7 @@ def query_worms(
         """
 
         # Query Claude to generate the API call
-        claude_result = _query_claude_for_api(
+        llm_result = _query_llm_for_api(
             prompt=prompt,
             schema=worms_schema,
             system_template=system_template,
@@ -1745,18 +1746,18 @@ def query_worms(
             model=model,
         )
 
-        if not claude_result["success"]:
-            return claude_result
+        if not llm_result["success"]:
+            return llm_result
 
         # Get the full URL and details from Claude's response
-        query_info = claude_result["data"]
+        query_info = llm_result["data"]
         endpoint = query_info.get("full_url", "")
         description = query_info.get("description", "")
 
         if not endpoint:
             return {
                 "error": "Failed to generate a valid endpoint from the prompt",
-                "claude_response": claude_result.get("raw_response", "No response"),
+                "claude_response": llm_result.get("raw_response", "No response"),
             }
     else:
         # Process provided endpoint
@@ -1840,7 +1841,7 @@ def query_cbioportal(
         """
 
         # Query Claude to generate the API call
-        claude_result = _query_claude_for_api(
+        llm_result = _query_llm_for_api(
             prompt=prompt,
             schema=cbioportal_schema,
             system_template=system_template,
@@ -1848,18 +1849,18 @@ def query_cbioportal(
             model=model,
         )
 
-        if not claude_result["success"]:
-            return claude_result
+        if not llm_result["success"]:
+            return llm_result
 
         # Get the full URL from Claude's response
-        query_info = claude_result["data"]
+        query_info = llm_result["data"]
         endpoint = query_info.get("full_url", "")
         description = query_info.get("description", "")
 
         if not endpoint:
             return {
                 "error": "Failed to generate a valid endpoint from the prompt",
-                "claude_response": claude_result.get("raw_response", "No response"),
+                "claude_response": llm_result.get("raw_response", "No response"),
             }
     else:
         # Process provided endpoint
@@ -1943,7 +1944,7 @@ def query_clinvar(
         """
 
         # Query Claude to generate the API call
-        claude_result = _query_claude_for_api(
+        llm_result = _query_llm_for_api(
             prompt=prompt,
             schema=clinvar_schema,
             system_template=system_prompt_template,
@@ -1951,17 +1952,17 @@ def query_clinvar(
             model=model,
         )
 
-        if not claude_result["success"]:
-            return claude_result
+        if not llm_result["success"]:
+            return llm_result
 
         # Get the full URL from Claude's response
-        query_info = claude_result["data"]
+        query_info = llm_result["data"]
         search_term = query_info.get("search_term", "")
 
         if not search_term:
             return {
                 "error": "Failed to generate a valid search term from the prompt",
-                "claude_response": claude_result.get("raw_response", "No response"),
+                "claude_response": llm_result.get("raw_response", "No response"),
             }
 
     return _query_ncbi_database(
@@ -2044,7 +2045,7 @@ def query_geo(
         """
 
         # Query Claude to generate the API call
-        claude_result = _query_claude_for_api(
+        llm_result = _query_llm_for_api(
             prompt=prompt,
             schema=geo_schema,
             system_template=system_template,
@@ -2052,18 +2053,18 @@ def query_geo(
             model=model,
         )
 
-        if not claude_result["success"]:
-            return claude_result
+        if not llm_result["success"]:
+            return llm_result
 
         # Get the search term and database from Claude's response
-        query_info = claude_result["data"]
+        query_info = llm_result["data"]
         search_term = query_info.get("search_term", "")
         database = query_info.get("database", "gds")
 
         if not search_term:
             return {
                 "error": "Failed to generate a valid search term from the prompt",
-                "claude_response": claude_result.get("raw_response", "No response"),
+                "claude_response": llm_result.get("raw_response", "No response"),
             }
 
     # Execute the GEO query using the helper function
@@ -2140,7 +2141,7 @@ def query_dbsnp(
         """
 
         # Query Claude to generate the API call
-        claude_result = _query_claude_for_api(
+        llm_result = _query_llm_for_api(
             prompt=prompt,
             schema=dbsnp_schema,
             system_template=system_template,
@@ -2148,17 +2149,17 @@ def query_dbsnp(
             model=model,
         )
 
-        if not claude_result["success"]:
-            return claude_result
+        if not llm_result["success"]:
+            return llm_result
 
         # Get the search term from Claude's response
-        query_info = claude_result["data"]
+        query_info = llm_result["data"]
         search_term = query_info.get("search_term", "")
 
         if not search_term:
             return {
                 "error": "Failed to generate a valid search term from the prompt",
-                "claude_response": claude_result.get("raw_response", "No response"),
+                "claude_response": llm_result.get("raw_response", "No response"),
             }
 
     # Execute the dbSNP query using the helper function
@@ -2240,7 +2241,7 @@ def query_ucsc(
         """
 
         # Query Claude to generate the API call
-        claude_result = _query_claude_for_api(
+        llm_result = _query_llm_for_api(
             prompt=prompt,
             schema=ucsc_schema,
             system_template=system_template,
@@ -2248,18 +2249,18 @@ def query_ucsc(
             model=model,
         )
 
-        if not claude_result["success"]:
-            return claude_result
+        if not llm_result["success"]:
+            return llm_result
 
         # Get the full URL from Claude's response
-        query_info = claude_result["data"]
+        query_info = llm_result["data"]
         endpoint = query_info.get("full_url", "")
         description = query_info.get("description", "")
 
         if not endpoint:
             return {
                 "error": "Failed to generate a valid endpoint from the prompt",
-                "claude_response": claude_result.get("raw_response", "No response"),
+                "claude_response": llm_result.get("raw_response", "No response"),
             }
 
     else:
@@ -2352,7 +2353,7 @@ def query_ensembl(
         """
 
         # Query Claude to generate the API call
-        claude_result = _query_claude_for_api(
+        llm_result = _query_llm_for_api(
             prompt=prompt,
             schema=ensembl_schema,
             system_template=system_template,
@@ -2360,11 +2361,11 @@ def query_ensembl(
             model=model,
         )
 
-        if not claude_result["success"]:
-            return claude_result
+        if not llm_result["success"]:
+            return llm_result
 
         # Get the endpoint and parameters from Claude's response
-        query_info = claude_result["data"]
+        query_info = llm_result["data"]
         endpoint = query_info.get("endpoint", "")
         params = query_info.get("params", {})
         description = query_info.get("description", "")
@@ -2372,7 +2373,7 @@ def query_ensembl(
         if not endpoint:
             return {
                 "error": "Failed to generate a valid endpoint from the prompt",
-                "claude_response": claude_result.get("raw_response", "No response"),
+                "claude_response": llm_result.get("raw_response", "No response"),
             }
     else:
         # Process provided endpoint
@@ -2475,7 +2476,7 @@ def query_opentarget_genetics(
         """
 
         # Query Claude to generate the API call
-        claude_result = _query_claude_for_api(
+        llm_result = _query_llm_for_api(
             prompt=prompt,
             schema=opentarget_schema,
             system_template=system_template,
@@ -2483,11 +2484,11 @@ def query_opentarget_genetics(
             model=model,
         )
 
-        if not claude_result["success"]:
-            return claude_result
+        if not llm_result["success"]:
+            return llm_result
 
         # Get the query and variables from Claude's response
-        query_info = claude_result["data"]
+        query_info = llm_result["data"]
         query = query_info.get("query", "")
         if variables is None:  # Only use Claude's variables if none provided
             variables = query_info.get("variables", {})
@@ -2495,7 +2496,7 @@ def query_opentarget_genetics(
         if not query:
             return {
                 "error": "Failed to generate a valid GraphQL query from the prompt",
-                "claude_response": claude_result.get("raw_response", "No response"),
+                "claude_response": llm_result.get("raw_response", "No response"),
             }
 
     # Execute the GraphQL query
@@ -2582,7 +2583,7 @@ def query_opentarget(
         """
 
         # Query Claude to generate the API call
-        claude_result = _query_claude_for_api(
+        llm_result = _query_llm_for_api(
             prompt=prompt,
             schema=opentarget_schema,
             system_template=system_template,
@@ -2590,11 +2591,11 @@ def query_opentarget(
             model=model,
         )
 
-        if not claude_result["success"]:
-            return claude_result
+        if not llm_result["success"]:
+            return llm_result
 
         # Get the query and variables from Claude's response
-        query_info = claude_result["data"]
+        query_info = llm_result["data"]
         query = query_info.get("query", "")
         if variables is None:  # Only use Claude's variables if none provided
             variables = query_info.get("variables", {})
@@ -2602,7 +2603,7 @@ def query_opentarget(
         if not query:
             return {
                 "error": "Failed to generate a valid GraphQL query from the prompt",
-                "claude_response": claude_result.get("raw_response", "No response"),
+                "claude_response": llm_result.get("raw_response", "No response"),
             }
 
     # Execute the GraphQL query
@@ -2688,7 +2689,7 @@ def query_gwas_catalog(
         """
 
         # Query Claude to generate the API call
-        claude_result = _query_claude_for_api(
+        llm_result = _query_llm_for_api(
             prompt=prompt,
             schema=gwas_schema,
             system_template=system_template,
@@ -2696,11 +2697,11 @@ def query_gwas_catalog(
             model=model,
         )
 
-        if not claude_result["success"]:
-            return claude_result
+        if not llm_result["success"]:
+            return llm_result
 
         # Get the endpoint and parameters from Claude's response
-        query_info = claude_result["data"]
+        query_info = llm_result["data"]
         endpoint = query_info.get("endpoint", "")
         params = query_info.get("params", {})
         description = query_info.get("description", "")
@@ -2708,7 +2709,7 @@ def query_gwas_catalog(
         if not endpoint:
             return {
                 "error": "Failed to generate a valid endpoint from the prompt",
-                "claude_response": claude_result.get("raw_response", "No response"),
+                "claude_response": llm_result.get("raw_response", "No response"),
             }
     else:
         if endpoint is None:
@@ -2794,7 +2795,7 @@ def query_gnomad(
         """
 
         # Query Claude to generate the API call
-        claude_result = _query_claude_for_api(
+        llm_result = _query_llm_for_api(
             prompt=prompt,
             schema=gnomad_schema,
             system_template=system_template,
@@ -2802,17 +2803,17 @@ def query_gnomad(
             model=model,
         )
 
-        if not claude_result["success"]:
-            return claude_result
+        if not llm_result["success"]:
+            return llm_result
 
         # Get the gene symbol from Claude's response
-        query_info = claude_result["data"]
+        query_info = llm_result["data"]
         query_str = query_info.get("query", "")
 
         if not query_str:
             return {
                 "error": "Failed to extract a valid query from the prompt",
-                "claude_response": claude_result.get("raw_response", "No response"),
+                "claude_response": llm_result.get("raw_response", "No response"),
             }
     else:
         description = f"Query gnomAD for variants in {gene_symbol}"
@@ -3011,7 +3012,7 @@ def query_reactome(
         """
 
         # Query Claude to generate the API call
-        claude_result = _query_claude_for_api(
+        llm_result = _query_llm_for_api(
             prompt=prompt,
             schema=reactome_schema,
             system_template=system_template,
@@ -3019,11 +3020,11 @@ def query_reactome(
             model=model,
         )
 
-        if not claude_result["success"]:
-            return claude_result
+        if not llm_result["success"]:
+            return llm_result
 
         # Get the endpoint and parameters from Claude's response
-        query_info = claude_result["data"]
+        query_info = llm_result["data"]
         endpoint = query_info.get("endpoint", "")
         base = query_info.get("base", "content")  # Default to ContentService
         params = query_info.get("params", {})
@@ -3033,7 +3034,7 @@ def query_reactome(
         if not endpoint:
             return {
                 "error": "Failed to generate a valid endpoint from the prompt",
-                "claude_response": claude_result.get("raw_response", "No response"),
+                "claude_response": llm_result.get("raw_response", "No response"),
             }
     else:
         # Process provided endpoint
@@ -3159,7 +3160,7 @@ def query_regulomedb(
         """
 
         # Query Claude to generate the API call
-        claude_result = _query_claude_for_api(
+        llm_result = _query_llm_for_api(
             prompt=prompt,
             schema=None,
             system_template=system_template,
@@ -3167,17 +3168,17 @@ def query_regulomedb(
             model=model,
         )
 
-        if not claude_result["success"]:
-            return claude_result
+        if not llm_result["success"]:
+            return llm_result
 
         # Get the variant or coordinates from Claude's response
-        query_info = claude_result["data"]
+        query_info = llm_result["data"]
         endpoint = query_info.get("endpoint", "")
 
         if not endpoint:
             return {
                 "error": "Failed to extract a valid variant ID or coordinates from the prompt",
-                "claude_response": claude_result.get("raw_response", "No response"),
+                "claude_response": llm_result.get("raw_response", "No response"),
             }
     else:
         pass
@@ -3261,7 +3262,7 @@ def query_pride(
         """
 
         # Query Claude to generate the API call
-        claude_result = _query_claude_for_api(
+        llm_result = _query_llm_for_api(
             prompt=prompt,
             schema=pride_schema,
             system_template=system_template,
@@ -3269,11 +3270,11 @@ def query_pride(
             model=model,
         )
 
-        if not claude_result["success"]:
-            return claude_result
+        if not llm_result["success"]:
+            return llm_result
 
         # Get the endpoint and parameters from Claude's response
-        query_info = claude_result["data"]
+        query_info = llm_result["data"]
         endpoint = query_info.get("endpoint", "")
         params = query_info.get("params", {})
         description = query_info.get("description", "")
@@ -3281,7 +3282,7 @@ def query_pride(
         if not endpoint:
             return {
                 "error": "Failed to generate a valid endpoint from the prompt",
-                "claude_response": claude_result.get("raw_response", "No response"),
+                "claude_response": llm_result.get("raw_response", "No response"),
             }
     else:
         # Process provided endpoint
@@ -3367,7 +3368,7 @@ def query_gtopdb(
         """
 
         # Query Claude to generate the API call
-        claude_result = _query_claude_for_api(
+        llm_result = _query_llm_for_api(
             prompt=prompt,
             schema=gtopdb_schema,
             system_template=system_template,
@@ -3375,18 +3376,18 @@ def query_gtopdb(
             model=model,
         )
 
-        if not claude_result["success"]:
-            return claude_result
+        if not llm_result["success"]:
+            return llm_result
 
         # Get the endpoint and parameters from Claude's response
-        query_info = claude_result["data"]
+        query_info = llm_result["data"]
         endpoint = query_info.get("endpoint", "")
         description = query_info.get("description", "")
 
         if not endpoint:
             return {
                 "error": "Failed to generate a valid endpoint from the prompt",
-                "claude_response": claude_result.get("raw_response", "No response"),
+                "claude_response": llm_result.get("raw_response", "No response"),
             }
     else:
         # Process provided endpoint
@@ -3640,7 +3641,7 @@ def query_remap(
         """
 
         # Query Claude to generate the API call
-        claude_result = _query_claude_for_api(
+        llm_result = _query_llm_for_api(
             prompt=prompt,
             schema=remap_schema,
             system_template=system_template,
@@ -3648,18 +3649,18 @@ def query_remap(
             model=model,
         )
 
-        if not claude_result["success"]:
-            return claude_result
+        if not llm_result["success"]:
+            return llm_result
 
         # Get the endpoint and parameters from Claude's response
-        query_info = claude_result["data"]
+        query_info = llm_result["data"]
         endpoint = query_info.get("endpoint", "")
         description = query_info.get("description", "")
 
         if not endpoint:
             return {
                 "error": "Failed to generate a valid endpoint from the prompt",
-                "claude_response": claude_result.get("raw_response", "No response"),
+                "claude_response": llm_result.get("raw_response", "No response"),
             }
     else:
         # Process provided endpoint
@@ -3747,7 +3748,7 @@ def query_mpd(
         """
 
         # Query Claude to generate the API call
-        claude_result = _query_claude_for_api(
+        llm_result = _query_llm_for_api(
             prompt=prompt,
             schema=mpd_schema,
             system_template=system_template,
@@ -3755,18 +3756,18 @@ def query_mpd(
             model=model,
         )
 
-        if not claude_result["success"]:
-            return claude_result
+        if not llm_result["success"]:
+            return llm_result
 
         # Get the endpoint and parameters from Claude's response
-        query_info = claude_result["data"]
+        query_info = llm_result["data"]
         endpoint = query_info.get("endpoint", "")
         description = query_info.get("description", "")
 
         if not endpoint:
             return {
                 "error": "Failed to generate a valid endpoint from the prompt",
-                "claude_response": claude_result.get("raw_response", "No response"),
+                "claude_response": llm_result.get("raw_response", "No response"),
             }
     else:
         # Process provided endpoint
@@ -3856,7 +3857,7 @@ def query_emdb(
         """
 
         # Query Claude to generate the API call
-        claude_result = _query_claude_for_api(
+        llm_result = _query_llm_for_api(
             prompt=prompt,
             schema=emdb_schema,
             system_template=system_template,
@@ -3864,11 +3865,11 @@ def query_emdb(
             model=model,
         )
 
-        if not claude_result["success"]:
-            return claude_result
+        if not llm_result["success"]:
+            return llm_result
 
         # Get the endpoint and parameters from Claude's response
-        query_info = claude_result["data"]
+        query_info = llm_result["data"]
         endpoint = query_info.get("endpoint", "")
         params = query_info.get("params", {})
         description = query_info.get("description", "")
@@ -3876,7 +3877,7 @@ def query_emdb(
         if not endpoint:
             return {
                 "error": "Failed to generate a valid endpoint from the prompt",
-                "claude_response": claude_result.get("raw_response", "No response"),
+                "claude_response": llm_result.get("raw_response", "No response"),
             }
     else:
         # Process provided endpoint

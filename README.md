@@ -49,11 +49,12 @@ pip install biomni --upgrade
 
 Or install from the github source version.
 
-Lastly, configure your API keys in bash profile `~/.bashrc`:
+Lastly, configure your API keys in bash profile `~/.bashrc` (at least one is required):
 
 ```bash
-export ANTHROPIC_API_KEY="YOUR_API_KEY"
-export OPENAI_API_KEY="YOUR_API_KEY" # optional if you just use Claude
+export OPENAI_API_KEY="YOUR_API_KEY"        # For OpenAI models (recommended)
+export ANTHROPIC_API_KEY="YOUR_API_KEY"     # For Claude models  
+# Or configure custom endpoint variables as needed
 ```
 
 ### Basic Usage
@@ -64,7 +65,20 @@ Once inside the environment, you can start using Biomni:
 from biomni.agent import A1
 
 # Initialize the agent with data path, Data lake will be automatically downloaded on first run (~11GB)
-agent = A1(path='./data', llm='claude-sonnet-4-20250514')
+# Uses OpenAI GPT-4o by default
+agent = A1(path='./data')
+
+# Or specify a different model
+agent = A1(path='./data', llm='claude-3-5-sonnet-20241022')  # Anthropic Claude
+agent = A1(path='./data', llm='llama3:8b')                   # Ollama local model
+
+# Or use a custom API endpoint
+agent = A1(
+    path='./data', 
+    llm='custom-model-name',
+    base_url='http://localhost:8000/v1',
+    api_key='your-api-key'
+)
 
 # Execute biomedical tasks using natural language
 agent.go("Plan a CRISPR screen to identify genes that regulate T cell exhaustion, generate 32 genes that maximize the perturbation effect.")

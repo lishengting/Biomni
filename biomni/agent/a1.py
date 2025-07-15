@@ -38,7 +38,7 @@ class A1:
     def __init__(
         self,
         path="./data",
-        llm="claude-sonnet-4-20250514",
+        llm="gpt-4o",
         use_tool_retriever=True,
         timeout_seconds=600,
         base_url: str | None = None,

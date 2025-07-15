@@ -11,7 +11,7 @@ Biomni is a general-purpose biomedical AI agent that combines LLM reasoning with
 ### Prerequisites
 - Python ≥3.11
 - Conda environment manager
-- API keys: ANTHROPIC_API_KEY (required), OPENAI_API_KEY (optional)
+- API keys: At least one of OPENAI_API_KEY, ANTHROPIC_API_KEY, or custom API endpoint
 
 ### Quick Setup
 ```bash
@@ -93,8 +93,22 @@ The project excludes test files in pyproject.toml but has no formal test suite c
 ```python
 from biomni.agent import A1
 
-# Initialize with data path (auto-downloads ~11GB on first run)
-agent = A1(path='./data', llm='claude-sonnet-4-20250514')
+# Initialize with default OpenAI model (auto-downloads ~11GB on first run)
+agent = A1(path='./data')
+
+# Or specify a different model
+agent = A1(path='./data', llm='claude-3-5-sonnet-20241022')  # Anthropic
+agent = A1(path='./data', llm='gpt-4o')  # OpenAI  
+agent = A1(path='./data', llm='llama3:8b')  # Ollama
+
+# Or use a custom API endpoint (e.g., local model server)
+agent = A1(
+    path='./data', 
+    llm='custom-model-name',
+    base_url='http://localhost:8000/v1',
+    api_key='your-api-key',
+    source='Custom'
+)
 
 # Execute tasks using natural language
 agent.go("Your biomedical research task here")
