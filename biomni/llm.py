@@ -51,7 +51,12 @@ def get_llm(
 
     # Create appropriate model based on source
     if source == "OpenAI":
-        return ChatOpenAI(model=model, temperature=temperature, stop_sequences=stop_sequences)
+        kwargs = {"model": model, "temperature": temperature, "stop_sequences": stop_sequences}
+        if base_url:
+            kwargs["base_url"] = base_url
+        if api_key and api_key != "EMPTY":
+            kwargs["api_key"] = api_key
+        return ChatOpenAI(**kwargs)
     elif source == "AzureOpenAI":
         API_VERSION = "2024-12-01-preview"
         return AzureChatOpenAI(
@@ -81,10 +86,15 @@ def get_llm(
     elif source == "Custom":
         # Custom LLM serving such as SGLang. Must expose an openai compatible API.
         assert base_url is not None, "base_url must be provided for customly served LLMs"
-        llm = ChatOpenAI(model=model, temperature=temperature, max_tokens=8192, stop_sequences=stop_sequences)
-        llm.client = openai.Client(base_url=base_url, api_key=api_key).chat.completions
-        return llm
+        return ChatOpenAI(
+            model=model, 
+            temperature=temperature, 
+            max_tokens=8192, 
+            stop_sequences=stop_sequences,
+            base_url=base_url,
+            api_key=api_key
+        )
     else:
         raise ValueError(
-            f"Invalid source: {source}. Valid options are 'OpenAI', 'AzureOpenAI', 'Anthropic', 'Gemini', or 'Ollama'"
+            f"Invalid source: {source}. Valid options are 'OpenAI', 'AzureOpenAI', 'Anthropic', 'Gemini', 'Ollama', or 'Custom'"
         )
