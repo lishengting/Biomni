@@ -29,6 +29,14 @@ RUN apt-get update && apt-get install -y \
     libfreetype6-dev libtiff5-dev libcairo2-dev \
     libpango1.0-dev libblas-dev liblapack-dev \
     libgsl-dev libhdf5-dev libnetcdf-dev \
+    # 生物信息学命令行工具（对应bio_env.yml中的conda包）
+    samtools bcftools bedtools fastqc bowtie2 bwa \
+    # 序列分析工具
+    blast2 ncbi-blast+ \
+    # 序列比对工具  
+    mafft \
+    # 质量控制工具
+    trimmomatic \
     # 其他依赖
     jq unzip zip bzip2 gzip \
     gosu \
@@ -39,6 +47,10 @@ RUN apt-get update && apt-get install -y \
 # 创建biomni用户
 RUN useradd -u 1005 -m -s /bin/bash biomni && \
     chown -R biomni:biomni /opt/biomni
+
+# 创建工具目录并设置权限（在切换到biomni用户之前）
+RUN mkdir -p /opt/biomni_tools/bin && \
+    chown -R biomni:biomni /opt/biomni_tools
 
 # 切换到biomni用户
 USER biomni
@@ -80,8 +92,7 @@ RUN . /opt/biomni/venv/bin/activate && \
 # 开发模式安装biomni源码
 # RUN /opt/biomni/venv/bin/pip install -e /opt/biomni
 
-# 创建工具目录
-RUN mkdir -p /opt/biomni_tools/bin
+# 工具目录已在前面创建并设置权限
 
 # 复制CLI工具安装脚本
 COPY --chown=biomni:biomni install_cli_tools.sh /opt/biomni/
@@ -94,24 +105,26 @@ RUN cd /opt/biomni && \
     # 设置环境变量
     export BIOMNI_TOOLS_DIR="/opt/biomni_tools" && \
     export BIOMNI_AUTO_INSTALL=1 && \
+    # 创建临时工作目录
+    mkdir -p /opt/biomni/tmp_build && \
     # 安装PLINK2
-    wget -O /tmp/plink2.zip "https://s3.amazonaws.com/plink2-assets/alpha6/plink2_linux_avx2_20250129.zip" && \
-    unzip /tmp/plink2.zip -d /tmp/ && \
-    cp /tmp/plink2 /opt/biomni_tools/bin/ && \
+    wget -O /opt/biomni/tmp_build/plink2.zip "https://s3.amazonaws.com/plink2-assets/alpha6/plink2_linux_avx2_20250129.zip" && \
+    unzip /opt/biomni/tmp_build/plink2.zip -d /opt/biomni/tmp_build/ && \
+    cp /opt/biomni/tmp_build/plink2 /opt/biomni_tools/bin/ && \
     chmod +x /opt/biomni_tools/bin/plink2 && \
     # 安装IQ-TREE
-    wget -O /tmp/iqtree.tar.gz "https://github.com/iqtree/iqtree2/releases/download/v2.2.2.7/iqtree-2.2.2.7-Linux.tar.gz" && \
-    tar -xzf /tmp/iqtree.tar.gz -C /tmp/ && \
-    cp /tmp/iqtree-2.2.2.7-Linux/bin/iqtree2 /opt/biomni_tools/bin/ && \
+    wget -O /opt/biomni/tmp_build/iqtree.tar.gz "https://github.com/iqtree/iqtree2/releases/download/v2.2.2.7/iqtree-2.2.2.7-Linux.tar.gz" && \
+    tar -xzf /opt/biomni/tmp_build/iqtree.tar.gz -C /opt/biomni/tmp_build/ && \
+    cp /opt/biomni/tmp_build/iqtree-2.2.2.7-Linux/bin/iqtree2 /opt/biomni_tools/bin/ && \
     chmod +x /opt/biomni_tools/bin/iqtree2 && \
     # 安装GCTA
-    wget -O /tmp/gcta.zip "https://yanglab.westlake.edu.cn/software/gcta/bin/gcta-1.94.4-linux-kernel-3-x86_64.zip" && \
-    unzip /tmp/gcta.zip -d /tmp/ && \
-    cp /tmp/gcta64 /opt/biomni_tools/bin/ && \
+    wget -O /opt/biomni/tmp_build/gcta.zip "https://yanglab.westlake.edu.cn/software/gcta/bin/gcta-1.94.4-linux-kernel-3-x86_64.zip" && \
+    unzip /opt/biomni/tmp_build/gcta.zip -d /opt/biomni/tmp_build/ && \
+    cp /opt/biomni/tmp_build/gcta64 /opt/biomni_tools/bin/ && \
     chmod +x /opt/biomni_tools/bin/gcta64 && \
     # 安装FastTree
-    wget -O /tmp/FastTree.c "https://morgannprice.github.io/fasttree/FastTree.c" && \
-    gcc -O3 -finline-functions -funroll-loops -Wall -o /opt/biomni_tools/bin/FastTree /tmp/FastTree.c -lm && \
+    wget -O /opt/biomni/tmp_build/FastTree.c "https://morgannprice.github.io/fasttree/FastTree.c" && \
+    gcc -O3 -finline-functions -funroll-loops -Wall -o /opt/biomni_tools/bin/FastTree /opt/biomni/tmp_build/FastTree.c -lm && \
     chmod +x /opt/biomni_tools/bin/FastTree && \
     # 安装MUSCLE
     wget -O /opt/biomni_tools/bin/muscle "https://github.com/rcedgar/muscle/releases/download/v5.3/muscle-linux-x86.v5.3" && \
@@ -124,7 +137,7 @@ RUN cd /opt/biomni && \
     # 创建HOMER的符号链接
     ln -sf /opt/biomni_tools/homer/bin/* /opt/biomni_tools/bin/ && \
     # 清理临时文件
-    rm -rf /tmp/*
+    rm -rf /opt/biomni/tmp_build
 
 # 安装R包
 RUN Rscript -e "install.packages(c('ggplot2', 'dplyr', 'tidyr', 'readr', 'stringr', 'Matrix', 'Rcpp', 'devtools', 'remotes', 'harmony'), repos='https://cran.rstudio.com/')" && \
@@ -158,7 +171,7 @@ ENV HOMER="/opt/biomni_tools/homer"
 # 暴露Jupyter和Gradio端口
 EXPOSE 8888 7860
 
-# 设置入口点
+# 设置入口点（脚本通过docker-compose.yml挂载）
 ENTRYPOINT ["/opt/biomni/start.sh"]
 
 # 默认命令
