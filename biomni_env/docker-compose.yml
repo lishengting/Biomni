@@ -24,7 +24,7 @@ services:
         echo 'Starting Jupyter Notebook...' &&
         jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --allow-root --NotebookApp.token='' --NotebookApp.password='' --NotebookApp.allow_origin='*' --notebook-dir=/opt/biomni/notebooks &
         echo 'Starting Gradio App...' &&
-        cd /opt/biomni && python gradio_app.py &
+        cd /opt/biomni && python scripts/gradio_app.py &
         echo 'Services started successfully!' &&
         echo 'Jupyter Notebook: http://0.0.0.0:8888' &&
         echo 'Gradio App: http://0.0.0.0:7860' &&
@@ -59,7 +59,7 @@ services:
         echo 'Starting Jupyter Notebook...' &&
         jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --allow-root --NotebookApp.token='' --NotebookApp.password='' --NotebookApp.allow_origin='*' --notebook-dir=/opt/biomni/notebooks &
         echo 'Starting Gradio App...' &&
-        cd /opt/biomni && python gradio_app.py &
+        cd /opt/biomni && python scripts/gradio_app.py &
         echo 'Services started successfully!' &&
         echo 'Jupyter Notebook: http://0.0.0.0:8889' &&
         echo 'Gradio App: http://0.0.0.0:7861' &&
@@ -93,7 +93,7 @@ services:
         echo 'Starting Jupyter Notebook...' &&
         jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --allow-root --NotebookApp.token='' --NotebookApp.password='' --NotebookApp.allow_origin='*' --notebook-dir=/opt/biomni/notebooks &
         echo 'Starting Gradio App...' &&
-        cd /opt/biomni && python gradio_app.py &
+        cd /opt/biomni && python scripts/gradio_app.py &
         echo 'Services started successfully!' &&
         echo 'Jupyter Notebook: http://0.0.0.0:8890' &&
         echo 'Gradio App: http://0.0.0.0:7862' &&
