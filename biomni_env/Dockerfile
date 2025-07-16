@@ -59,6 +59,9 @@ USER biomni
 RUN python3 -m venv /opt/biomni/venv
 ENV PATH="/opt/biomni/venv/bin:$PATH"
 
+RUN . /opt/biomni/venv/bin/activate && \
+    pip install --upgrade pip
+
 # 复制pip配置文件
 COPY --chown=biomni:biomni pip.conf /opt/biomni/
 
