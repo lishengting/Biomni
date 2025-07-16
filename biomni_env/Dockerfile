@@ -40,11 +40,16 @@ RUN apt-get update && apt-get install -y \
     apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# 安装R环境
+# 安装R环境（R 4.4+）
 RUN apt-get update && apt-get install -y \
-    r-base r-base-dev \
+    software-properties-common dirmngr apt-transport-https ca-certificates gnupg && \
+    # 添加CRAN官方密钥和源
+    wget -qO- https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc | gpg --dearmor -o /usr/share/keyrings/r-project.gpg && \
+    echo "deb [signed-by=/usr/share/keyrings/r-project.gpg] https://cloud.r-project.org/bin/linux/ubuntu jammy-cran40/" | tee -a /etc/apt/sources.list.d/r-project.list && \
+    apt-get update && \
+    apt-get install -y r-base r-base-dev && \
     # 清理缓存
-    && apt-get clean \
+    apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 # 安装生物信息学依赖库
@@ -168,6 +173,10 @@ RUN . /opt/biomni/venv/bin/activate && \
 RUN . /opt/biomni/venv/bin/activate && \
     pip install cyvcf2 pykalman community fanc
 
+# 安装额外的生物信息学工具（对应bio_env.yml中的conda包）
+RUN . /opt/biomni/venv/bin/activate && \
+    pip install gseapy mageck plannotate
+
 # 安装其他工具包
 RUN . /opt/biomni/venv/bin/activate && \
     pip install beautifulsoup4 lxml seaborn networkx requests pyyaml
@@ -222,6 +231,12 @@ RUN cd /opt/biomni && \
     /opt/biomni_tools/bin/configureHomer.pl -install -local /opt/biomni_tools/homer -b && \
     # 创建HOMER的符号链接
     ln -sf /opt/biomni_tools/homer/bin/* /opt/biomni_tools/bin/ && \
+    # 安装BWA（从GitHub克隆源码编译）
+    git clone https://github.com/lh3/bwa.git /opt/biomni/tmp_build/bwa && \
+    cd /opt/biomni/tmp_build/bwa && \
+    make && \
+    cp bwa /opt/biomni_tools/bin/ && \
+    chmod +x /opt/biomni_tools/bin/bwa && \
     # 清理临时文件
     rm -rf /opt/biomni/tmp_build
 
@@ -230,7 +245,7 @@ USER root
 
 ENV MAKEFLAGS="-j16"
 # 安装基础R包（小包）
-RUN Rscript -e "install.packages(c('ggplot2', 'dplyr', 'tidyr', 'readr', 'stringr'), repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/')"
+RUN Rscript -e "install.packages(c('ggplot2', 'dplyr', 'tidyr', 'readr', 'stringr', 'lme4'), repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/')"
 
 # 安装Matrix包（大包，单独安装）
 RUN Rscript -e "install.packages('Matrix', repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/')"
@@ -244,8 +259,9 @@ RUN Rscript -e "install.packages(c('devtools', 'remotes'), repos='https://mirror
 # 安装harmony包（大包，单独安装）
 RUN Rscript -e "install.packages('harmony', repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/')"
 
-# 安装BiocManager
-RUN Rscript -e "if (!require('BiocManager', quietly = TRUE)) install.packages('BiocManager', repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/')"
+# 安装BiocManager并更新到最新版本
+RUN Rscript -e "if (!require('BiocManager', quietly = TRUE)) install.packages('BiocManager', repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/')" && \
+    Rscript -e "BiocManager::install(version = BiocManager::version(), update = TRUE, ask = FALSE)"
 
 # 安装Bioconductor包（大包，分别安装，使用国内镜像）
 RUN Rscript -e "options(BioC_mirror='https://mirrors.westlake.edu.cn/bioconductor', repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/'); BiocManager::install('DESeq2', update = FALSE, ask = FALSE)"
@@ -258,6 +274,10 @@ RUN Rscript -e "options(BioC_mirror='https://mirrors.westlake.edu.cn/bioconducto
 
 # 安装WGCNA包（大包，单独安装）
 RUN Rscript -e "install.packages('WGCNA', repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/')"
+
+# 安装WGCNA的依赖包（确保WGCNA正常工作）
+RUN Rscript -e "install.packages(c('dynamicTreeCut', 'fastcluster', 'matrixStats', 'Hmisc', 'foreach', 'doParallel'), repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/')" && \
+    Rscript -e "options(BioC_mirror='https://mirrors.westlake.edu.cn/bioconductor', repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/'); BiocManager::install(c('impute', 'preprocessCore', 'GO.db', 'AnnotationDbi'), update = FALSE, ask = FALSE)"
 
 # 切换回biomni用户
 USER biomni
