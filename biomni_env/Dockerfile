@@ -30,10 +30,12 @@ RUN apt-get update && apt-get install -y \
     software-properties-common && \
     add-apt-repository ppa:deadsnakes/ppa && \
     apt-get update && \
-    apt-get install -y python3.11 python3.11-pip python3.11-dev python3.11-venv python3.11-distutils && \
+    apt-get install -y python3.11 python3.11-dev python3.11-venv python3.11-distutils && \
     # 创建Python 3.11的符号链接
     update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 && \
     update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1 && \
+    # 安装pip（PPA中没有python3.11-pip包，需要使用get-pip.py）
+    curl -sS https://bootstrap.pypa.io/get-pip.py | python3.11 && \
     # 清理缓存
     apt-get clean \
     && rm -rf /var/lib/apt/lists/*
