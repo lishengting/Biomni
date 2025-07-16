@@ -1,0 +1,174 @@
+version: '3.8'
+
+services:
+  # 基础环境（快速启动）- 使用conda环境
+  biomni-basic.1:
+    build:
+      context: .
+      dockerfile: Dockerfile.basic.1
+    container_name: biomni-basic.1
+    ports:
+      - "0.0.0.0:8888:8888"  # Jupyter notebook
+      - "0.0.0.0:7860:7860"  # Gradio
+    volumes:
+      # 完整源码挂载，便于开发
+      - ../:/opt/biomni
+      - biomni_data:/opt/biomni/biomni_data
+      - biomni_cache:/home/biomni/.cache
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+      - JUPYTER_ALLOW_REMOTE_ACCESS=true
+      - PYTHONPATH=/opt/biomni
+    command: >
+      bash -c "
+        echo '激活conda环境...' &&
+        source /opt/miniconda3/etc/profile.d/conda.sh &&
+        conda activate biomni_e1 &&
+        echo '安装biomni包...' &&
+        cd /opt/biomni &&
+        pip install -e . &&
+        echo '启动Jupyter Notebook...' &&
+        jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --allow-root --NotebookApp.token='' --NotebookApp.password='' --NotebookApp.allow_origin='*' --notebook-dir=/opt/biomni/notebooks &
+        echo '启动Gradio App...' &&
+        cd /opt/biomni && python scripts/gradio_app.py &
+        echo '服务启动成功！' &&
+        echo 'Jupyter Notebook: http://localhost:8888' &&
+        echo 'Gradio App: http://localhost:7860' &&
+        wait
+      "
+    networks:
+      - biomni-network
+    profiles:
+      - basic.1
+    restart: unless-stopped
+
+  # 完整环境（包含所有生物信息学工具）- 使用conda环境
+  biomni-full.1:
+    build:
+      context: .
+      dockerfile: Dockerfile.1
+    container_name: biomni-full.1
+    ports:
+      - "0.0.0.0:8889:8888"  # Jupyter notebook
+      - "0.0.0.0:7861:7860"  # Gradio
+    volumes:
+      # 完整源码挂载，便于开发
+      - ../:/opt/biomni
+      - biomni_data:/opt/biomni/biomni_data
+      - biomni_results:/opt/biomni/results
+      - biomni_cache:/home/biomni/.cache
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+      - JUPYTER_ALLOW_REMOTE_ACCESS=true
+      - PYTHONPATH=/opt/biomni
+      - PATH=/opt/miniconda3/envs/biomni_e1/bin:/opt/biomni_tools/bin:$PATH
+    command: >
+      bash -c "
+        echo '激活conda环境...' &&
+        source /opt/miniconda3/etc/profile.d/conda.sh &&
+        conda activate biomni_e1 &&
+        echo '安装biomni包...' &&
+        cd /opt/biomni &&
+        pip install -e . &&
+        echo '启动Jupyter Notebook...' &&
+        jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --allow-root --NotebookApp.token='' --NotebookApp.password='' --NotebookApp.allow_origin='*' --notebook-dir=/opt/biomni/notebooks &
+        echo '启动Gradio App...' &&
+        cd /opt/biomni && python scripts/gradio_app.py &
+        echo '服务启动成功！' &&
+        echo 'Jupyter Notebook: http://localhost:8889' &&
+        echo 'Gradio App: http://localhost:7861' &&
+        echo 'HOMER路径: /opt/biomni_tools/homer' &&
+        echo 'CLI工具路径: /opt/biomni_tools/bin' &&
+        wait
+      "
+    networks:
+      - biomni-network
+    profiles:
+      - full.1
+    restart: unless-stopped
+
+  # 开发环境（挂载源代码）- 使用conda环境
+  biomni-dev.1:
+    build:
+      context: .
+      dockerfile: Dockerfile.basic.1
+    container_name: biomni-dev.1
+    ports:
+      - "0.0.0.0:8890:8888"  # Jupyter notebook
+      - "0.0.0.0:7862:7860"  # Gradio
+    volumes:
+      # 完整源码挂载，便于开发
+      - ../:/opt/biomni
+      - biomni_data:/opt/biomni/biomni_data
+      - biomni_cache:/home/biomni/.cache
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+      - JUPYTER_ALLOW_REMOTE_ACCESS=true
+      - PYTHONPATH=/opt/biomni
+    command: >
+      bash -c "
+        echo '激活conda环境...' &&
+        source /opt/miniconda3/etc/profile.d/conda.sh &&
+        conda activate biomni_e1 &&
+        echo '安装biomni包（开发模式）...' &&
+        cd /opt/biomni &&
+        pip install -e . &&
+        echo '启动Jupyter Notebook...' &&
+        jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --allow-root --NotebookApp.token='' --NotebookApp.password='' --NotebookApp.allow_origin='*' --notebook-dir=/opt/biomni/notebooks &
+        echo '启动Gradio App...' &&
+        cd /opt/biomni && python scripts/gradio_app.py &
+        echo '服务启动成功！' &&
+        echo 'Jupyter Notebook: http://localhost:8890' &&
+        echo 'Gradio App: http://localhost:7862' &&
+        echo '开发环境已就绪！' &&
+        wait
+      "
+    networks:
+      - biomni-network
+    profiles:
+      - dev.1
+    restart: unless-stopped
+
+  # 一键设置环境（运行setup.sh）
+  biomni-setup.1:
+    build:
+      context: .
+      dockerfile: Dockerfile.1
+    container_name: biomni-setup.1
+    volumes:
+      - ../:/opt/biomni
+      - biomni_data:/opt/biomni/biomni_data
+      - biomni_results:/opt/biomni/results
+      - biomni_cache:/home/biomni/.cache
+    environment:
+      - PYTHONPATH=/opt/biomni
+      - NON_INTERACTIVE=1
+    command: >
+      bash -c "
+        echo '开始设置Biomni环境...' &&
+        cd /opt/biomni &&
+        chmod +x biomni_env/setup.sh &&
+        ./biomni_env/setup.sh &&
+        echo '环境设置完成！' &&
+        echo '您现在可以运行：' &&
+        echo 'docker compose --profile basic up' &&
+        echo '或' &&
+        echo 'docker compose --profile full up' &&
+        tail -f /dev/null
+      "
+    networks:
+      - biomni-network
+    profiles:
+      - setup.1
+
+volumes:
+  biomni_data:
+    driver: local
+  biomni_results:
+    driver: local
+  biomni_cache:
+    driver: local
+
+networks:
+  biomni-network:
+    driver: bridge 
