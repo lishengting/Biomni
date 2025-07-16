@@ -175,15 +175,7 @@ RUN . /opt/biomni/venv/bin/activate && \
 
 # 安装额外的生物信息学工具（对应bio_env.yml中的conda包）
 RUN . /opt/biomni/venv/bin/activate && \
-    pip install gseapy mageck plannotate
-
-# 安装其他工具包
-RUN . /opt/biomni/venv/bin/activate && \
-    pip install beautifulsoup4 lxml seaborn networkx requests pyyaml
-
-# 安装Jupyter相关包
-RUN . /opt/biomni/venv/bin/activate && \
-    pip install jupyter notebook ipykernel pytest
+    pip install gseapy plannotate beautifulsoup4 lxml seaborn networkx requests pyyaml jupyter notebook ipykernel pytest
 
 # 开发模式安装biomni源码
 # RUN /opt/biomni/venv/bin/pip install -e /opt/biomni
@@ -244,40 +236,26 @@ RUN cd /opt/biomni && \
 USER root
 
 ENV MAKEFLAGS="-j16"
-# 安装基础R包（小包）
-RUN Rscript -e "install.packages(c('ggplot2', 'dplyr', 'tidyr', 'readr', 'stringr', 'lme4'), repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/')"
-
-# 安装Matrix包（大包，单独安装）
-RUN Rscript -e "install.packages('Matrix', repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/')"
-
-# 安装Rcpp包（大包，单独安装）
-RUN Rscript -e "install.packages('Rcpp', repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/')"
-
-# 安装开发工具包
-RUN Rscript -e "install.packages(c('devtools', 'remotes'), repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/')"
-
-# 安装harmony包（大包，单独安装）
-RUN Rscript -e "install.packages('harmony', repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/')"
-
-# 安装BiocManager并更新到最新版本
-RUN Rscript -e "if (!require('BiocManager', quietly = TRUE)) install.packages('BiocManager', repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/')" && \
-    Rscript -e "BiocManager::install(version = BiocManager::version(), update = TRUE, ask = FALSE)"
-
-# 安装Bioconductor包（大包，分别安装，使用国内镜像）
-RUN Rscript -e "options(BioC_mirror='https://mirrors.westlake.edu.cn/bioconductor', repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/'); BiocManager::install('DESeq2', update = FALSE, ask = FALSE)"
-RUN Rscript -e "options(BioC_mirror='https://mirrors.westlake.edu.cn/bioconductor', repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/'); BiocManager::install('DADA2', update = FALSE, ask = FALSE)"
-RUN Rscript -e "options(BioC_mirror='https://mirrors.westlake.edu.cn/bioconductor', repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/'); BiocManager::install('xcms', update = FALSE, ask = FALSE)"
-RUN Rscript -e "options(BioC_mirror='https://mirrors.westlake.edu.cn/bioconductor', repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/'); BiocManager::install('FlowCore', update = FALSE, ask = FALSE)"
-RUN Rscript -e "options(BioC_mirror='https://mirrors.westlake.edu.cn/bioconductor', repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/'); BiocManager::install('edgeR', update = FALSE, ask = FALSE)"
-RUN Rscript -e "options(BioC_mirror='https://mirrors.westlake.edu.cn/bioconductor', repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/'); BiocManager::install('limma', update = FALSE, ask = FALSE)"
-RUN Rscript -e "options(BioC_mirror='https://mirrors.westlake.edu.cn/bioconductor', repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/'); BiocManager::install('clusterProfiler', update = FALSE, ask = FALSE)"
-
-# 安装WGCNA包（大包，单独安装）
-RUN Rscript -e "install.packages('WGCNA', repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/')"
-
-# 安装WGCNA的依赖包（确保WGCNA正常工作）
-RUN Rscript -e "install.packages(c('dynamicTreeCut', 'fastcluster', 'matrixStats', 'Hmisc', 'foreach', 'doParallel'), repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/')" && \
-    Rscript -e "options(BioC_mirror='https://mirrors.westlake.edu.cn/bioconductor', repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/'); BiocManager::install(c('impute', 'preprocessCore', 'GO.db', 'AnnotationDbi'), update = FALSE, ask = FALSE)"
+# 安装所有R包（合并多个RUN命令）
+RUN Rscript -e "install.packages(c('ggplot2', 'dplyr', 'tidyr', 'readr', 'stringr', 'lme4'), repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/')" && \
+    Rscript -e "install.packages('Matrix', repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/')" && \
+    Rscript -e "install.packages('Rcpp', repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/')" && \
+    Rscript -e "install.packages(c('devtools', 'remotes'), repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/')" && \
+    Rscript -e "install.packages('harmony', repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/')" && \
+    Rscript -e "if (!require('BiocManager', quietly = TRUE)) install.packages('BiocManager', repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/')" && \
+    Rscript -e "BiocManager::install(version = BiocManager::version(), update = TRUE, ask = FALSE)" && \
+    Rscript -e "options(BioC_mirror='https://mirrors.westlake.edu.cn/bioconductor', repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/'); BiocManager::install('DESeq2', update = FALSE, ask = FALSE)" && \
+    Rscript -e "options(BioC_mirror='https://mirrors.westlake.edu.cn/bioconductor', repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/'); BiocManager::install('DADA2', update = FALSE, ask = FALSE)" && \
+    Rscript -e "options(BioC_mirror='https://mirrors.westlake.edu.cn/bioconductor', repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/'); BiocManager::install('xcms', update = FALSE, ask = FALSE)" && \
+    Rscript -e "options(BioC_mirror='https://mirrors.westlake.edu.cn/bioconductor', repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/'); BiocManager::install('FlowCore', update = FALSE, ask = FALSE)" && \
+    Rscript -e "options(BioC_mirror='https://mirrors.westlake.edu.cn/bioconductor', repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/'); BiocManager::install('edgeR', update = FALSE, ask = FALSE)" && \
+    Rscript -e "options(BioC_mirror='https://mirrors.westlake.edu.cn/bioconductor', repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/'); BiocManager::install('limma', update = FALSE, ask = FALSE)" && \
+    Rscript -e "options(BioC_mirror='https://mirrors.westlake.edu.cn/bioconductor', repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/'); BiocManager::install('clusterProfiler', update = FALSE, ask = FALSE)" && \
+    Rscript -e "install.packages('WGCNA', repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/')" && \
+    Rscript -e "install.packages(c('dynamicTreeCut', 'fastcluster', 'matrixStats', 'Hmisc', 'foreach', 'doParallel'), repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/')" && \
+    Rscript -e "options(BioC_mirror='https://mirrors.westlake.edu.cn/bioconductor', repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/'); BiocManager::install(c('impute', 'preprocessCore', 'GO.db', 'AnnotationDbi'), update = FALSE, ask = FALSE)" && \
+    Rscript -e "if (!require('devtools', quietly = TRUE)) install.packages('devtools', repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/')" && \
+    Rscript -e "devtools::install_github('liulab-dfci/MAGeCKFlute')"
 
 # 切换回biomni用户
 USER biomni
