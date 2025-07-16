@@ -74,6 +74,7 @@ RUN . /opt/biomni/venv/bin/activate && \
 
 # 激活虚拟环境并升级pip（使用配置后的pip）
 RUN . /opt/biomni/venv/bin/activate && \
+    pip config list && \
     pip install --upgrade pip setuptools wheel
 
 # 复制环境文件

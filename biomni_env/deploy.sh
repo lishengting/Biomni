@@ -29,9 +29,13 @@ show_help() {
     echo "  shell     - 进入容器shell"
     echo "  help      - 显示此帮助信息"
     echo ""
+    echo "全局选项:"
+    echo "  -p        - 构建时使用 --progress=plain 显示详细输出"
+    echo ""
     echo "示例:"
     echo "  $0 basic           # 启动基础环境"
     echo "  $0 full            # 启动完整环境"
+    echo "  $0 -p build full   # 构建完整环境并显示详细输出"
     echo "  $0 stop basic      # 停止基础环境"
     echo "  $0 stop all        # 停止所有环境"
     echo "  $0 clean full      # 清理完整环境"
@@ -50,17 +54,18 @@ create_directories() {
 # 构建镜像
 build_image() {
     local profile=$1
+    local progress_flag=$2
     echo -e "${YELLOW}构建 $profile 环境镜像...${NC}"
     
     case $profile in
         "basic")
-            docker compose --profile basic build biomni-basic
+            docker compose --profile basic build $progress_flag biomni-basic
             ;;
         "full")
-            docker compose --profile full build biomni-full
+            docker compose --profile full build $progress_flag biomni-full
             ;;
         "dev")
-            docker compose --profile dev build biomni-dev
+            docker compose --profile dev build $progress_flag biomni-dev
             ;;
         *)
             echo -e "${RED}未知的环境类型: $profile${NC}"
@@ -237,7 +242,24 @@ check_docker() {
 main() {
     check_docker
     
-    case $1 in
+    # 检查是否有 -p 参数
+    local progress_flag=""
+    local args=("$@")
+    
+    # 处理 -p 参数
+    for i in "${!args[@]}"; do
+        if [[ "${args[$i]}" == "-p" ]]; then
+            progress_flag="--progress=plain"
+            # 移除 -p 参数
+            unset args[$i]
+            break
+        fi
+    done
+    
+    # 重新构建参数数组
+    args=("${args[@]}")
+    
+    case ${args[0]} in
         "basic")
             start_service "basic"
             ;;
@@ -248,45 +270,45 @@ main() {
             start_service "dev"
             ;;
         "build")
-            if [ -z "$2" ]; then
+            if [ -z "${args[1]}" ]; then
                 echo -e "${RED}请指定要构建的环境: basic, full, 或 dev${NC}"
                 exit 1
             fi
-            build_image "$2"
+            build_image "${args[1]}" "$progress_flag"
             ;;
         "stop")
-            if [ -z "$2" ]; then
+            if [ -z "${args[1]}" ]; then
                 stop_containers "all"
             else
-                stop_containers "$2"
+                stop_containers "${args[1]}"
             fi
             ;;
         "clean")
-            if [ -z "$2" ]; then
+            if [ -z "${args[1]}" ]; then
                 clean_all "all"
             else
-                clean_all "$2"
+                clean_all "${args[1]}"
             fi
             ;;
         "logs")
-            if [ -z "$2" ]; then
+            if [ -z "${args[1]}" ]; then
                 echo -e "${RED}请指定环境类型: basic, full, 或 dev${NC}"
                 exit 1
             fi
-            show_logs "$2"
+            show_logs "${args[1]}"
             ;;
         "shell")
-            if [ -z "$2" ]; then
+            if [ -z "${args[1]}" ]; then
                 echo -e "${RED}请指定环境类型: basic, full, 或 dev${NC}"
                 exit 1
             fi
-            enter_shell "$2"
+            enter_shell "${args[1]}"
             ;;
         "help"|"-h"|"--help"|"")
             show_help
             ;;
         *)
-            echo -e "${RED}未知选项: $1${NC}"
+            echo -e "${RED}未知选项: ${args[0]}${NC}"
             show_help
             exit 1
             ;;
