@@ -1,0 +1,88 @@
+# Git相关
+.git
+.gitignore
+.gitattributes
+
+# Python相关
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+env
+pip-log.txt
+pip-delete-this-directory.txt
+.tox
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+.git
+.mypy_cache
+.pytest_cache
+.hypothesis
+
+# Jupyter相关
+.ipynb_checkpoints
+
+# IDE相关
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# 操作系统相关
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# 临时文件
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# 日志文件
+*.log
+logs/
+
+# 数据文件（避免复制大文件）
+data/
+results/
+notebooks/
+*.csv
+*.tsv
+*.txt
+*.fastq
+*.fasta
+*.bam
+*.vcf
+
+# 构建相关
+build/
+dist/
+*.egg-info/
+
+# 测试相关
+tests/
+test_*
+*_test.py
+
+# 文档相关
+docs/
+*.md
+README*
+
+# 其他
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log* 
