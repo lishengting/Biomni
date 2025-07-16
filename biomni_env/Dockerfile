@@ -13,13 +13,20 @@ ENV LC_ALL=C.UTF-8
 # 设置工作目录
 WORKDIR /opt/biomni
 
-# 安装系统依赖
+# 安装基础工具和编译环境
 RUN apt-get update && apt-get install -y \
     # 基础工具
     wget curl git vim nano htop \
     # 编译工具
     build-essential gcc g++ make cmake \
-    # Python 3.11相关
+    # 其他基础依赖
+    jq unzip zip bzip2 gzip \
+    # 清理缓存
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# 安装Python 3.11（需要添加PPA）
+RUN apt-get update && apt-get install -y \
     software-properties-common && \
     add-apt-repository ppa:deadsnakes/ppa && \
     apt-get update && \
@@ -27,25 +34,46 @@ RUN apt-get update && apt-get install -y \
     # 创建Python 3.11的符号链接
     update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 && \
     update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1 && \
-    # R相关
+    # 清理缓存
+    apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# 安装R环境
+RUN apt-get update && apt-get install -y \
     r-base r-base-dev \
-    # 生物信息学依赖
-    libz-dev libbz2-dev liblzma-dev libcurl4-openssl-dev \
-    libssl-dev libxml2-dev libpng-dev libjpeg-dev \
-    libfreetype6-dev libtiff5-dev libcairo2-dev \
-    libpango1.0-dev libblas-dev liblapack-dev \
-    libgsl-dev libhdf5-dev libnetcdf-dev \
-    # 生物信息学命令行工具（对应bio_env.yml中的conda包）
-    samtools bcftools bedtools fastqc bowtie2 bwa \
+    # 清理缓存
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# 安装生物信息学依赖库
+RUN apt-get update && apt-get install -y \
+    # 压缩库
+    libz-dev libbz2-dev liblzma-dev \
+    # 网络和加密库
+    libcurl4-openssl-dev libssl-dev \
+    # XML和图像库
+    libxml2-dev libpng-dev libjpeg-dev \
+    libfreetype6-dev libtiff5-dev \
+    # 图形库
+    libcairo2-dev libpango1.0-dev \
+    # 数学库
+    libblas-dev liblapack-dev libgsl-dev \
+    # 科学计算库
+    libhdf5-dev libnetcdf-dev \
+    # 清理缓存
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# 安装生物信息学命令行工具
+RUN apt-get update && apt-get install -y \
     # 序列分析工具
+    samtools bcftools bedtools fastqc bowtie2 bwa \
+    # NCBI工具
     ncbi-tools-bin ncbi-blast+ \
     # 序列比对工具  
     mafft \
     # 质量控制工具
     trimmomatic \
-    # 其他依赖
-    jq unzip zip bzip2 gzip \
-    gosu \
     # 清理缓存
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
@@ -231,24 +259,6 @@ RUN Rscript -e "install.packages('WGCNA', repos='https://mirrors.tuna.tsinghua.e
 
 # 切换回biomni用户
 USER biomni
-
-# 创建启动脚本
-# RUN echo '#!/bin/bash' > /opt/biomni/start.sh && \
-#     echo 'export PATH="/opt/biomni_tools/bin:$PATH"' >> /opt/biomni/start.sh && \
-#     echo 'export PATH="/opt/biomni/venv/bin:$PATH"' >> /opt/biomni/start.sh && \
-#     echo 'export HOMER="/opt/biomni_tools/homer"' >> /opt/biomni/start.sh && \
-#     echo 'echo "Biomni environment activated!"' >> /opt/biomni/start.sh && \
-#     echo 'echo "Available tools:"' >> /opt/biomni/start.sh && \
-#     echo 'ls -la /opt/biomni_tools/bin/' >> /opt/biomni/start.sh && \
-#     echo 'echo "Python packages:"' >> /opt/biomni/start.sh && \
-#     echo 'pip list' >> /opt/biomni/start.sh && \
-#     echo 'echo "Switching to biomni user..."' >> /opt/biomni/start.sh && \
-#     echo 'exec gosu biomni "$@"' >> /opt/biomni/start.sh && \
-#     chmod +x /opt/biomni/start.sh
-
-# 拷贝通用脚本
-#COPY --chown=biomni:biomni scripts/ /opt/biomni/scripts/
-#RUN chmod +x /opt/biomni/scripts/start.sh
 
 # 设置环境变量
 #ENV PATH="/opt/biomni/venv/bin:$PATH"
