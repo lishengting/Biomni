@@ -78,14 +78,14 @@ USER biomni
 #     echo '    demo.launch(server_name="0.0.0.0", server_port=7860, share=False)' >> /opt/biomni/gradio_app.py
 
 # 拷贝通用脚本（在创建用户后，确保权限正确）
-COPY --chown=biomni:biomni scripts/ /opt/biomni/scripts/
+#COPY --chown=biomni:biomni scripts/ /opt/biomni/scripts/
 #RUN chmod +x /opt/biomni/scripts/start.sh
 
 # 暴露Jupyter和Gradio端口
 EXPOSE 8888 7860
 
 # 设置入口点（使用bash执行，避免权限问题）
-ENTRYPOINT ["/bin/bash", "/opt/biomni/scripts/start.sh"]
+#ENTRYPOINT ["/bin/bash", "/opt/biomni/scripts/start.sh"]
 
 # 默认命令
 CMD ["/bin/bash"] 

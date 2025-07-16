@@ -12,8 +12,7 @@ services:
       - "0.0.0.0:7860:7860"  # Gradio
     volumes:
       - ../:/opt/biomni
-      - ./downloads:/opt/biomni/downloads # 见鬼了，这里必须有，Dockerfile里也必须拷贝 COPY --chown=biomni:biomni downloads/ /opt/biomni/downloads/ 为什么呢？？？
-      - ./scripts:/opt/biomni/scripts     # 见鬼了，这里必须有，Dockerfile里也必须拷贝 COPY --chown=biomni:biomni scripts/ /opt/biomni/scripts/ 为什么呢？？？
+      - ./scripts:/opt/biomni/scripts     # 放这里，../:/opt/biomni 覆盖了/opt/biomni/scripts
       - ./data:/opt/biomni/data
       - ./notebooks:/opt/biomni/notebooks
     environment:
@@ -46,8 +45,7 @@ services:
       - "0.0.0.0:7861:7860"  # Gradio
     volumes:
       - ../:/opt/biomni
-      - ./downloads:/opt/biomni/downloads # 见鬼了，这里必须有，Dockerfile里也必须拷贝 COPY --chown=biomni:biomni downloads/ /opt/biomni/downloads/ 为什么呢？？？
-      - ./scripts:/opt/biomni/scripts     # 见鬼了，这里必须有，Dockerfile里也必须拷贝 COPY --chown=biomni:biomni scripts/ /opt/biomni/scripts/ 为什么呢？？？
+      - ./scripts:/opt/biomni/scripts       # 放这里，../:/opt/biomni 覆盖了/opt/biomni/scripts
       - ./data:/opt/biomni/data
       - ./notebooks:/opt/biomni/notebooks
       - ./results:/opt/biomni/results
@@ -56,6 +54,8 @@ services:
       - JUPYTER_ALLOW_REMOTE_ACCESS=true
     command: >
       bash -c "
+        source /opt/biomni/venv/bin/activate
+
         echo 'Starting Jupyter Notebook...' &&
         jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --allow-root --NotebookApp.token='' --NotebookApp.password='' --NotebookApp.allow_origin='*' --notebook-dir=/opt/biomni/notebooks &
         echo 'Starting Gradio App...' &&
@@ -81,8 +81,7 @@ services:
       - "0.0.0.0:7862:7860"  # Gradio
     volumes:
       - ../:/opt/biomni
-      - ./downloads:/opt/biomni/downloads # 见鬼了，这里必须有，Dockerfile里也必须拷贝 COPY --chown=biomni:biomni downloads/ /opt/biomni/downloads/ 为什么呢？？？
-      - ./scripts:/opt/biomni/scripts     # 见鬼了，这里必须有，Dockerfile里也必须拷贝 COPY --chown=biomni:biomni scripts/ /opt/biomni/scripts/ 为什么呢？？？
+      - ./scripts:/opt/biomni/scripts     # 放这里，../:/opt/biomni 覆盖了/opt/biomni/scripts
       - ./data:/opt/biomni/data
       - ./notebooks:/opt/biomni/notebooks
     environment:

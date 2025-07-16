@@ -163,7 +163,7 @@ USER biomni
 #     chmod +x /opt/biomni/start.sh
 
 # 拷贝通用脚本
-COPY --chown=biomni:biomni scripts/ /opt/biomni/scripts/
+#COPY --chown=biomni:biomni scripts/ /opt/biomni/scripts/
 #RUN chmod +x /opt/biomni/scripts/start.sh
 
 # 设置环境变量
@@ -173,8 +173,8 @@ ENV HOMER="/opt/biomni_tools/homer"
 # 暴露Jupyter和Gradio端口
 EXPOSE 8888 7860
 
-# 设置入口点（使用bash执行，避免权限问题）
-ENTRYPOINT ["/bin/bash", "/opt/biomni/scripts/start.sh"]
+# 注释掉ENTRYPOINT，让docker-compose.yml的command完全控制
+# ENTRYPOINT ["/bin/bash", "/opt/biomni/scripts/start.sh"]
 
 # 默认命令
 CMD ["/bin/bash"] 
