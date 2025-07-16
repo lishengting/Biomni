@@ -85,39 +85,47 @@ RUN . /opt/biomni/venv/bin/activate && \
     pip install gradio langchain langgraph==0.3.18 langchain_openai langchain_anthropic \
                 langchain_community langchain-google-genai langchain_ollama openai
 
-# 安装生物信息学包 - 第一部分
+# 安装生物信息学包 - 第一部分（小包）
 RUN . /opt/biomni/venv/bin/activate && \
-    pip install biopython scanpy scvelo scvi-tools biopandas biotite
+    pip install biopython scanpy scvelo biopandas
 
-# 安装生物信息学包 - 第二部分
+# 安装生物信息学包 - 第二部分（大包，单独安装）
 RUN . /opt/biomni/venv/bin/activate && \
-    pip install opencv-python rdkit macs2 pymc3 cryosparc-tools lifelines
+    pip install scvi-tools
 
-# 安装生物信息学包 - 第三部分
+# 安装生物信息学包 - 第三部分（大包，单独安装）
 RUN . /opt/biomni/venv/bin/activate && \
-    pip install scikit-image googlesearch-python PyPDF2 gget faiss-cpu
+    pip install biotite
 
 # 安装生物信息学包 - 第四部分
 RUN . /opt/biomni/venv/bin/activate && \
-    pip install cellxgene-census scikit-bio pymed arxiv scholarly umap-learn
+    pip install opencv-python rdkit macs2 pymc3 cryosparc-tools lifelines
 
 # 安装生物信息学包 - 第五部分
 RUN . /opt/biomni/venv/bin/activate && \
-    pip install scrublet harmony-pytorch pyliftover pytdc==0.4.0 pysam pyfaidx
+    pip install scikit-image googlesearch-python PyPDF2 gget faiss-cpu
 
 # 安装生物信息学包 - 第六部分
 RUN . /opt/biomni/venv/bin/activate && \
-    pip install pyranges pybedtools openmm pystan igraph pyscenic cooler
+    pip install cellxgene-census scikit-bio pymed arxiv scholarly umap-learn
 
 # 安装生物信息学包 - 第七部分
 RUN . /opt/biomni/venv/bin/activate && \
-    pip install trackpy flowcytometrytools cellpose viennarna PyMassSpec
+    pip install scrublet harmony-pytorch pyliftover pytdc==0.4.0 pysam pyfaidx
 
 # 安装生物信息学包 - 第八部分
 RUN . /opt/biomni/venv/bin/activate && \
-    pip install python-libsbml cobra reportlab hmmlearn msprime tskit
+    pip install pyranges pybedtools openmm pystan igraph pyscenic cooler
 
 # 安装生物信息学包 - 第九部分
+RUN . /opt/biomni/venv/bin/activate && \
+    pip install trackpy flowcytometrytools cellpose viennarna PyMassSpec
+
+# 安装生物信息学包 - 第十部分
+RUN . /opt/biomni/venv/bin/activate && \
+    pip install python-libsbml cobra reportlab hmmlearn msprime tskit
+
+# 安装生物信息学包 - 第十一部分
 RUN . /opt/biomni/venv/bin/activate && \
     pip install cyvcf2 pykalman community fanc
 
