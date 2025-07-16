@@ -151,17 +151,26 @@ clean_all() {
     case $profile in
         "basic")
             echo -e "${YELLOW}清理基础环境容器和镜像...${NC}"
-            docker compose --profile basic down --rmi all --volumes --remove-orphans
+            # 只清理basic环境的容器和镜像
+            docker compose --profile basic down --rmi local --volumes --remove-orphans
+            # 手动删除basic镜像（如果存在）
+            docker rmi biomni_env-biomni-basic:latest 2>/dev/null || true
             echo -e "${GREEN}基础环境清理完成！${NC}"
             ;;
         "full")
             echo -e "${YELLOW}清理完整环境容器和镜像...${NC}"
-            docker compose --profile full down --rmi all --volumes --remove-orphans
+            # 只清理full环境的容器和镜像
+            docker compose --profile full down --rmi local --volumes --remove-orphans
+            # 手动删除full镜像（如果存在）
+            docker rmi biomni_env-biomni-full:latest 2>/dev/null || true
             echo -e "${GREEN}完整环境清理完成！${NC}"
             ;;
         "dev")
             echo -e "${YELLOW}清理开发环境容器和镜像...${NC}"
-            docker compose --profile dev down --rmi all --volumes --remove-orphans
+            # 只清理dev环境的容器和镜像
+            docker compose --profile dev down --rmi local --volumes --remove-orphans
+            # 手动删除dev镜像（如果存在）
+            docker rmi biomni_env-biomni-dev:latest 2>/dev/null || true
             echo -e "${GREEN}开发环境清理完成！${NC}"
             ;;
         "all")
@@ -171,9 +180,13 @@ clean_all() {
             docker compose --profile full down
             docker compose --profile dev down
             # 然后清理所有profile的容器和镜像
-            docker compose --profile basic down --rmi all --volumes --remove-orphans
-            docker compose --profile full down --rmi all --volumes --remove-orphans
-            docker compose --profile dev down --rmi all --volumes --remove-orphans
+            docker compose --profile basic down --rmi local --volumes --remove-orphans
+            docker compose --profile full down --rmi local --volumes --remove-orphans
+            docker compose --profile dev down --rmi local --volumes --remove-orphans
+            # 手动删除所有相关镜像
+            docker rmi biomni_env-biomni-basic:latest 2>/dev/null || true
+            docker rmi biomni_env-biomni-full:latest 2>/dev/null || true
+            docker rmi biomni_env-biomni-dev:latest 2>/dev/null || true
             echo -e "${GREEN}所有环境清理完成！${NC}"
             ;;
         *)
