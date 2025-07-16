@@ -194,10 +194,36 @@ RUN cd /opt/biomni && \
 
 # 安装R包（切换到root用户安装，然后切换回biomni用户）
 USER root
-RUN Rscript -e "install.packages(c('ggplot2', 'dplyr', 'tidyr', 'readr', 'stringr', 'Matrix', 'Rcpp', 'devtools', 'remotes', 'harmony'), repos='https://cran.rstudio.com/')" && \
-    Rscript -e "if (!require('BiocManager', quietly = TRUE)) install.packages('BiocManager', repos='https://cran.rstudio.com/')" && \
-    Rscript -e "BiocManager::install(c('DESeq2', 'DADA2', 'xcms', 'FlowCore', 'edgeR', 'limma', 'clusterProfiler'), update = FALSE, ask = FALSE)" && \
-    Rscript -e "install.packages('WGCNA', repos='https://cran.rstudio.com/')"
+
+# 安装基础R包（小包）
+RUN Rscript -e "install.packages(c('ggplot2', 'dplyr', 'tidyr', 'readr', 'stringr'), repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/')"
+
+# 安装Matrix包（大包，单独安装）
+RUN Rscript -e "install.packages('Matrix', repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/')"
+
+# 安装Rcpp包（大包，单独安装）
+RUN Rscript -e "install.packages('Rcpp', repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/')"
+
+# 安装开发工具包
+RUN Rscript -e "install.packages(c('devtools', 'remotes'), repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/')"
+
+# 安装harmony包（大包，单独安装）
+RUN Rscript -e "install.packages('harmony', repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/')"
+
+# 安装BiocManager
+RUN Rscript -e "if (!require('BiocManager', quietly = TRUE)) install.packages('BiocManager', repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/')"
+
+# 安装Bioconductor包（大包，分别安装）
+RUN Rscript -e "BiocManager::install('DESeq2', update = FALSE, ask = FALSE)"
+RUN Rscript -e "BiocManager::install('DADA2', update = FALSE, ask = FALSE)"
+RUN Rscript -e "BiocManager::install('xcms', update = FALSE, ask = FALSE)"
+RUN Rscript -e "BiocManager::install('FlowCore', update = FALSE, ask = FALSE)"
+RUN Rscript -e "BiocManager::install('edgeR', update = FALSE, ask = FALSE)"
+RUN Rscript -e "BiocManager::install('limma', update = FALSE, ask = FALSE)"
+RUN Rscript -e "BiocManager::install('clusterProfiler', update = FALSE, ask = FALSE)"
+
+# 安装WGCNA包（大包，单独安装）
+RUN Rscript -e "install.packages('WGCNA', repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/')"
 
 # 切换回biomni用户
 USER biomni
