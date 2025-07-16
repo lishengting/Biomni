@@ -9,7 +9,10 @@ services:
       - "0.0.0.0:8888:8888"  # Jupyter notebook
       - "0.0.0.0:7860:7860"  # Gradio
     volumes:
-      - ../:/opt/biomni
+      #- ../:/opt/biomni
+      - ../biomni:/opt/biomni/biomni
+      - ../pyproject.toml:/opt/biomni/pyproject.toml
+      - ../biomni_data:/opt/biomni/biomni_data
       - ./scripts:/opt/biomni/scripts     # 放这里，../:/opt/biomni 覆盖了/opt/biomni/scripts
       - ./data:/opt/biomni/data
       - ./notebooks:/opt/biomni/notebooks
@@ -18,6 +21,7 @@ services:
       - JUPYTER_ALLOW_REMOTE_ACCESS=true
     command: >
       bash -c "
+        pip install -e /opt/biomni
         echo 'Starting Jupyter Notebook...' &&
         jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --allow-root --NotebookApp.token='' --NotebookApp.password='' --NotebookApp.allow_origin='*' --notebook-dir=/opt/biomni/notebooks &
         echo 'Starting Gradio App...' &&
@@ -42,7 +46,10 @@ services:
       - "0.0.0.0:8889:8888"  # Jupyter notebook
       - "0.0.0.0:7861:7860"  # Gradio
     volumes:
-      - ../:/opt/biomni
+      #- ../:/opt/biomni
+      - ../biomni:/opt/biomni/biomni
+      - ../pyproject.toml:/opt/biomni/pyproject.toml
+      - ../biomni_data:/opt/biomni/biomni_data
       - ./scripts:/opt/biomni/scripts       # 放这里，../:/opt/biomni 覆盖了/opt/biomni/scripts
       - ./data:/opt/biomni/data
       - ./notebooks:/opt/biomni/notebooks
@@ -53,6 +60,7 @@ services:
     command: >
       bash -c "
         source /opt/biomni/venv/bin/activate
+        pip install -e /opt/biomni
 
         echo 'Starting Jupyter Notebook...' &&
         jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --allow-root --NotebookApp.token='' --NotebookApp.password='' --NotebookApp.allow_origin='*' --notebook-dir=/opt/biomni/notebooks &
@@ -78,7 +86,10 @@ services:
       - "0.0.0.0:8890:8888"  # Jupyter notebook
       - "0.0.0.0:7862:7860"  # Gradio
     volumes:
-      - ../:/opt/biomni
+      #- ../:/opt/biomni
+      - ../biomni:/opt/biomni/biomni
+      - ../pyproject.toml:/opt/biomni/pyproject.toml
+      - ../biomni_data:/opt/biomni/biomni_data
       - ./scripts:/opt/biomni/scripts     # 放这里，../:/opt/biomni 覆盖了/opt/biomni/scripts
       - ./data:/opt/biomni/data
       - ./notebooks:/opt/biomni/notebooks
@@ -87,6 +98,7 @@ services:
       - JUPYTER_ALLOW_REMOTE_ACCESS=true
     command: >
       bash -c "
+        pip install -e /opt/biomni
         echo 'Starting Jupyter Notebook...' &&
         jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --allow-root --NotebookApp.token='' --NotebookApp.password='' --NotebookApp.allow_origin='*' --notebook-dir=/opt/biomni/notebooks &
         echo 'Starting Gradio App...' &&
