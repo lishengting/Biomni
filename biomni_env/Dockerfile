@@ -97,11 +97,11 @@ RUN . /opt/biomni/venv/bin/activate && \
 
 # 安装生物信息学包 - 第二部分（大包，单独安装）
 RUN . /opt/biomni/venv/bin/activate && \
-    pip install --progress-bar raw scvi-tools
+    pip install --timeout 60 --progress-bar raw scvi-tools
 
 # 安装生物信息学包 - 第三部分（大包，单独安装）
 RUN . /opt/biomni/venv/bin/activate && \
-    pip install --progress-bar raw biotite
+    pip install --timeout 60 --progress-bar raw biotite
 
 # 安装生物信息学包 - 第四部分
 RUN . /opt/biomni/venv/bin/activate && \
