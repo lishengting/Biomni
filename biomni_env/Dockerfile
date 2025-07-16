@@ -167,7 +167,7 @@ USER biomni
 #RUN chmod +x /opt/biomni/scripts/start.sh
 
 # 设置环境变量
-ENV PATH="/opt/biomni_tools/bin:/opt/biomni/venv/bin:$PATH"
+ENV PATH="/opt/biomni/venv/bin:$PATH"
 ENV HOMER="/opt/biomni_tools/homer"
 
 # 暴露Jupyter和Gradio端口

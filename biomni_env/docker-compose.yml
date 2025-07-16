@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # 基础环境（快速启动）
   biomni-basic:
