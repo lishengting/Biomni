@@ -173,9 +173,9 @@ RUN . /opt/biomni/venv/bin/activate && \
 RUN . /opt/biomni/venv/bin/activate && \
     pip install cyvcf2 pykalman community fanc
 
-# 安装额外的生物信息学工具（对应bio_env.yml中的conda包）
+# 安装额外的生物信息学工具（对应bio_env.yml中的conda包） mageck在R中安装 plannotate不存在，可能在conda中
 RUN . /opt/biomni/venv/bin/activate && \
-    pip install gseapy plannotate beautifulsoup4 lxml seaborn networkx requests pyyaml jupyter notebook ipykernel pytest
+    pip install gseapy beautifulsoup4 lxml seaborn networkx requests pyyaml jupyter notebook ipykernel pytest
 
 # 开发模式安装biomni源码
 # RUN /opt/biomni/venv/bin/pip install -e /opt/biomni
