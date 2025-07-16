@@ -84,7 +84,7 @@ COPY --chown=biomni:biomni r_packages.yml /opt/biomni/
 
 # 安装基础科学计算包
 RUN . /opt/biomni/venv/bin/activate && \
-    pip install numpy==2.1 pandas matplotlib scipy statsmodels scikit-learn
+    pip install tqdm numpy==2.1 pandas matplotlib scipy statsmodels scikit-learn
 
 # 安装AI/ML相关包
 RUN . /opt/biomni/venv/bin/activate && \
@@ -137,7 +137,7 @@ RUN . /opt/biomni/venv/bin/activate && \
 
 # 安装其他工具包
 RUN . /opt/biomni/venv/bin/activate && \
-    pip install beautifulsoup4 lxml tqdm seaborn networkx requests pyyaml
+    pip install beautifulsoup4 lxml seaborn networkx requests pyyaml
 
 # 安装Jupyter相关包
 RUN . /opt/biomni/venv/bin/activate && \
