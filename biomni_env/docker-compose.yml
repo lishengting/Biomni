@@ -121,7 +121,7 @@ services:
       - "0.0.0.0:9860:7860"  # Gradio
     volumes:
       - ../:/opt/biomni
-      - biomni_data:/opt/biomni/biomni_data
+      - ../biomni_data:/opt/biomni/biomni_data
       - biomni_cache:/home/biomni/.cache
     environment:
       - JUPYTER_ENABLE_LAB=yes
@@ -160,8 +160,8 @@ services:
       - "0.0.0.0:9861:7860"  # Gradio
     volumes:
       - ../:/opt/biomni
-      - biomni_data:/opt/biomni/biomni_data
-      - biomni_results:/opt/biomni/results
+      - ../biomni_data:/opt/biomni/biomni_data
+      - ./biomni_results:/opt/biomni/results
       - biomni_cache:/home/biomni/.cache
     environment:
       - JUPYTER_ENABLE_LAB=yes
@@ -203,7 +203,7 @@ services:
       - "0.0.0.0:9862:7860"  # Gradio
     volumes:
       - ../:/opt/biomni
-      - biomni_data:/opt/biomni/biomni_data
+      - ../biomni_data:/opt/biomni/biomni_data
       - biomni_cache:/home/biomni/.cache
     environment:
       - JUPYTER_ENABLE_LAB=yes
@@ -240,8 +240,8 @@ services:
     container_name: biomni-setup.1
     volumes:
       - ../:/opt/biomni
-      - biomni_data:/opt/biomni/biomni_data
-      - biomni_results:/opt/biomni/results
+      - ../biomni_data:/opt/biomni/biomni_data
+      - ./biomni_results:/opt/biomni/results
       - biomni_cache:/home/biomni/.cache
     environment:
       - PYTHONPATH=/opt/biomni
@@ -268,10 +268,6 @@ volumes:
   data:
   notebooks:
   results:
-  biomni_data:
-    driver: local
-  biomni_results:
-    driver: local
   biomni_cache:
     driver: local
 
