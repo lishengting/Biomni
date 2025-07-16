@@ -233,36 +233,36 @@ services:
       - dev.1
     restart: unless-stopped
 
-  biomni-setup.1:
-    build:
-      context: .
-      dockerfile: Dockerfile.1
-    container_name: biomni-setup.1
-    volumes:
-      - ../:/opt/biomni
-      - ../biomni_data:/opt/biomni/biomni_data
-      - ./biomni_results:/opt/biomni/results
-      - biomni_cache:/home/biomni/.cache
-    environment:
-      - PYTHONPATH=/opt/biomni
-      - NON_INTERACTIVE=1
-    command: >
-      bash -c "
-        echo '开始设置Biomni环境...' &&
-        cd /opt/biomni &&
-        chmod +x biomni_env/setup.sh &&
-        ./biomni_env/setup.sh &&
-        echo '环境设置完成！' &&
-        echo '您现在可以运行：' &&
-        echo 'docker compose --profile basic.1 up' &&
-        echo '或' &&
-        echo 'docker compose --profile full.1 up' &&
-        tail -f /dev/null
-      "
-    networks:
-      - biomni-network
-    profiles:
-      - setup.1
+  # biomni-setup.1:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.1
+  #   container_name: biomni-setup.1
+  #   volumes:
+  #     - ../:/opt/biomni
+  #     - ../biomni_data:/opt/biomni/biomni_data
+  #     - ./biomni_results:/opt/biomni/results
+  #     - biomni_cache:/home/biomni/.cache
+  #   environment:
+  #     - PYTHONPATH=/opt/biomni
+  #     - NON_INTERACTIVE=1
+  #   command: >
+  #     bash -c "
+  #       echo '开始设置Biomni环境...' &&
+  #       cd /opt/biomni &&
+  #       chmod +x biomni_env/setup.sh &&
+  #       ./biomni_env/setup.sh &&
+  #       echo '环境设置完成！' &&
+  #       echo '您现在可以运行：' &&
+  #       echo 'docker compose --profile basic.1 up' &&
+  #       echo '或' &&
+  #       echo 'docker compose --profile full.1 up' &&
+  #       tail -f /dev/null
+  #     "
+  #   networks:
+  #     - biomni-network
+  #   profiles:
+  #     - setup.1
 
 volumes:
   data:

@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Biomni Docker 部署脚本
-# 支持新旧版本容器管理
+# Biomni Docker 部署脚本 - 精简版
+# 支持新旧版本容器管理（移除冗余的setup.1）
 
 set -e
 
@@ -19,14 +19,13 @@ show_help() {
     echo ""
     echo "用法: $0 [选项] [环境类型]"
     echo ""
-    echo "环境类型 (新旧版本):"
+    echo "环境类型:"
     echo "  basic       - 旧版基础环境（虚拟环境）"
     echo "  full        - 旧版完整环境（虚拟环境）"
     echo "  dev         - 旧版开发环境（虚拟环境）"
-    echo "  basic.1     - 新版基础环境（conda环境）"
-    echo "  full.1      - 新版完整环境（conda环境）"
+    echo "  basic.1     - 新版基础环境（conda环境，轻量）"
+    echo "  full.1      - 新版完整环境（conda环境，已包含所有工具）"
     echo "  dev.1       - 新版开发环境（conda环境）"
-    echo "  setup.1     - 新版一键设置环境"
     echo ""
     echo "选项:"
     echo "  build       - 仅构建镜像"
@@ -42,17 +41,19 @@ show_help() {
     echo "  -p          - 构建时使用 --progress=plain 显示详细输出"
     echo ""
     echo "示例:"
-    echo "  $0 basic.1      # 启动新版基础环境"
-    echo "  $0 full         # 启动旧版完整环境"
-    echo "  $0 build dev.1  # 构建新版开发环境"
+    echo "  $0 basic.1      # 启动新版基础环境（轻量）"
+    echo "  $0 full.1       # 启动新版完整环境（包含所有工具）"
+    echo "  $0 build full.1 # 构建新版完整环境"
     echo "  $0 stop all.all # 停止所有环境"
     echo "  $0 status       # 查看所有容器状态"
+    echo ""
+    echo "注意：Dockerfile.1已集成完整环境，无需单独setup！"
 }
 
 # 创建必要的目录
 create_directories() {
     echo -e "${YELLOW}创建必要的目录...${NC}"
-    mkdir -p data notebooks results
+    mkdir -p data notebooks results biomni_results
     echo -e "${GREEN}目录创建完成！${NC}"
 }
 
@@ -110,6 +111,7 @@ start_service() {
         "full.1")
             docker compose --profile full.1 up -d biomni-full.1
             echo -e "${GREEN}新版完整环境已启动！${NC}"
+            echo -e "${BLUE}完整工具已集成，无需额外设置${NC}"
             echo -e "${BLUE}Jupyter Notebook: http://0.0.0.0:9999${NC}"
             echo -e "${BLUE}Gradio: http://0.0.0.0:9861${NC}"
             ;;
@@ -148,19 +150,16 @@ stop_containers() {
             docker compose --profile basic.1 down
             docker compose --profile full.1 down
             docker compose --profile dev.1 down
-            docker compose --profile setup.1 down
             echo -e "${GREEN}所有新版环境容器已停止！${NC}"
             ;;
         "all.all")
             echo -e "${YELLOW}停止所有Biomni容器...${NC}"
-            # 停止所有profile的容器
             docker compose --profile basic down
             docker compose --profile full down
             docker compose --profile dev down
             docker compose --profile basic.1 down
             docker compose --profile full.1 down
             docker compose --profile dev.1 down
-            docker compose --profile setup.1 down
             echo -e "${GREEN}所有容器已停止！${NC}"
             ;;
         *)
@@ -192,27 +191,22 @@ clean_all() {
             docker compose --profile basic.1 down --rmi local --volumes --remove-orphans
             docker compose --profile full.1 down --rmi local --volumes --remove-orphans
             docker compose --profile dev.1 down --rmi local --volumes --remove-orphans
-            docker compose --profile setup.1 down --rmi local --volumes --remove-orphans
             echo -e "${GREEN}所有新版环境清理完成！${NC}"
             ;;
         "all.all")
             echo -e "${YELLOW}清理所有Biomni容器和镜像...${NC}"
-            # 停止所有容器
             docker compose --profile basic down
             docker compose --profile full down
             docker compose --profile dev down
             docker compose --profile basic.1 down
             docker compose --profile full.1 down
             docker compose --profile dev.1 down
-            docker compose --profile setup.1 down
-            # 清理所有profile的容器和镜像
             docker compose --profile basic down --rmi local --volumes --remove-orphans
             docker compose --profile full down --rmi local --volumes --remove-orphans
             docker compose --profile dev down --rmi local --volumes --remove-orphans
             docker compose --profile basic.1 down --rmi local --volumes --remove-orphans
             docker compose --profile full.1 down --rmi local --volumes --remove-orphans
             docker compose --profile dev.1 down --rmi local --volumes --remove-orphans
-            docker compose --profile setup.1 down --rmi local --volumes --remove-orphans
             echo -e "${GREEN}所有环境清理完成！${NC}"
             ;;
         *)
@@ -341,10 +335,8 @@ main() {
             enter_shell "${args[1]}"
             ;;
         "setup"|"setup.1")
-            echo -e "${YELLOW}运行一键设置环境...${NC}"
-            create_directories
-            docker compose --profile setup.1 up biomni-setup.1
-            echo -e "${GREEN}环境设置完成！${NC}"
+            echo -e "${YELLOW}Dockerfile.1已包含完整环境，无需单独设置！${NC}"
+            echo -e "${BLUE}直接使用：./deploy.1.sh full.1 即可${NC}"
             ;;
         "status")
             echo -e "${BLUE}Biomni容器状态:${NC}"
@@ -356,7 +348,6 @@ main() {
             docker compose --profile basic.1 ps -a
             docker compose --profile full.1 ps -a
             docker compose --profile dev.1 ps -a
-            docker compose --profile setup.1 ps -a
             ;;
         "pull")
             echo -e "${YELLOW}拉取最新镜像...${NC}"
@@ -366,7 +357,6 @@ main() {
             docker compose --profile basic.1 pull
             docker compose --profile full.1 pull
             docker compose --profile dev.1 pull
-            docker compose --profile setup.1 pull
             echo -e "${GREEN}镜像拉取完成！${NC}"
             ;;
         "help"|"-h"|"--help"|"")

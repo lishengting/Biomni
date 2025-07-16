@@ -253,8 +253,9 @@ RUN Rscript -e "install.packages(c('ggplot2', 'dplyr', 'tidyr', 'readr', 'string
     Rscript -e "options(BioC_mirror='https://mirrors.westlake.edu.cn/bioconductor', repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/'); BiocManager::install('clusterProfiler', update = FALSE, ask = FALSE)" && \
     Rscript -e "install.packages('WGCNA', repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/')" && \
     Rscript -e "install.packages(c('dynamicTreeCut', 'fastcluster', 'matrixStats', 'Hmisc', 'foreach', 'doParallel'), repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/')" && \
-    Rscript -e "options(BioC_mirror='https://mirrors.westlake.edu.cn/bioconductor', repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/'); BiocManager::install(c('impute', 'preprocessCore', 'GO.db', 'AnnotationDbi'), update = FALSE, ask = FALSE)" && \
-    Rscript -e "if (!require('devtools', quietly = TRUE)) install.packages('devtools', repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/')" && \
+    Rscript -e "options(BioC_mirror='https://mirrors.westlake.edu.cn/bioconductor', repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/'); BiocManager::install(c('impute', 'preprocessCore', 'GO.db', 'AnnotationDbi'), update = FALSE, ask = FALSE)"
+
+RUN Rscript -e "if (!require('devtools', quietly = TRUE)) install.packages('devtools', repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/')" && \
     Rscript -e "devtools::install_github('liulab-dfci/MAGeCKFlute')"
 
 # 切换回biomni用户
