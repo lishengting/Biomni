@@ -59,17 +59,22 @@ USER biomni
 RUN python3 -m venv /opt/biomni/venv
 ENV PATH="/opt/biomni/venv/bin:$PATH"
 
-# 激活虚拟环境并升级pip
-RUN . /opt/biomni/venv/bin/activate && \
-    pip install --upgrade pip setuptools wheel
-
 # 复制pip配置文件
 COPY --chown=biomni:biomni pip.conf /opt/biomni/
 
 # 配置pip以支持更长的超时和重试
 RUN . /opt/biomni/venv/bin/activate && \
     mkdir -p /opt/biomni/venv/pip && \
-    cp /opt/biomni/pip.conf /opt/biomni/venv/pip/pip.conf
+    cp /opt/biomni/pip.conf /opt/biomni/venv/pip/pip.conf && \
+    # 同时复制到用户目录确保pip能找到配置
+    mkdir -p /home/biomni/.pip && \
+    cp /opt/biomni/pip.conf /home/biomni/.pip/pip.conf && \
+    # 设置环境变量指向pip配置
+    echo 'export PIP_CONFIG_FILE=/opt/biomni/venv/pip/pip.conf' >> /opt/biomni/venv/bin/activate
+
+# 激活虚拟环境并升级pip（使用配置后的pip）
+RUN . /opt/biomni/venv/bin/activate && \
+    pip install --upgrade pip setuptools wheel
 
 # 复制环境文件
 COPY --chown=biomni:biomni environment.yml /opt/biomni/
@@ -85,63 +90,47 @@ RUN . /opt/biomni/venv/bin/activate && \
     pip install gradio langchain langgraph==0.3.18 langchain_openai langchain_anthropic \
                 langchain_community langchain-google-genai langchain_ollama openai
 
-# 安装生物信息学包 - 第一部分
+# 安装生物信息学包 - 第一部分（小包）
 RUN . /opt/biomni/venv/bin/activate && \
     pip install biopython scanpy scvelo biopandas
 
-RUN . /opt/biomni/venv/bin/activate && \
-    pip install torch==2.7.1
-
-RUN . /opt/biomni/venv/bin/activate && \
-    pip install nvidia-cublas-cu12==12.6.4.1
-
-RUN . /opt/biomni/venv/bin/activate && \
-    pip install nvidia-cudnn-cu12==9.5.1.17
-
-RUN . /opt/biomni/venv/bin/activate && \
-    pip install nvidia-cufft-cu12==11.3.0.4
-
-RUN . /opt/biomni/venv/bin/activate && \
-    pip install nvidia-curand-cu12==10.3.7.77
-
-RUN . /opt/biomni/venv/bin/activate && \
-    pip install nvidia-cusolver-cu12==11.7.1.2
-
+# 安装生物信息学包 - 第二部分（大包，单独安装）
 RUN . /opt/biomni/venv/bin/activate && \
     pip install scvi-tools
 
+# 安装生物信息学包 - 第三部分（大包，单独安装）
 RUN . /opt/biomni/venv/bin/activate && \
     pip install biotite
 
-# 安装生物信息学包
+# 安装生物信息学包 - 第四部分
 RUN . /opt/biomni/venv/bin/activate && \
     pip install opencv-python rdkit macs2 pymc3 cryosparc-tools lifelines
 
-# 安装生物信息学包
+# 安装生物信息学包 - 第五部分
 RUN . /opt/biomni/venv/bin/activate && \
     pip install scikit-image googlesearch-python PyPDF2 gget faiss-cpu
 
-# 安装生物信息学包
+# 安装生物信息学包 - 第六部分
 RUN . /opt/biomni/venv/bin/activate && \
     pip install cellxgene-census scikit-bio pymed arxiv scholarly umap-learn
 
-# 安装生物信息学包
+# 安装生物信息学包 - 第七部分
 RUN . /opt/biomni/venv/bin/activate && \
     pip install scrublet harmony-pytorch pyliftover pytdc==0.4.0 pysam pyfaidx
 
-# 安装生物信息学包
+# 安装生物信息学包 - 第八部分
 RUN . /opt/biomni/venv/bin/activate && \
     pip install pyranges pybedtools openmm pystan igraph pyscenic cooler
 
-# 安装生物信息学包
+# 安装生物信息学包 - 第九部分
 RUN . /opt/biomni/venv/bin/activate && \
     pip install trackpy flowcytometrytools cellpose viennarna PyMassSpec
 
-# 安装生物信息学包 - 最后部分
+# 安装生物信息学包 - 第十部分
 RUN . /opt/biomni/venv/bin/activate && \
     pip install python-libsbml cobra reportlab hmmlearn msprime tskit
 
-# 安装生物信息学包
+# 安装生物信息学包 - 第十一部分
 RUN . /opt/biomni/venv/bin/activate && \
     pip install cyvcf2 pykalman community fanc
 
