@@ -214,13 +214,13 @@ RUN Rscript -e "install.packages('harmony', repos='https://mirrors.tuna.tsinghua
 RUN Rscript -e "if (!require('BiocManager', quietly = TRUE)) install.packages('BiocManager', repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/')"
 
 # 安装Bioconductor包（大包，分别安装，使用国内镜像）
-RUN Rscript -e "options(BioC_mirror='https://mirrors.tuna.tsinghua.edu.cn/bioconductor'); BiocManager::install('DESeq2', update = FALSE, ask = FALSE)"
-RUN Rscript -e "options(BioC_mirror='https://mirrors.tuna.tsinghua.edu.cn/bioconductor'); BiocManager::install('DADA2', update = FALSE, ask = FALSE)"
-RUN Rscript -e "options(BioC_mirror='https://mirrors.tuna.tsinghua.edu.cn/bioconductor'); BiocManager::install('xcms', update = FALSE, ask = FALSE)"
-RUN Rscript -e "options(BioC_mirror='https://mirrors.tuna.tsinghua.edu.cn/bioconductor'); BiocManager::install('FlowCore', update = FALSE, ask = FALSE)"
-RUN Rscript -e "options(BioC_mirror='https://mirrors.tuna.tsinghua.edu.cn/bioconductor'); BiocManager::install('edgeR', update = FALSE, ask = FALSE)"
-RUN Rscript -e "options(BioC_mirror='https://mirrors.tuna.tsinghua.edu.cn/bioconductor'); BiocManager::install('limma', update = FALSE, ask = FALSE)"
-RUN Rscript -e "options(BioC_mirror='https://mirrors.tuna.tsinghua.edu.cn/bioconductor'); BiocManager::install('clusterProfiler', update = FALSE, ask = FALSE)"
+RUN Rscript -e "options(BioC_mirror='https://mirrors.ustc.edu.cn/bioc'); BiocManager::install('DESeq2', update = FALSE, ask = FALSE)"
+RUN Rscript -e "options(BioC_mirror='https://mirrors.ustc.edu.cn/bioc'); BiocManager::install('DADA2', update = FALSE, ask = FALSE)"
+RUN Rscript -e "options(BioC_mirror='https://mirrors.ustc.edu.cn/bioc'); BiocManager::install('xcms', update = FALSE, ask = FALSE)"
+RUN Rscript -e "options(BioC_mirror='https://mirrors.ustc.edu.cn/bioc'); BiocManager::install('FlowCore', update = FALSE, ask = FALSE)"
+RUN Rscript -e "options(BioC_mirror='https://mirrors.ustc.edu.cn/bioc'); BiocManager::install('edgeR', update = FALSE, ask = FALSE)"
+RUN Rscript -e "options(BioC_mirror='https://mirrors.ustc.edu.cn/bioc'); BiocManager::install('limma', update = FALSE, ask = FALSE)"
+RUN Rscript -e "options(BioC_mirror='https://mirrors.ustc.edu.cn/bioc'); BiocManager::install('clusterProfiler', update = FALSE, ask = FALSE)"
 
 # 安装WGCNA包（大包，单独安装）
 RUN Rscript -e "install.packages('WGCNA', repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/')"
