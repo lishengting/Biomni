@@ -19,8 +19,14 @@ RUN apt-get update && apt-get install -y \
     wget curl git vim nano htop \
     # 编译工具
     build-essential gcc g++ make cmake \
-    # Python相关
-    python3 python3-pip python3-dev python3-venv \
+    # Python 3.11相关
+    software-properties-common && \
+    add-apt-repository ppa:deadsnakes/ppa && \
+    apt-get update && \
+    apt-get install -y python3.11 python3.11-pip python3.11-dev python3.11-venv python3.11-distutils && \
+    # 创建Python 3.11的符号链接
+    update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 && \
+    update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1 && \
     # R相关
     r-base r-base-dev \
     # 生物信息学依赖
@@ -55,8 +61,8 @@ RUN mkdir -p /opt/biomni_tools/bin && \
 # 切换到biomni用户
 USER biomni
 
-# 创建Python虚拟环境
-RUN python3 -m venv /opt/biomni/venv
+# 创建Python 3.11虚拟环境
+RUN python3.11 -m venv /opt/biomni/venv
 ENV PATH="/opt/biomni/venv/bin:$PATH"
 
 # 复制pip配置文件
@@ -74,6 +80,7 @@ RUN . /opt/biomni/venv/bin/activate && \
 
 # 激活虚拟环境并升级pip（使用配置后的pip）
 RUN . /opt/biomni/venv/bin/activate && \
+    python --version && \
     pip config list && \
     pip install --upgrade pip setuptools wheel
 
@@ -97,15 +104,11 @@ RUN . /opt/biomni/venv/bin/activate && \
 
 # 安装生物信息学包 - 第二部分（大包，单独安装）
 RUN . /opt/biomni/venv/bin/activate && \
-    pip install --timeout 60 --progress-bar raw scvi-tools
-
-# 安装生物信息学包 - 第三部分（大包，单独安装）
-RUN . /opt/biomni/venv/bin/activate && \
-    pip install --timeout 60 --progress-bar raw biotite
+    pip install --progress-bar raw scvi-tools
 
 # 安装生物信息学包 - 第四部分
 RUN . /opt/biomni/venv/bin/activate && \
-    pip install opencv-python rdkit macs2 pymc3 cryosparc-tools lifelines
+    pip install biotite opencv-python rdkit macs2 pymc3 cryosparc-tools lifelines
 
 # 安装生物信息学包 - 第五部分
 RUN . /opt/biomni/venv/bin/activate && \
@@ -195,6 +198,7 @@ RUN cd /opt/biomni && \
 # 安装R包（切换到root用户安装，然后切换回biomni用户）
 USER root
 
+ENV MAKEFLAGS="-j16"
 # 安装基础R包（小包）
 RUN Rscript -e "install.packages(c('ggplot2', 'dplyr', 'tidyr', 'readr', 'stringr'), repos='https://mirrors.tuna.tsinghua.edu.cn/CRAN/')"
 
