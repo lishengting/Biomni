@@ -107,7 +107,8 @@ def get_llm(
         if is_aliyun_qwen:
             #kwargs["chat_template_kwargs"] = {"enable_thinking": False}
             #kwargs["enable_thinking"] = False
-            kwargs["extra_body"] = {"chat_template_kwargs": {"enable_thinking": False}}
+            #kwargs["extra_body"] = {"chat_template_kwargs": {"enable_thinking": False}}
+            kwargs["extra_body"] = {"enable_thinking": False}
         
         return ChatOpenAI(**kwargs)
     else:
