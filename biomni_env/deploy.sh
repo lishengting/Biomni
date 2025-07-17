@@ -153,7 +153,7 @@ restart_containers() {
     local profile=$1
     
     case $profile in
-      basic"|"full"|dev)
+      "basic"|"full"|"dev")
             echo -e "${YELLOW}重启 $profile 环境...${NC}"
             stop_containers "$profile"
             start_service "$profile"
@@ -170,7 +170,7 @@ full_restart_containers() {
     local profile=$1
     
     case $profile in
-      basic"|"full"|dev)
+      "basic"|"full"|"dev")
             echo -e "${YELLOW}完全重启 $profile 环境...${NC}"
             clean_all "$profile"
             start_service "$profile"
