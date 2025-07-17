@@ -29,8 +29,10 @@ show_help() {
     echo ""
     echo "选项:"
     echo "  build       - 仅构建镜像"
-    echo "  stop        - 停止容器 (支持: basic, full, dev, basic.1, full.1, dev.1, all, all.1, all.all)"
-    echo "  clean       - 清理容器和镜像 (支持: basic, full, dev, basic.1, full.1, dev.1, all, all.1, all.all)"
+    echo "  restart     - 重启容器 (先stop再start)"  
+    echo "  full_restart - 完全重启 (先clean再start)"
+    echo "  stop        - 停止容器"  
+    echo "  clean       - 清理容器和镜像"
     echo "  logs        - 查看容器日志"
     echo "  shell       - 进入容器shell"
     echo "  status      - 查看容器状态"
@@ -44,6 +46,8 @@ show_help() {
     echo "  $0 basic.1      # 启动新版基础环境（轻量）"
     echo "  $0 full.1       # 启动新版完整环境（包含所有工具）"
     echo "  $0 build full.1 # 构建新版完整环境"
+    echo "  $0 restart full.1 # 重启完整环境"
+    echo "  $0 full_restart full.1 # 完全重启完整环境"
     echo "  $0 stop all.all # 停止所有环境"
     echo "  $0 status       # 查看所有容器状态"
     echo ""
@@ -128,9 +132,33 @@ start_service() {
     esac
 }
 
-# 停止所有容器
+# 重启容器
+restart_container() {
+    local profile=$1
+    echo -e "${YELLOW}重启 $profile 环境...${NC}"
+    stop_containers "$profile"
+    start_service "$profile"
+    echo -e "${GREEN}$profile 环境已重启！${NC}"
+}
+
+# 完全重启（先清理再启动）
+full_restart() {
+    local profile=$1
+    echo -e "${YELLOW}完全重启 $profile 环境...${NC}"
+    clean_all "$profile"
+    start_service "$profile"
+    echo -e "${GREEN}$profile 环境已完全重启！${NC}"
+}
+
+# 停止所有容器（必须指定配置名）
 stop_containers() {
     local profile=$1
+    
+    if [ -z "$profile" ]; then
+        echo -e "${RED}错误：必须指定配置名！${NC}"
+        echo -e "${YELLOW}可用配置：basic, full, dev, basic.1, full.1, dev.1, all, all.1, all.all${NC}"
+        exit 1
+    fi
     
     case $profile in
         "basic"|"full"|"dev"|"basic.1"|"full.1"|"dev.1")
@@ -163,7 +191,7 @@ stop_containers() {
             echo -e "${GREEN}所有容器已停止！${NC}"
             ;;
         *)
-            echo -e "${RED}请指定环境类型: basic, full, dev, basic.1, full.1, dev.1, all, all.1, 或 all.all${NC}"
+            echo -e "${RED}请指定有效的配置名: basic, full, dev, basic.1, full.1, dev.1, all, all.1, all.all${NC}"
             exit 1
             ;;
     esac
@@ -308,35 +336,51 @@ main() {
             ;;
         "stop")
             if [ -z "${args[1]}" ]; then
-                stop_containers "all.all"
-            else
-                stop_containers "${args[1]}"
+                echo -e "${RED}错误：stop命令必须指定配置名！${NC}"
+                echo -e "${YELLOW}可用配置：basic, full, dev, basic.1, full.1, dev.1, all, all.1, all.all${NC}"
+                exit 1
             fi
+            stop_containers "${args[1]}"
             ;;
         "clean")
             if [ -z "${args[1]}" ]; then
-                clean_all "all.all"
-            else
-                clean_all "${args[1]}"
+                echo -e "${RED}错误：clean命令必须指定配置名！${NC}"
+                echo -e "${YELLOW}可用配置：basic, full, dev, basic.1, full.1, dev.1, all, all.1, all.all${NC}"
+                exit 1
             fi
+            clean_all "${args[1]}"
+            ;;
+        "restart")
+            if [ -z "${args[1]}" ]; then
+                echo -e "${RED}错误：restart命令必须指定配置名！${NC}"
+                echo -e "${YELLOW}可用配置：basic, full, dev, basic.1, full.1, dev.1, all, all.1, all.all${NC}"
+                exit 1
+            fi
+            restart_container "${args[1]}"
+            ;;
+        "full_restart")
+            if [ -z "${args[1]}" ]; then
+                echo -e "${RED}错误：full_restart命令必须指定配置名！${NC}"
+                echo -e "${YELLOW}可用配置：basic, full, dev, basic.1, full.1, dev.1, all, all.1, all.all${NC}"
+                exit 1
+            fi
+            full_restart "${args[1]}"
             ;;
         "logs")
             if [ -z "${args[1]}" ]; then
-                echo -e "${RED}请指定环境类型: basic, full, dev, basic.1, full.1, 或 dev.1${NC}"
+                echo -e "${RED}错误：logs命令必须指定环境类型！${NC}"
+                echo -e "${YELLOW}可用配置：basic, full, dev, basic.1, full.1, 或 dev.1${NC}"
                 exit 1
             fi
             show_logs "${args[1]}"
             ;;
         "shell")
             if [ -z "${args[1]}" ]; then
-                echo -e "${RED}请指定环境类型: basic, full, dev, basic.1, full.1, 或 dev.1${NC}"
+                echo -e "${RED}错误：shell命令必须指定环境类型！${NC}"
+                echo -e "${YELLOW}可用配置：basic, full, dev, basic.1, full.1, 或 dev.1${NC}"
                 exit 1
             fi
             enter_shell "${args[1]}"
-            ;;
-        "setup"|"setup.1")
-            echo -e "${YELLOW}Dockerfile.1已包含完整环境，无需单独设置！${NC}"
-            echo -e "${BLUE}直接使用：./deploy.1.sh full.1 即可${NC}"
             ;;
         "status")
             echo -e "${BLUE}Biomni容器状态:${NC}"

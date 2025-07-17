@@ -23,8 +23,10 @@ show_help() {
     echo "  full      - 部署完整环境（包含所有生物信息学工具）"
     echo "  dev       - 部署开发环境（挂载源代码）"
     echo "  build     - 仅构建镜像，不启动容器"
-    echo "  stop      - 停止容器 (支持: basic, full, dev, all)"
-    echo "  clean     - 清理容器和镜像 (支持: basic, full, dev, all)"
+    echo "  stop      - 停止容器 (basic|full|dev|all)"
+    echo "  clean     - 清理容器和镜像 (basic|full|dev|all)"
+    echo "  restart   - 重启容器 (停止后启动) (basic|full|dev)"
+    echo "  full_restart - 完全重启 (停止、清理、启动) (basic|full|dev)"
     echo "  logs      - 查看容器日志"
     echo "  shell     - 进入容器shell"
     echo "  help      - 显示此帮助信息"
@@ -40,6 +42,8 @@ show_help() {
     echo "  $0 stop all        # 停止所有环境"
     echo "  $0 clean full      # 清理完整环境"
     echo "  $0 clean all       # 清理所有环境"
+    echo "  $0 restart full    # 重启完整环境"
+    echo "  $0 full_restart dev # 完全重启开发环境"
     echo "  $0 logs full       # 查看完整环境日志"
     echo "  $0 shell dev       # 进入开发环境shell"
 }
@@ -139,6 +143,40 @@ stop_containers() {
             ;;
         *)
             echo -e "${RED}请指定环境类型: basic, full, dev, 或 all${NC}"
+            exit 1
+            ;;
+    esac
+}
+
+# 重启容器（停止后启动）
+restart_containers() {
+    local profile=$1
+    
+    case $profile in
+      basic"|"full"|dev)
+            echo -e "${YELLOW}重启 $profile 环境...${NC}"
+            stop_containers "$profile"
+            start_service "$profile"
+            ;;
+        *)
+            echo -e "${RED}请指定环境类型: basic, full, 或 dev${NC}"
+            exit 1
+            ;;
+    esac
+}
+
+# 完全重启容器（停止、清理、启动）
+full_restart_containers() {
+    local profile=$1
+    
+    case $profile in
+      basic"|"full"|dev)
+            echo -e "${YELLOW}完全重启 $profile 环境...${NC}"
+            clean_all "$profile"
+            start_service "$profile"
+            ;;
+        *)
+            echo -e "${RED}请指定环境类型: basic, full, 或 dev${NC}"
             exit 1
             ;;
     esac
@@ -291,17 +329,31 @@ main() {
             ;;
         "stop")
             if [ -z "${args[1]}" ]; then
-                stop_containers "all"
-            else
-                stop_containers "${args[1]}"
+                echo -e "${RED}请指定要停止的环境: basic, full, dev, 或 all${NC}"
+                exit 1
             fi
+            stop_containers "${args[1]}"
             ;;
         "clean")
             if [ -z "${args[1]}" ]; then
-                clean_all "all"
-            else
-                clean_all "${args[1]}"
+                echo -e "${RED}请指定要清理的环境: basic, full, dev, 或 all${NC}"
+                exit 1
             fi
+            clean_all "${args[1]}"
+            ;;
+        "restart")
+            if [ -z "${args[1]}" ]; then
+                echo -e "${RED}请指定要重启的环境: basic, full, dev${NC}"
+                exit 1
+            fi
+            restart_containers "${args[1]}"
+            ;;
+        "full_restart")
+            if [ -z "${args[1]}" ]; then
+                echo -e "${RED}请指定要完全重启的环境: basic, full, dev${NC}"
+                exit 1
+            fi
+            full_restart_containers "${args[1]}"
             ;;
         "logs")
             if [ -z "${args[1]}" ]; then
