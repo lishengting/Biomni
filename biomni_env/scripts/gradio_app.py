@@ -214,10 +214,10 @@ def ask_biomni_stream(question: str):
                 # Format intermediate results with advanced parsing
                 intermediate_text = ""
                 if intermediate_outputs:
-                    intermediate_text = f"**Execution Steps ({len(intermediate_outputs)} total):**\n\n"
+                    intermediate_text = f"<div style='margin: 30px 0; padding: 20px; background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border-radius: 10px; text-align: center;'><h2 style='margin: 0; font-size: 1.5em;'>⚙️ Execution Steps ({len(intermediate_outputs)} total)</h2></div>\n\n"
                     # Show all intermediate outputs without truncation
                     for output in intermediate_outputs:
-                        step_header = f"**Step {output['step']} ({output['message_type']})** - {output['timestamp']}"
+                        step_header = f"<div style='margin: 40px 0 20px 0; border-top: 3px solid #007acc; padding-top: 20px;'><h3><strong>📝 Step {output['step']} ({output['message_type']}) - {output['timestamp']}</strong></h3></div>"
                         step_content = output['content']
                         # 使用高级解析函数处理内容
                         parsed_content = parse_advanced_content(step_content)
@@ -241,49 +241,27 @@ def ask_biomni_stream(question: str):
         if 'result' in result_container:
             result = result_container['result']
             
-            # Extract the final response from the log
-            if isinstance(result, tuple) and len(result) == 2:
-                log, final_response = result
-                
-                # Format the full execution log
-                execution_log = "\n".join([entry["formatted"] for entry in agent.get_execution_logs()])
-                
-                # Extract intermediate results from the log
-                intermediate_results = []
-                for entry in log:
-                    if isinstance(entry, str):
-                        # Look for specific patterns in the log entries
-                        if "================================" in entry:
-                            intermediate_results.append(entry)
-                        elif "<execute>" in entry or "<observation>" in entry:
-                            intermediate_results.append(entry)
-                        elif "Human Message" in entry or "Ai Message" in entry:
-                            intermediate_results.append(entry)
-                
-                # Format the final output with advanced parsing
-                intermediate_text = ""
-                
-                # Add final response at the top
-                intermediate_text += f"✅ **Final Response:**\n\n{final_response}\n\n"
-                
-                # Add intermediate outputs with advanced parsing
-                intermediate_outputs = agent.get_intermediate_outputs()
-                if intermediate_outputs:
-                    intermediate_text += f"**Detailed Steps ({len(intermediate_outputs)} total):**\n\n"
-                    for output in intermediate_outputs:
-                        step_header = f"**Step {output['step']} ({output['message_type']})** - {output['timestamp']}"
-                        step_content = output['content']
-                        # 使用高级解析函数处理内容
-                        parsed_content = parse_advanced_content(step_content)
-                        intermediate_text += f"{step_header}\n{parsed_content}\n\n"
-                
-                if not intermediate_outputs:
-                    intermediate_text += "No intermediate results available."
-                
-                yield intermediate_text, execution_log
-            else:
-                execution_log = "\n".join([entry["formatted"] for entry in agent.get_execution_logs()])
-                yield f"✅ **Biomni Response:**\n\n{str(result)}", execution_log
+            # Format the full execution log
+            execution_log = "\n".join([entry["formatted"] for entry in agent.get_execution_logs()])
+            
+            # Format the final output with advanced parsing
+            intermediate_text = ""
+            
+            # Add intermediate outputs with advanced parsing
+            intermediate_outputs = agent.get_intermediate_outputs()
+            if intermediate_outputs:
+                intermediate_text += f"<div style='margin: 30px 0; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 10px; text-align: center;'><h2 style='margin: 0; font-size: 1.5em;'>📊 Detailed Steps ({len(intermediate_outputs)} total)</h2></div>\n\n"
+                for output in intermediate_outputs:
+                    step_header = f"<div style='margin: 40px 0 20px 0; border-top: 3px solid #007acc; padding-top: 20px;'><h3><strong>📝 Step {output['step']} ({output['message_type']}) - {output['timestamp']}</strong></h3></div>"
+                    step_content = output['content']
+                    # 使用高级解析函数处理内容
+                    parsed_content = parse_advanced_content(step_content)
+                    intermediate_text += f"{step_header}\n{parsed_content}\n\n"
+            
+            if not intermediate_outputs:
+                intermediate_text += "No intermediate results available."
+            
+            yield intermediate_text, execution_log
         else:
             yield "❌ No result received.", "\n".join([entry["formatted"] for entry in agent.get_execution_logs()])
             
