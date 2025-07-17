@@ -62,10 +62,18 @@ def parse_advanced_content(content: str) -> str:
             processed_content = processed_content.replace('`', '<code>').replace('`', '</code>')
             return f'<div class="solution-block"><strong>💡 Solution:</strong><br>{processed_content}</div>'
     
+    def process_think_tag(match):
+        """处理<think>标签，用灰色小号字体显示"""
+        inner_content = match.group(1).strip()
+        # 转义HTML特殊字符
+        inner_content = inner_content.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+        return f'<div class="think-block"><strong>💭 Thinking:</strong><br><span class="think-content">{inner_content}</span></div>'
+    
     # 先处理特殊标签
     content = re.sub(r'<execute>(.*?)</execute>', process_execute_tag, content, flags=re.DOTALL)
     content = re.sub(r'<observation>(.*?)</observation>', process_observation_tag, content, flags=re.DOTALL)
     content = re.sub(r'<solution>(.*?)</solution>', process_solution_tag, content, flags=re.DOTALL)
+    content = re.sub(r'<think>(.*?)</think>', process_think_tag, content, flags=re.DOTALL)
     
     # 处理其他markdown格式
     # 处理标题
@@ -137,18 +145,18 @@ def stop_execution():
     if agent:
         agent.stop()
     
-    return "⏹️ Stopping execution...", "Execution stopped by user.", "Execution stopped."
+    return "⏹️ Stopping execution...", "Execution stopped."
 
 def ask_biomni_stream(question: str):
     """Ask a question to the Biomni agent with streaming output."""
     global agent, agent_error, current_task, stop_flag
     
     if agent is None:
-        yield f"❌ Biomni agent not initialized. Please configure and create an agent first.\nError: {agent_error or 'No agent created'}", "", ""
+        yield f"❌ Biomni agent not initialized. Please configure and create an agent first.\nError: {agent_error or 'No agent created'}", ""
         return
     
     if not question.strip():
-        yield "❌ Please enter a question.", "", ""
+        yield "❌ Please enter a question.", ""
         return
     
     stop_flag = False
@@ -182,7 +190,7 @@ def ask_biomni_stream(question: str):
                 if agent:
                     agent.stop()
                 # Stop showing updates
-                yield "⏹️ **Stopping execution...**", "Execution interrupted by user.", "\n".join([entry["formatted"] for entry in agent.get_execution_logs()])
+                yield "⏹️ **Stopping execution...**", "\n".join([entry["formatted"] for entry in agent.get_execution_logs()])
                 current_task.join(timeout=1)  # Give it a moment to finish
                 return
             
@@ -217,7 +225,7 @@ def ask_biomni_stream(question: str):
                 else:
                     intermediate_text = "⏳ Processing... Please wait for intermediate results."
                 
-                yield progress, intermediate_text, execution_log
+                yield intermediate_text, execution_log
             
             time.sleep(0.5)  # Update every 0.5 seconds for better responsiveness
         
@@ -227,7 +235,7 @@ def ask_biomni_stream(question: str):
         # Handle results
         if 'error' in result_container:
             execution_log = "\n".join([entry["formatted"] for entry in agent.get_execution_logs()])
-            yield f"❌ **Error:** {result_container['error']}", "", execution_log
+            yield f"❌ **Error:** {result_container['error']}", execution_log
             return
         
         if 'result' in result_container:
@@ -252,14 +260,16 @@ def ask_biomni_stream(question: str):
                         elif "Human Message" in entry or "Ai Message" in entry:
                             intermediate_results.append(entry)
                 
-                # Also include intermediate outputs with advanced parsing
+                # Format the final output with advanced parsing
                 intermediate_text = ""
-                if intermediate_results:
-                    intermediate_text += "**Execution Log:**\n\n" + "\n".join(intermediate_results)
                 
+                # Add final response at the top
+                intermediate_text += f"✅ **Final Response:**\n\n{final_response}\n\n"
+                
+                # Add intermediate outputs with advanced parsing
                 intermediate_outputs = agent.get_intermediate_outputs()
                 if intermediate_outputs:
-                    intermediate_text += f"\n\n**Detailed Steps ({len(intermediate_outputs)} total):**\n\n"
+                    intermediate_text += f"**Detailed Steps ({len(intermediate_outputs)} total):**\n\n"
                     for output in intermediate_outputs:
                         step_header = f"**Step {output['step']} ({output['message_type']})** - {output['timestamp']}"
                         step_content = output['content']
@@ -267,19 +277,19 @@ def ask_biomni_stream(question: str):
                         parsed_content = parse_advanced_content(step_content)
                         intermediate_text += f"{step_header}\n{parsed_content}\n\n"
                 
-                if not intermediate_text:
-                    intermediate_text = "No intermediate results available."
+                if not intermediate_outputs:
+                    intermediate_text += "No intermediate results available."
                 
-                yield f"✅ **Final Response:**\n\n{final_response}", intermediate_text, execution_log
+                yield intermediate_text, execution_log
             else:
                 execution_log = "\n".join([entry["formatted"] for entry in agent.get_execution_logs()])
-                yield f"✅ **Biomni Response:**\n\n{str(result)}", "No intermediate results available.", execution_log
+                yield f"✅ **Biomni Response:**\n\n{str(result)}", execution_log
         else:
-            yield "❌ No result received.", "", "\n".join([entry["formatted"] for entry in agent.get_execution_logs()])
+            yield "❌ No result received.", "\n".join([entry["formatted"] for entry in agent.get_execution_logs()])
             
     except Exception as e:
         execution_log = "\n".join([entry["formatted"] for entry in agent.get_execution_logs()]) if agent else ""
-        yield f"❌ Error processing question: {str(e)}", "", execution_log
+        yield f"❌ Error processing question: {str(e)}", execution_log
 
 def ask_biomni(question: str):
     """Non-streaming version for backward compatibility."""
@@ -362,6 +372,21 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft(), css="""
         padding: 15px;
         border-radius: 8px;
         margin: 10px 0;
+    }
+    
+    .intermediate-results .think-block {
+        background-color: #f8f9fa;
+        border: 1px solid #e9ecef;
+        padding: 10px;
+        border-radius: 6px;
+        margin: 8px 0;
+    }
+    
+    .intermediate-results .think-content {
+        color: #6c757d;
+        font-size: 0.9em;
+        font-style: italic;
+        line-height: 1.4;
     }
     
     /* 内容包装器样式 */
@@ -496,17 +521,10 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft(), css="""
             )
             
             # Multiple output areas
-            with gr.Tab("Final Response"):
-                response = gr.Textbox(
-                    label="Final Response",
-                    lines=20,
-                    interactive=False
-                )
-            
-            with gr.Tab("Intermediate Results"):
+            with gr.Tab("Output"):
                 intermediate_results = gr.HTML(
-                    label="Intermediate Results & Execution Steps",
-                    value="<div style='text-align: center; color: #666; padding: 20px;'>Intermediate results will appear here...</div>",
+                    label="Output & Execution Steps",
+                    value="<div style='text-align: center; color: #666; padding: 20px;'>Output will appear here...</div>",
                     elem_classes=["intermediate-results"]
                 )
             
@@ -545,21 +563,21 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft(), css="""
     # Stop button
     stop_btn.click(
         fn=stop_execution,
-        outputs=[response, intermediate_results, execution_log]
+        outputs=[intermediate_results, execution_log]
     )
     
     # Streaming ask function
     ask_btn.click(
         fn=ask_biomni_stream,
         inputs=[question],
-        outputs=[response, intermediate_results, execution_log]
+        outputs=[intermediate_results, execution_log]
     )
     
     # Also allow Enter key to submit question
     question.submit(
         fn=ask_biomni_stream,
         inputs=[question],
-        outputs=[response, intermediate_results, execution_log]
+        outputs=[intermediate_results, execution_log]
     )
 
 if __name__ == "__main__":
