@@ -1103,7 +1103,7 @@ Each library is listed with its description to help you understand its functiona
                     )
                 else:
                     # Try to correct it
-                    # self._log("ERROR", "⏹", str(response))
+                    self._log("ERROR", "⏹", str(response))
                     state["messages"].append(
                         AIMessage(
                             content="There are no tags (e.g. <execute><solution>). Please follow the instruction, fix and update."
