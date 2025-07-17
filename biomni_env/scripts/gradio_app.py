@@ -246,7 +246,7 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft()) as demo:
             
             data_path = gr.Textbox(
                 label="Data Path",
-                value="./biomni_data",
+                value="./data",
                 placeholder="./data",
                 info="Path where Biomni data will be stored"
             )
