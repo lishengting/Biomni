@@ -67,12 +67,6 @@ RUN apt-get update && apt-get install -y \
     libblas-dev liblapack-dev libgsl-dev \
     # 科学计算库
     libhdf5-dev libnetcdf-dev \
-    # 清理缓存
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-# 安装生物信息学命令行工具
-RUN apt-get update && apt-get install -y \
     # 序列分析工具
     samtools bcftools bedtools fastqc bowtie2 bwa \
     # NCBI工具
@@ -87,10 +81,9 @@ RUN apt-get update && apt-get install -y \
 
 # 创建biomni用户
 RUN useradd -u 1005 -m -s /bin/bash biomni && \
-    chown -R biomni:biomni /opt/biomni
-
-# 创建工具目录并设置权限（在切换到biomni用户之前）
-RUN mkdir -p /opt/biomni_tools/bin && \
+    chown -R biomni:biomni /opt/biomni && \
+    # 创建工具目录并设置权限（在切换到biomni用户之前）
+    mkdir -p /opt/biomni_tools/bin && \
     chown -R biomni:biomni /opt/biomni_tools
 
 # 切换到biomni用户
@@ -111,10 +104,8 @@ RUN . /opt/biomni/venv/bin/activate && \
     mkdir -p /home/biomni/.pip && \
     cp /opt/biomni/pip.conf /home/biomni/.pip/pip.conf && \
     # 设置环境变量指向pip配置
-    echo 'export PIP_CONFIG_FILE=/opt/biomni/venv/pip/pip.conf' >> /opt/biomni/venv/bin/activate
-
-# 激活虚拟环境并升级pip（使用配置后的pip）
-RUN . /opt/biomni/venv/bin/activate && \
+    echo 'export PIP_CONFIG_FILE=/opt/biomni/venv/pip/pip.conf' >> /opt/biomni/venv/bin/activate && \
+    # 激活虚拟环境并升级pip（使用配置后的pip）
     python --version && \
     pip config list && \
     pip install --upgrade pip setuptools wheel
@@ -124,58 +115,55 @@ COPY --chown=biomni:biomni environment.yml /opt/biomni/
 COPY --chown=biomni:biomni bio_env.yml /opt/biomni/
 COPY --chown=biomni:biomni r_packages.yml /opt/biomni/
 
-# 安装基础科学计算包
+# 大包，单独安装
 RUN . /opt/biomni/venv/bin/activate && \
-    pip install tqdm numpy==2.1 pandas matplotlib scipy statsmodels scikit-learn
+    pip install scvi-tools
 
-# 安装AI/ML相关包
+# 合并所有Python包安装为一个RUN命令，提升构建效率（原分散RUN命令已注释，见下方）
 RUN . /opt/biomni/venv/bin/activate && \
-    pip install gradio langchain langgraph==0.3.18 langchain_openai langchain_anthropic \
-                langchain_community langchain-google-genai langchain_ollama openai
+    pip install \
+        tqdm numpy==2.1 pandas matplotlib scipy statsmodels scikit-learn \
+        gradio langchain langgraph==0.3.18 langchain_openai langchain_anthropic \
+        langchain_community langchain-google-genai langchain_ollama openai \
+        biopython scanpy scvelo biopandas \
+        biotite opencv-python rdkit macs2 pymc3 cryosparc-tools lifelines \
+        scikit-image googlesearch-python PyPDF2 gget faiss-cpu \
+        cellxgene-census scikit-bio pymed arxiv scholarly umap-learn \
+        scrublet harmony-pytorch pyliftover pytdc==0.4.0 pysam pyfaidx \
+        pyranges pybedtools openmm pystan igraph pyscenic cooler \
+        trackpy flowcytometrytools cellpose viennarna PyMassSpec \
+        python-libsbml cobra reportlab hmmlearn msprime tskit \
+        cyvcf2 pykalman community fanc \
+        gseapy beautifulsoup4 lxml seaborn networkx requests pyyaml jupyter notebook ipykernel pytest
 
-# 安装生物信息学包 - 第一部分（小包）
-RUN . /opt/biomni/venv/bin/activate && \
-    pip install biopython scanpy scvelo biopandas
-
-# 安装生物信息学包 - 第二部分（大包，单独安装）
-RUN . /opt/biomni/venv/bin/activate && \
-    pip install --progress-bar raw scvi-tools
-
-# 安装生物信息学包 - 第四部分
-RUN . /opt/biomni/venv/bin/activate && \
-    pip install biotite opencv-python rdkit macs2 pymc3 cryosparc-tools lifelines
-
-# 安装生物信息学包 - 第五部分
-RUN . /opt/biomni/venv/bin/activate && \
-    pip install scikit-image googlesearch-python PyPDF2 gget faiss-cpu
-
-# 安装生物信息学包 - 第六部分
-RUN . /opt/biomni/venv/bin/activate && \
-    pip install cellxgene-census scikit-bio pymed arxiv scholarly umap-learn
-
-# 安装生物信息学包 - 第七部分
-RUN . /opt/biomni/venv/bin/activate && \
-    pip install scrublet harmony-pytorch pyliftover pytdc==0.4.0 pysam pyfaidx
-
-# 安装生物信息学包 - 第八部分
-RUN . /opt/biomni/venv/bin/activate && \
-    pip install pyranges pybedtools openmm pystan igraph pyscenic cooler
-
-# 安装生物信息学包 - 第九部分
-RUN . /opt/biomni/venv/bin/activate && \
-    pip install trackpy flowcytometrytools cellpose viennarna PyMassSpec
-
-# 安装生物信息学包 - 第十部分
-RUN . /opt/biomni/venv/bin/activate && \
-    pip install python-libsbml cobra reportlab hmmlearn msprime tskit
-
-# 安装生物信息学包 - 第十一部分
-RUN . /opt/biomni/venv/bin/activate && \
-    pip install cyvcf2 pykalman community fanc
-
-# 安装额外的生物信息学工具（对应bio_env.yml中的conda包） mageck在R中安装 plannotate不存在，可能在conda中
-RUN . /opt/biomni/venv/bin/activate && \
-    pip install gseapy beautifulsoup4 lxml seaborn networkx requests pyyaml jupyter notebook ipykernel pytest
+# 以下为原分散安装命令，已合并，注释掉以便追溯（合并原因：减少镜像层数、加速构建）
+# RUN . /opt/biomni/venv/bin/activate && \
+#     pip install scvi-tools
+# RUN . /opt/biomni/venv/bin/activate && \
+#     pip install tqdm numpy==2.1 pandas matplotlib scipy statsmodels scikit-learn 
+# RUN . /opt/biomni/venv/bin/activate && \
+#     pip install gradio langchain langgraph==0.3.18 langchain_openai langchain_anthropic \
+#                 langchain_community langchain-google-genai langchain_ollama openai
+# RUN . /opt/biomni/venv/bin/activate && \
+#     pip install biopython scanpy scvelo biopandas
+# RUN . /opt/biomni/venv/bin/activate && \
+#     pip install biotite opencv-python rdkit macs2 pymc3 cryosparc-tools lifelines
+# RUN . /opt/biomni/venv/bin/activate && \
+#     pip install scikit-image googlesearch-python PyPDF2 gget faiss-cpu
+# RUN . /opt/biomni/venv/bin/activate && \
+#     pip install cellxgene-census scikit-bio pymed arxiv scholarly umap-learn
+# RUN . /opt/biomni/venv/bin/activate && \
+#     pip install scrublet harmony-pytorch pyliftover pytdc==0.4.0 pysam pyfaidx
+# RUN . /opt/biomni/venv/bin/activate && \
+#     pip install pyranges pybedtools openmm pystan igraph pyscenic cooler
+# RUN . /opt/biomni/venv/bin/activate && \
+#     pip install trackpy flowcytometrytools cellpose viennarna PyMassSpec
+# RUN . /opt/biomni/venv/bin/activate && \
+#     pip install python-libsbml cobra reportlab hmmlearn msprime tskit
+# RUN . /opt/biomni/venv/bin/activate && \
+#     pip install cyvcf2 pykalman community fanc
+# RUN . /opt/biomni/venv/bin/activate && \
+#     pip install gseapy beautifulsoup4 lxml seaborn networkx requests pyyaml jupyter notebook ipykernel pytest
 
 # 开发模式安装biomni源码
 # RUN /opt/biomni/venv/bin/pip install -e /opt/biomni
