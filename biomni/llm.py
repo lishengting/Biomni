@@ -86,14 +86,22 @@ def get_llm(
     elif source == "Custom":
         # Custom LLM serving such as SGLang. Must expose an openai compatible API.
         assert base_url is not None, "base_url must be provided for customly served LLMs"
-        return ChatOpenAI(
-            model=model, 
-            temperature=temperature, 
-            max_tokens=8192, 
-            stop_sequences=stop_sequences,
-            base_url=base_url,
-            api_key=api_key
-        )
+        # 检查是否为阿里云Qwen模型，需要特殊处理enable_thinking参数
+        kwargs = {
+            "model": model,
+            "temperature": temperature,
+            "max_tokens": 8192,
+            "stop_sequences": stop_sequences,
+            "base_url": base_url,
+            "api_key": api_key
+        }
+
+        # 如果是阿里云Qwen模型，添加enable_thinking=False参数
+        if "qwen" in model.lower() and "dashscope" in base_url.lower():
+            kwargs["enable_thinking"] = False
+            print(f"🔧 检测到阿里云Qwen模型，已设置 enable_thinking=False")
+
+        return ChatOpenAI(**kwargs)
     else:
         raise ValueError(
             f"Invalid source: {source}. Valid options are 'OpenAI', 'AzureOpenAI', 'Anthropic', 'Gemini', 'Ollama', or 'Custom'"
