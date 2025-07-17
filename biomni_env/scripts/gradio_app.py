@@ -126,12 +126,9 @@ def ask_biomni_stream(question: str):
                 intermediate_text = ""
                 if intermediate_outputs:
                     intermediate_text = f"**Execution Steps ({len(intermediate_outputs)} total):**\n\n"
-                    # Show last 5 intermediate outputs
-                    for output in intermediate_outputs[-5:]:
-                        intermediate_text += f"**Step {output['step']} ({output['message_type']})** - {output['timestamp']}\n"
-                        # Show a preview of the content
-                        content_preview = output['content'][:500] + "..." if len(output['content']) > 500 else output['content']
-                        intermediate_text += f"{content_preview}\n\n"
+                    # Show all intermediate outputs without truncation
+                    for output in intermediate_outputs:
+                        intermediate_text += f"**Step {output['step']} ({output['message_type']})** - {output['timestamp']}\n{output['content']}\n\n"
                 else:
                     intermediate_text = "⏳ Processing... Please wait for intermediate results."
                 
@@ -278,7 +275,7 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft()) as demo:
                 lines=4
             )
             
-        with gr.Column(scale=2):
+        with gr.Column(scale=3):
             gr.Markdown("## 💬 Chat with Biomni")
             
             # Chat interface
@@ -305,14 +302,14 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft()) as demo:
             with gr.Tab("Final Response"):
                 response = gr.Textbox(
                     label="Final Response",
-                    lines=10,
+                    lines=20,
                     interactive=False
                 )
             
             with gr.Tab("Intermediate Results"):
                 intermediate_results = gr.Textbox(
                     label="Intermediate Results & Execution Steps",
-                    lines=15,
+                    lines=30,
                     interactive=False,
                     placeholder="Intermediate results will appear here..."
                 )
@@ -320,7 +317,7 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft()) as demo:
             with gr.Tab("Execution Log"):
                 execution_log = gr.Textbox(
                     label="Detailed Execution Log",
-                    lines=15,
+                    lines=30,
                     interactive=False,
                     placeholder="Detailed execution logs will appear here..."
                 )
