@@ -67,12 +67,19 @@ def get_llm(
             temperature=temperature,
         )
     elif source == "Anthropic":
-        return ChatAnthropic(
-            model=model,
-            temperature=temperature,
-            max_tokens=8192,
-            stop_sequences=stop_sequences,
-        )
+        kwargs = {
+            "model": model,
+            "temperature": temperature,
+            "max_tokens": 8192,
+            "stop_sequences": stop_sequences,
+        }
+        if api_key and api_key != "EMPTY":
+            kwargs["api_key"] = api_key
+        elif "ANTHROPIC_API_KEY" in os.environ:
+            kwargs["api_key"] = os.getenv("ANTHROPIC_API_KEY")
+        if base_url:
+            kwargs["base_url"] = base_url
+        return ChatAnthropic(**kwargs)
     elif source == "Gemini":
         return ChatGoogleGenerativeAI(
             model=model,
