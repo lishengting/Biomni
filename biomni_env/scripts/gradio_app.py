@@ -2,6 +2,8 @@ import gradio as gr
 import os
 import threading
 import time
+import re
+import json
 from typing import Optional
 
 # Global agent variable
@@ -9,6 +11,85 @@ agent = None
 agent_error = None
 current_task = None  # Track current running task
 stop_flag = False  # Flag to stop execution
+
+def parse_advanced_content(content: str) -> str:
+    """
+    高级内容解析函数，将不同格式的内容转换为HTML显示
+    - 普通内容按markdown格式解析
+    - <execute></execute>中的内容用深色代码窗显示
+    - <observation></observation>和<solution></solution>中的内容，如果是JSON就用JSON美化显示，否则按markdown格式解析
+    """
+    if not content:
+        return ""
+    
+    # 定义不同标签的处理函数
+    def process_execute_tag(match):
+        """处理<execute>标签，用深色代码窗显示"""
+        inner_content = match.group(1)
+        # 转义HTML特殊字符
+        inner_content = inner_content.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+        return f'<div class="execute-block"><strong>🔧 Execute:</strong><br><pre>{inner_content}</pre></div>'
+    
+    def process_observation_tag(match):
+        """处理<observation>标签，判断是否为JSON格式"""
+        inner_content = match.group(1).strip()
+        try:
+            # 尝试解析为JSON
+            json_data = json.loads(inner_content)
+            # 美化JSON显示
+            formatted_json = json.dumps(json_data, indent=2, ensure_ascii=False)
+            return f'<div class="observation-block"><strong>👁️ Observation:</strong><br><pre>{formatted_json}</pre></div>'
+        except (json.JSONDecodeError, ValueError):
+            # 不是JSON，按markdown格式处理
+            # 简单的markdown转HTML处理
+            processed_content = inner_content.replace('**', '<strong>').replace('**', '</strong>')
+            processed_content = processed_content.replace('`', '<code>').replace('`', '</code>')
+            return f'<div class="observation-block"><strong>👁️ Observation:</strong><br>{processed_content}</div>'
+    
+    def process_solution_tag(match):
+        """处理<solution>标签，判断是否为JSON格式"""
+        inner_content = match.group(1).strip()
+        try:
+            # 尝试解析为JSON
+            json_data = json.loads(inner_content)
+            # 美化JSON显示
+            formatted_json = json.dumps(json_data, indent=2, ensure_ascii=False)
+            return f'<div class="solution-block"><strong>💡 Solution:</strong><br><pre>{formatted_json}</pre></div>'
+        except (json.JSONDecodeError, ValueError):
+            # 不是JSON，按markdown格式处理
+            # 简单的markdown转HTML处理
+            processed_content = inner_content.replace('**', '<strong>').replace('**', '</strong>')
+            processed_content = processed_content.replace('`', '<code>').replace('`', '</code>')
+            return f'<div class="solution-block"><strong>💡 Solution:</strong><br>{processed_content}</div>'
+    
+    # 先处理特殊标签
+    content = re.sub(r'<execute>(.*?)</execute>', process_execute_tag, content, flags=re.DOTALL)
+    content = re.sub(r'<observation>(.*?)</observation>', process_observation_tag, content, flags=re.DOTALL)
+    content = re.sub(r'<solution>(.*?)</solution>', process_solution_tag, content, flags=re.DOTALL)
+    
+    # 处理其他markdown格式
+    # 处理标题
+    content = re.sub(r'^### (.*?)$', r'<h3>\1</h3>', content, flags=re.MULTILINE)
+    content = re.sub(r'^## (.*?)$', r'<h2>\1</h2>', content, flags=re.MULTILINE)
+    content = re.sub(r'^\*\* (.*?) \*\*$', r'<h4>\1</h4>', content, flags=re.MULTILINE)
+    
+    # 处理粗体
+    content = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', content)
+    
+    # 处理代码块
+    content = re.sub(r'```(.*?)```', r'<pre>\1</pre>', content, flags=re.DOTALL)
+    
+    # 处理行内代码
+    content = re.sub(r'`(.*?)`', r'<code>\1</code>', content)
+    
+    # 处理列表
+    content = re.sub(r'^- (.*?)$', r'<li>\1</li>', content, flags=re.MULTILINE)
+    content = re.sub(r'(\n<li.*?</li>\n)+', r'<ul>\g<0></ul>', content)
+    
+    # 处理换行
+    content = content.replace('\n', '<br>')
+    
+    return f'<div class="content-wrapper">{content}</div>'
 
 def create_agent(llm_model: str, source: str, base_url: Optional[str], api_key: Optional[str], data_path: str, verbose: bool):
     """Create a new Biomni agent with the specified configuration."""
@@ -122,13 +203,17 @@ def ask_biomni_stream(question: str):
                 latest_logs = logs[-min(3, len(logs)):]  # Show last 3 log entries
                 progress = f"🔄 **Running...** (Step {current_step})\n\n**Recent Activity:**\n" + "\n".join([log["formatted"] for log in latest_logs])
                 
-                # Format intermediate results
+                # Format intermediate results with advanced parsing
                 intermediate_text = ""
                 if intermediate_outputs:
                     intermediate_text = f"**Execution Steps ({len(intermediate_outputs)} total):**\n\n"
                     # Show all intermediate outputs without truncation
                     for output in intermediate_outputs:
-                        intermediate_text += f"**Step {output['step']} ({output['message_type']})** - {output['timestamp']}\n{output['content']}\n\n"
+                        step_header = f"**Step {output['step']} ({output['message_type']})** - {output['timestamp']}"
+                        step_content = output['content']
+                        # 使用高级解析函数处理内容
+                        parsed_content = parse_advanced_content(step_content)
+                        intermediate_text += f"{step_header}\n{parsed_content}\n\n"
                 else:
                     intermediate_text = "⏳ Processing... Please wait for intermediate results."
                 
@@ -167,7 +252,7 @@ def ask_biomni_stream(question: str):
                         elif "Human Message" in entry or "Ai Message" in entry:
                             intermediate_results.append(entry)
                 
-                # Also include intermediate outputs
+                # Also include intermediate outputs with advanced parsing
                 intermediate_text = ""
                 if intermediate_results:
                     intermediate_text += "**Execution Log:**\n\n" + "\n".join(intermediate_results)
@@ -176,7 +261,11 @@ def ask_biomni_stream(question: str):
                 if intermediate_outputs:
                     intermediate_text += f"\n\n**Detailed Steps ({len(intermediate_outputs)} total):**\n\n"
                     for output in intermediate_outputs:
-                        intermediate_text += f"**Step {output['step']} ({output['message_type']})** - {output['timestamp']}\n{output['content']}\n\n"
+                        step_header = f"**Step {output['step']} ({output['message_type']})** - {output['timestamp']}"
+                        step_content = output['content']
+                        # 使用高级解析函数处理内容
+                        parsed_content = parse_advanced_content(step_content)
+                        intermediate_text += f"{step_header}\n{parsed_content}\n\n"
                 
                 if not intermediate_text:
                     intermediate_text = "No intermediate results available."
@@ -206,7 +295,115 @@ def reset_agent():
     return "Agent reset. Please configure and create a new agent.", ""
 
 # Create the Gradio interface
-with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft()) as demo:
+with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft(), css="""
+    .intermediate-results {
+        max-height: 800px;
+        overflow-y: auto;
+        padding: 20px;
+        background-color: #ffffff;
+        border-radius: 8px;
+        border: 1px solid #e1e5e9;
+    }
+    
+    .intermediate-results::-webkit-scrollbar {
+        width: 8px;
+    }
+    
+    .intermediate-results::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+    }
+    
+    .intermediate-results::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 4px;
+    }
+    
+    .intermediate-results::-webkit-scrollbar-thumb:hover {
+        background: #a8a8a8;
+    }
+    
+    /* 自定义代码块样式 */
+    .intermediate-results pre {
+        background-color: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 6px;
+        padding: 12px;
+        margin: 10px 0;
+        overflow-x: auto;
+        font-family: 'Courier New', monospace;
+        font-size: 14px;
+        line-height: 1.4;
+    }
+    
+    /* 自定义标签样式 */
+    .intermediate-results .execute-block {
+        background-color: #1e1e1e;
+        color: #d4d4d4;
+        padding: 15px;
+        border-radius: 8px;
+        margin: 10px 0;
+        font-family: 'Courier New', monospace;
+        white-space: pre-wrap;
+        border-left: 4px solid #007acc;
+    }
+    
+    .intermediate-results .observation-block {
+        background-color: #f8f9fa;
+        border: 1px solid #e9ecef;
+        padding: 15px;
+        border-radius: 8px;
+        margin: 10px 0;
+    }
+    
+    .intermediate-results .solution-block {
+        background-color: #e8f5e8;
+        border: 1px solid #c3e6c3;
+        padding: 15px;
+        border-radius: 8px;
+        margin: 10px 0;
+    }
+    
+    /* 内容包装器样式 */
+    .intermediate-results .content-wrapper {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        line-height: 1.6;
+        color: #333;
+    }
+    
+    .intermediate-results h2 {
+        color: #34495e;
+        margin: 25px 0 15px 0;
+        border-bottom: 2px solid #ecf0f1;
+        padding-bottom: 5px;
+    }
+    
+    .intermediate-results h3 {
+        color: #2c3e50;
+        margin: 20px 0 10px 0;
+    }
+    
+    .intermediate-results h4 {
+        color: #7f8c8d;
+        margin: 15px 0 8px 0;
+    }
+    
+    .intermediate-results code {
+        background-color: #f4f4f4;
+        padding: 2px 4px;
+        border-radius: 3px;
+        font-family: monospace;
+    }
+    
+    .intermediate-results li {
+        margin: 5px 0;
+    }
+    
+    .intermediate-results ul {
+        margin: 10px 0;
+        padding-left: 20px;
+    }
+""") as demo:
     gr.Markdown("# 🧬 Biomni AI Agent Demo")
     gr.Markdown("Configure your LLM settings and ask Biomni to run biomedical tasks!")
     
@@ -307,11 +504,10 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft()) as demo:
                 )
             
             with gr.Tab("Intermediate Results"):
-                intermediate_results = gr.Textbox(
+                intermediate_results = gr.HTML(
                     label="Intermediate Results & Execution Steps",
-                    lines=30,
-                    interactive=False,
-                    placeholder="Intermediate results will appear here..."
+                    value="<div style='text-align: center; color: #666; padding: 20px;'>Intermediate results will appear here...</div>",
+                    elem_classes=["intermediate-results"]
                 )
             
             with gr.Tab("Execution Log"):
