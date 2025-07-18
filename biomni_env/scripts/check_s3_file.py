@@ -121,7 +121,7 @@ def check_file_size(s3_bucket_url: str, file_path: str) -> Dict[str, Any]:
             "error": error_msg
         }
 
-def download_file_with_resume(s3_bucket_url: str, file_path: str, local_dir: str = ".", chunk_size: int = 8192, max_retries: int = 3, retry_delay: float = 5.0) -> Dict[str, Any]:
+def download_file_with_resume(s3_bucket_url: str, file_path: str, local_dir: str = ".", chunk_size: int = 8192, max_retries: int = 15, retry_delay: float = 5.0) -> Dict[str, Any]:
     """
     下载文件，支持断点续传和自动重试
     
