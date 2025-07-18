@@ -222,6 +222,8 @@ def stop_execution(session_id: str = ""):
     """Stop the current execution."""
     global stop_flag, agent
     
+    print(f"[LOG] 停止执行，session_id: {session_id}")  # 添加日志
+    
     # 如果没有提供session_id，停止所有会话
     if not session_id or session_id == "":
         stop_flag = True
@@ -235,6 +237,7 @@ def stop_execution(session_id: str = ""):
         session_manager.update_session(session_id, stop_flag=True)
         if session['agent']:
             session['agent'].stop()
+        print(f"[LOG] 已设置停止标志，session_id: {session_id}")  # 添加日志
         return "⏹️ Stopping execution...", "Execution stopped."
     
     return "⏹️ No active session found.", "No session to stop."
@@ -316,8 +319,25 @@ def ask_biomni_stream(question: str, session_id: str = ""):
                 # Call agent's stop method to actually stop execution
                 if session_agent:
                     session_agent.stop()
-                # Stop showing updates
-                yield "⏹️ **Stopping execution...**", "\n".join([entry["formatted"] for entry in session_agent.get_execution_logs()])
+                # 获取当前的执行日志
+                execution_log = "\n".join([entry["formatted"] for entry in session_agent.get_execution_logs()])
+                # 获取当前的中间输出
+                intermediate_outputs = session_agent.get_intermediate_outputs()
+                
+                # 构建停止消息，保留现有内容
+                stop_message = ""
+                if intermediate_outputs:
+                    stop_message = f"<div style='margin: 30px 0; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 10px; text-align: center;'><h2 style='margin: 0; font-size: 1.5em;'>📊 Execution Steps ({len(intermediate_outputs)} total)</h2></div>\n\n"
+                    for output in intermediate_outputs:
+                        step_header = f"<div style='margin: 40px 0 20px 0; border-top: 3px solid #007acc; padding-top: 20px;'><h3><strong>📝 Step {output['step']} ({output['message_type']}) - {output['timestamp']}</strong></h3></div>"
+                        step_content = output['content']
+                        parsed_content = parse_advanced_content(step_content)
+                        stop_message += f"{step_header}\n{parsed_content}\n\n"
+                
+                # 追加停止信息
+                stop_message += f"\n\n<div style='margin: 20px 0; padding: 15px; background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; border-radius: 8px; text-align: center;'><h3 style='margin: 0;'>⏹️ Execution Stopped</h3><p style='margin: 5px 0 0 0;'>Task execution has been stopped by user.</p></div>"
+                
+                yield stop_message, execution_log
                 session_task.join(timeout=1)  # Give it a moment to finish
                 return
             
