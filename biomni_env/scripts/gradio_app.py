@@ -262,9 +262,18 @@ def ask_biomni_stream(question: str, session_id: str = ""):
     
     print(f"[LOG] 提问时会话状态: agent={session_agent is not None}, error={session_error}")  # 添加日志
     
+    # 如果当前会话没有agent，尝试使用全局agent
     if session_agent is None:
-        yield f"❌ Biomni agent not initialized. Please configure and create an agent first.\nError: {session_error or 'No agent created'}", ""
-        return
+        if agent is not None:
+            # 使用全局agent
+            print(f"[LOG] 使用全局agent")  # 添加日志
+            session_agent = agent
+            session_manager.update_session(session_id, agent=agent, agent_error=None)
+        else:
+            # 提示用户先创建agent
+            print(f"[LOG] 没有可用的agent，提示用户先创建")  # 添加日志
+            yield f"❌ Biomni agent not initialized. Please configure and create an agent first.\n\n请先点击'🚀 Create Agent'按钮创建agent，然后再提问。", ""
+            return
     
     if not question.strip():
         yield "❌ Please enter a question.", ""
@@ -709,16 +718,15 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft(), css="""
         outputs=[session_display]
     )
     
-    # 创建agent时自动生成新的会话ID
-    def create_agent_with_new_session(llm_model, source, base_url, api_key, data_path, verbose, session_id):
-        """创建agent时自动生成新的会话ID"""
-        new_session_id = get_timestamp_session_id()
-        print(f"[LOG] 创建agent时生成新会话ID: {new_session_id}")  # 添加日志
-        result = create_agent(llm_model, source, base_url, api_key, data_path, verbose, new_session_id)
-        return result[0], result[1], new_session_id
+    # 创建agent时使用当前会话ID
+    def create_agent_with_current_session(llm_model, source, base_url, api_key, data_path, verbose, session_id):
+        """创建agent时使用当前会话ID"""
+        print(f"[LOG] 创建agent时使用会话ID: {session_id}")  # 添加日志
+        result = create_agent(llm_model, source, base_url, api_key, data_path, verbose, session_id)
+        return result[0], result[1], session_id
     
     create_btn.click(
-        fn=create_agent_with_new_session,
+        fn=create_agent_with_current_session,
         inputs=[llm_model, source, base_url, api_key, data_path, verbose, session_display],
         outputs=[status_text, config_info, session_display]
     )
