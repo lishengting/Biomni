@@ -245,12 +245,13 @@ def ask_biomni_stream(question: str, session_id: str = ""):
     
     print(f"[LOG] 提问，session_id: {session_id}, question: {question[:50]}...")  # 添加日志
     
-    # 使用传入的会话ID，如果没有则生成新的
-    if not session_id or session_id == "":
-        session_id = get_timestamp_session_id()
-        print(f"[LOG] 生成新session_id: {session_id}")  # 添加日志
-    else:
-        print(f"[LOG] 使用传入的session_id: {session_id}")  # 添加日志
+    # 检查是否有有效的会话ID
+    if not session_id or session_id == "" or session_id == "No session assigned":
+        print(f"[LOG] 没有有效的session_id，提示用户先创建agent")  # 添加日志
+        yield f"❌ No session assigned. Please click '🚀 Create Agent' button first to create a session.", ""
+        return
+    
+    print(f"[LOG] 使用传入的session_id: {session_id}")  # 添加日志
     
     # 清理旧会话
     cleanup_old_sessions()
@@ -587,7 +588,7 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft(), css="""
     # 显示当前会话ID（用于调试）
     session_display = gr.Textbox(
         label="Session ID (Debug)",
-        value=get_timestamp_session_id(),
+        value="No session assigned",
         interactive=False,
         visible=True  # 临时设为可见，用于调试
     )
@@ -600,14 +601,8 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft(), css="""
         visible=True
     )
     
-    # 刷新会话按钮
-    refresh_session_btn = gr.Button("🔄 New Session", variant="secondary", size="sm")
-    
-    # 强制刷新会话按钮
-    force_refresh_btn = gr.Button("🔄 Force New Session", variant="primary", size="sm")
-    
-    # 隐藏的会话ID组件 - 使用时间戳确保每个页面加载都有不同的ID
-    session_id_state = gr.State(value=get_timestamp_session_id())
+    # 隐藏的会话ID组件 - 初始为空
+    session_id_state = gr.State(value="")
     
     with gr.Row():
         with gr.Column(scale=1):
@@ -726,33 +721,19 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft(), css="""
             )
     
     # Event handlers
-    # 刷新会话ID
-    refresh_session_btn.click(
-        fn=refresh_session_id,
-        outputs=[session_display]
-    )
-    
-    # 强制刷新会话ID
-    force_refresh_btn.click(
-        fn=refresh_session_id,
-        outputs=[session_display]
-    )
-    
-    # 创建agent时使用当前会话ID
-    def create_agent_with_current_session(llm_model, source, base_url, api_key, data_path, verbose, session_id):
-        """创建agent时使用当前会话ID"""
-        print(f"[LOG] 创建agent时使用会话ID: {session_id}")  # 添加日志
-        # 如果session_id为空，生成一个新的
-        if not session_id or session_id == "":
-            session_id = get_timestamp_session_id()
-            print(f"[LOG] 创建agent时生成新会话ID: {session_id}")  # 添加日志
-        result = create_agent(llm_model, source, base_url, api_key, data_path, verbose, session_id)
+    # 创建agent时分配新的会话ID
+    def create_agent_with_new_session(llm_model, source, base_url, api_key, data_path, verbose, session_id):
+        """创建agent时分配新的会话ID"""
+        # 总是生成新的会话ID
+        new_session_id = get_timestamp_session_id()
+        print(f"[LOG] 创建agent时分配新会话ID: {new_session_id}")  # 添加日志
+        result = create_agent(llm_model, source, base_url, api_key, data_path, verbose, new_session_id)
         # 更新会话状态
-        session_status_text = f"Agent created for session: {session_id}"
-        return result[0], result[1], session_id, session_status_text
+        session_status_text = f"Agent created for session: {new_session_id}"
+        return result[0], result[1], new_session_id, session_status_text
     
     create_btn.click(
-        fn=create_agent_with_current_session,
+        fn=create_agent_with_new_session,
         inputs=[llm_model, source, base_url, api_key, data_path, verbose, session_display],
         outputs=[status_text, config_info, session_display, session_status]
     )
