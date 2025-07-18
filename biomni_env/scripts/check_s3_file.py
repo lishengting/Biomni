@@ -121,15 +121,17 @@ def check_file_size(s3_bucket_url: str, file_path: str) -> Dict[str, Any]:
             "error": error_msg
         }
 
-def download_file_with_resume(s3_bucket_url: str, file_path: str, local_dir: str = ".", chunk_size: int = 8192) -> Dict[str, Any]:
+def download_file_with_resume(s3_bucket_url: str, file_path: str, local_dir: str = ".", chunk_size: int = 8192, max_retries: int = 3, retry_delay: float = 5.0) -> Dict[str, Any]:
     """
-    下载文件，支持断点续传
+    下载文件，支持断点续传和自动重试
     
     Args:
         s3_bucket_url: S3存储桶的基础URL
         file_path: 文件在存储桶中的路径
         local_dir: 本地保存目录
         chunk_size: 下载块大小
+        max_retries: 最大重试次数
+        retry_delay: 重试间隔（秒）
         
     Returns:
         下载结果字典
@@ -156,127 +158,138 @@ def download_file_with_resume(s3_bucket_url: str, file_path: str, local_dir: str
         resume_pos = os.path.getsize(temp_file_path)
         print(f"🔄 发现临时文件，从 {format_file_size(resume_pos)} 处继续下载")
     
-    try:
-        # 首先检查文件信息
-        file_info = check_file_size(s3_bucket_url, file_path)
-        if not file_info["accessible"]:
-            return {
-                "success": False,
-                "error": file_info["error"],
-                "file_path": file_path,
-                "local_path": local_file_path
-            }
-        
-        total_size = file_info["size_bytes"]
-        
-        # 如果文件已完整下载，直接返回
-        if os.path.exists(local_file_path) and os.path.getsize(local_file_path) == total_size:
-            print(f"✅ 文件已完整下载: {local_file_path}")
-            return {
-                "success": True,
-                "file_path": file_path,
-                "local_path": local_file_path,
-                "size": total_size,
-                "message": "文件已存在且完整"
-            }
-        
-        # 设置请求头，支持断点续传
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        }
-        
-        if resume_pos > 0:
-            headers['Range'] = f'bytes={resume_pos}-'
-        
-        # 开始下载
-        response = requests.get(file_url, headers=headers, stream=True, timeout=30)
-        
-        if response.status_code not in [200, 206]:
-            return {
-                "success": False,
-                "error": f"HTTP错误: {response.status_code}",
-                "file_path": file_path,
-                "local_path": local_file_path
-            }
-        
-        # 打开文件进行写入
-        mode = 'ab' if resume_pos > 0 else 'wb'
-        with open(temp_file_path, mode) as f:
-            downloaded = resume_pos
-            last_progress_time = time.time()
-            session_start_time = time.time()  # 本次会话开始时间
-            session_downloaded = 0  # 本次会话下载的字节数
+    # 重试逻辑
+    for retry_count in range(max_retries + 1):
+        try:
+            # 首先检查文件信息
+            file_info = check_file_size(s3_bucket_url, file_path)
+            if not file_info["accessible"]:
+                return {
+                    "success": False,
+                    "error": file_info["error"],
+                    "file_path": file_path,
+                    "local_path": local_file_path
+                }
             
-            for chunk in response.iter_content(chunk_size=chunk_size):
-                if chunk:
-                    f.write(chunk)
-                    downloaded += len(chunk)
-                    session_downloaded += len(chunk)
-                    
-                    # 显示进度（每秒更新一次）
-                    current_time = time.time()
-                    if current_time - last_progress_time >= 1.0:
-                        progress = (downloaded / total_size) * 100
-                        # 计算实际下载速度（从上次进度更新到现在）
-                        time_diff = current_time - last_progress_time
-                        speed = session_downloaded / (current_time - session_start_time) if (current_time - session_start_time) > 0 else 0
-                        print(f"📊 进度: {progress:.1f}% ({format_file_size(downloaded)}/{format_file_size(total_size)}) "
-                              f"速度: {format_file_size(int(speed))}/s")
-                        last_progress_time = current_time
-        
-        # 下载完成，重命名临时文件
-        if os.path.exists(local_file_path):
-            os.remove(local_file_path)  # 删除旧文件
-        os.rename(temp_file_path, local_file_path)
-        
-        # 验证文件大小
-        final_size = os.path.getsize(local_file_path)
-        if final_size == total_size:
-            print(f"✅ 下载完成: {local_file_path}")
-            print(f"   大小: {format_file_size(final_size)}")
-            return {
-                "success": True,
-                "file_path": file_path,
-                "local_path": local_file_path,
-                "size": final_size,
-                "message": "下载成功"
-            }
-        else:
-            print(f"⚠️ 文件大小不匹配: 期望 {format_file_size(total_size)}, 实际 {format_file_size(final_size)}")
-            return {
-                "success": False,
-                "error": f"文件大小不匹配: 期望 {total_size}, 实际 {final_size}",
-                "file_path": file_path,
-                "local_path": local_file_path
+            total_size = file_info["size_bytes"]
+            
+            # 如果文件已完整下载，直接返回
+            if os.path.exists(local_file_path) and os.path.getsize(local_file_path) == total_size:
+                print(f"✅ 文件已完整下载: {local_file_path}")
+                return {
+                    "success": True,
+                    "file_path": file_path,
+                    "local_path": local_file_path,
+                    "size": total_size,
+                    "message": "文件已存在且完整"
+                }
+            
+            # 设置请求头，支持断点续传
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
             }
             
-    except requests.exceptions.Timeout:
-        error_msg = "下载超时"
-        print(f"❌ {error_msg}")
-        return {
-            "success": False,
-            "error": error_msg,
-            "file_path": file_path,
-            "local_path": local_file_path
-        }
-    except requests.exceptions.RequestException as e:
-        error_msg = f"下载异常: {e}"
-        print(f"❌ {error_msg}")
-        return {
-            "success": False,
-            "error": error_msg,
-            "file_path": file_path,
-            "local_path": local_file_path
-        }
-    except Exception as e:
-        error_msg = f"未知错误: {e}"
-        print(f"❌ {error_msg}")
-        return {
-            "success": False,
-            "error": error_msg,
-            "file_path": file_path,
-            "local_path": local_file_path
-        }
+            if resume_pos > 0:
+                headers['Range'] = f'bytes={resume_pos}-'
+            
+            # 开始下载
+            response = requests.get(file_url, headers=headers, stream=True, timeout=30)
+            
+            if response.status_code not in [200, 206]:
+                return {
+                    "success": False,
+                    "error": f"HTTP错误: {response.status_code}",
+                    "file_path": file_path,
+                    "local_path": local_file_path
+                }
+            
+            # 打开文件进行写入
+            mode = 'ab' if resume_pos > 0 else 'wb'
+            with open(temp_file_path, mode) as f:
+                downloaded = resume_pos
+                last_progress_time = time.time()
+                session_start_time = time.time()  # 本次会话开始时间
+                session_downloaded = 0  # 本次会话下载的字节数
+                
+                for chunk in response.iter_content(chunk_size=chunk_size):
+                    if chunk:
+                        f.write(chunk)
+                        downloaded += len(chunk)
+                        session_downloaded += len(chunk)
+                        
+                        # 显示进度（每秒更新一次）
+                        current_time = time.time()
+                        if current_time - last_progress_time >= 1.0:
+                            progress = (downloaded / total_size) * 100
+                            # 计算实际下载速度（从本次会话开始到现在）
+                            speed = session_downloaded / (current_time - session_start_time) if (current_time - session_start_time) > 0 else 0
+                            print(f"📊 进度: {progress:.1f}% ({format_file_size(downloaded)}/{format_file_size(total_size)}) "
+                                  f"速度: {format_file_size(int(speed))}/s")
+                            last_progress_time = current_time
+            
+            # 下载完成，重命名临时文件
+            if os.path.exists(local_file_path):
+                os.remove(local_file_path)  # 删除旧文件
+            os.rename(temp_file_path, local_file_path)
+            
+            # 验证文件大小
+            final_size = os.path.getsize(local_file_path)
+            if final_size == total_size:
+                print(f"✅ 下载完成: {local_file_path}")
+                print(f"   大小: {format_file_size(final_size)}")
+                return {
+                    "success": True,
+                    "file_path": file_path,
+                    "local_path": local_file_path,
+                    "size": final_size,
+                    "message": "下载成功"
+                }
+            else:
+                print(f"⚠️ 文件大小不匹配: 期望 {format_file_size(total_size)}, 实际 {format_file_size(final_size)}")
+                return {
+                    "success": False,
+                    "error": f"文件大小不匹配: 期望 {total_size}, 实际 {final_size}",
+                    "file_path": file_path,
+                    "local_path": local_file_path
+                }
+                
+        except (requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
+            error_msg = f"下载异常: {e}"
+            print(f"❌ {error_msg}")
+            
+            if retry_count < max_retries:
+                print(f"🔄 {retry_delay}秒后进行第{retry_count + 1}次重试...")
+                time.sleep(retry_delay)
+                # 更新断点位置（重新检查临时文件大小）
+                if os.path.exists(temp_file_path):
+                    resume_pos = os.path.getsize(temp_file_path)
+                    print(f"🔄 断点续传位置: {format_file_size(resume_pos)}")
+                continue
+            else:
+                print(f"❌ 重试{max_retries}次后仍然失败")
+                return {
+                    "success": False,
+                    "error": error_msg,
+                    "file_path": file_path,
+                    "local_path": local_file_path
+                }
+        except Exception as e:
+            error_msg = f"未知错误: {e}"
+            print(f"❌ {error_msg}")
+            return {
+                "success": False,
+                "error": error_msg,
+                "file_path": file_path,
+                "local_path": local_file_path
+            }
+    
+    # 默认返回值（理论上不会执行到这里）
+    return {
+        "success": False,
+        "error": "未知错误",
+        "file_path": file_path,
+        "local_path": local_file_path
+    }
 
 def format_file_size(size_bytes: int) -> str:
     """格式化文件大小显示"""
@@ -291,13 +304,14 @@ def format_file_size(size_bytes: int) -> str:
     else:
         return f"{size_bytes / (1024 * 1024 * 1024):.1f} GB"
 
-def check_multiple_files(s3_bucket_url: str, file_list: List[str], delay: float = 0.1) -> List[Dict[str, Any]]:
+def check_multiple_files(s3_bucket_url: str, file_list: List[str], local_dir: Optional[str] = None, delay: float = 0.1) -> List[Dict[str, Any]]:
     """
-    检查多个文件的大小和可访问性
+    检查多个文件的大小和可访问性，可选比较本地文件大小
     
     Args:
         s3_bucket_url: S3存储桶的基础URL
         file_list: 文件路径列表
+        local_dir: 本地目录路径，用于比较文件大小
         delay: 请求之间的延迟（秒）
         
     Returns:
@@ -305,15 +319,42 @@ def check_multiple_files(s3_bucket_url: str, file_list: List[str], delay: float 
     """
     
     print(f"🚀 开始检查 {len(file_list)} 个文件...")
+    if local_dir:
+        print(f"📁 将比较本地目录: {local_dir}")
     print("=" * 80)
     
     results = []
     accessible_count = 0
     total_size = 0
+    mismatch_count = 0
     
     for i, file_path in enumerate(file_list, 1):
         print(f"\n[{i}/{len(file_list)}] ", end="")
         result = check_file_size(s3_bucket_url, file_path)
+        
+        # 如果指定了本地目录，检查本地文件大小
+        if local_dir and result["accessible"]:
+            filename = os.path.basename(file_path)
+            local_file_path = os.path.join(local_dir, filename)
+            
+            if os.path.exists(local_file_path):
+                local_size = os.path.getsize(local_file_path)
+                result["local_size"] = local_size
+                result["local_size_formatted"] = format_file_size(local_size)
+                
+                if local_size != result["size_bytes"]:
+                    result["size_mismatch"] = True
+                    mismatch_count += 1
+                    print(f"⚠️ 大小不匹配: 网络 {format_file_size(result['size_bytes'])}, 本地 {format_file_size(local_size)}")
+                else:
+                    result["size_mismatch"] = False
+                    print(f"✅ 大小匹配: {format_file_size(local_size)}")
+            else:
+                result["local_size"] = 0
+                result["local_size_formatted"] = "文件不存在"
+                result["size_mismatch"] = False
+                print(f"📁 本地文件不存在")
+        
         results.append(result)
         
         if result["accessible"]:
@@ -331,6 +372,12 @@ def check_multiple_files(s3_bucket_url: str, file_list: List[str], delay: float 
     print(f"不可访问文件: {len(file_list) - accessible_count}")
     print(f"成功率: {accessible_count/len(file_list)*100:.1f}%")
     print(f"总大小: {format_file_size(total_size)}")
+    
+    if local_dir:
+        print(f"本地目录: {local_dir}")
+        print(f"大小不匹配文件: {mismatch_count}")
+        if mismatch_count > 0:
+            print("⚠️ 发现大小不匹配的文件，建议重新下载")
     
     return results
 
@@ -370,25 +417,28 @@ def show_usage():
 🧬 Biomni S3文件工具 - 使用说明
 
 用法:
-  python check_s3_file_size.py [命令] [参数]
+  python check_s3_file.py [命令] [参数]
 
 命令:
   check <文件路径>           - 检查指定文件的大小和可访问性
   download <文件路径> [目录]  - 下载指定文件到本地目录（默认当前目录）
-  list                      - 检查所有期望的文件
+  list [本地目录]            - 检查所有期望的文件，可选比较本地文件大小
   help                      - 显示此帮助信息
 
 示例:
-  python check_s3_file_size.py check data_lake/gene_info.parquet
-  python check_s3_file_size.py download data_lake/gene_info.parquet
-  python check_s3_file_size.py download data_lake/gene_info.parquet ./downloads
-  python check_s3_file_size.py list
+  python check_s3_file.py check data_lake/gene_info.parquet
+  python check_s3_file.py download data_lake/gene_info.parquet
+  python check_s3_file.py download data_lake/gene_info.parquet ./downloads
+  python check_s3_file.py list
+  python check_s3_file.py list ./data/biomni_data
 
 特性:
   ✅ 支持断点续传
-  ✅ 显示下载进度
+  ✅ 自动重试（网络异常时）
+  ✅ 显示下载进度和速度
   ✅ 自动验证文件完整性
   ✅ 支持批量检查
+  ✅ 比较网络和本地文件大小
 """)
 
 def main():
@@ -414,7 +464,7 @@ def main():
     elif command == "check":
         if len(sys.argv) < 3:
             print("❌ 请指定要检查的文件路径")
-            print("用法: python check_s3_file_size.py check <文件路径>")
+            print("用法: python check_s3_file.py check <文件路径>")
             return
         
         file_path = sys.argv[2]
@@ -434,7 +484,7 @@ def main():
     elif command == "download":
         if len(sys.argv) < 3:
             print("❌ 请指定要下载的文件路径")
-            print("用法: python check_s3_file_size.py download <文件路径> [目录]")
+            print("用法: python check_s3_file.py download <文件路径> [目录]")
             return
         
         file_path = sys.argv[2]
@@ -467,12 +517,18 @@ def main():
             ]
             print("使用示例文件列表")
         
+        # 检查是否有本地目录参数
+        local_dir = None
+        if len(sys.argv) > 2:
+            local_dir = sys.argv[2]
+            print(f"将比较本地目录: {local_dir}")
+        
         print(f"将检查 {len(expected_files)} 个文件")
         
         # 询问用户是否继续
         response = input("\n是否继续检查所有文件? (y/n): ").lower().strip()
         if response in ['y', 'yes', '是']:
-            results = check_multiple_files(s3_bucket_url, expected_files)
+            results = check_multiple_files(s3_bucket_url, expected_files, local_dir)
             
             # 保存结果到文件
             output_file = "s3_file_check_results.txt"
@@ -480,7 +536,10 @@ def main():
                 f.write("S3文件检查结果\n")
                 f.write("=" * 50 + "\n")
                 f.write(f"检查时间: {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
-                f.write(f"存储桶: {s3_bucket_url}\n\n")
+                f.write(f"存储桶: {s3_bucket_url}\n")
+                if local_dir:
+                    f.write(f"本地目录: {local_dir}\n")
+                f.write("\n")
                 
                 for result in results:
                     f.write(f"文件: {result['file_path']}\n")
@@ -488,6 +547,10 @@ def main():
                     if result['accessible']:
                         f.write(f"大小: {format_file_size(result['size_bytes'])}\n")
                         f.write(f"类型: {result['content_type']}\n")
+                        if local_dir and 'local_size' in result:
+                            f.write(f"本地大小: {result['local_size_formatted']}\n")
+                            if result.get('size_mismatch', False):
+                                f.write("⚠️ 大小不匹配\n")
                     else:
                         f.write(f"错误: {result['error']}\n")
                     f.write("-" * 30 + "\n")
