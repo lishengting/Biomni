@@ -241,10 +241,12 @@ def ask_biomni_stream(question: str, session_id: str = ""):
     
     print(f"[LOG] 提问，session_id: {session_id}, question: {question[:50]}...")  # 添加日志
     
-    # 生成会话ID（如果未提供）
-    if not session_id or session_id == "":
-        session_id = str(uuid.uuid4())
-        print(f"[LOG] 生成新session_id: {session_id}")  # 添加日志
+    # 强制生成新的会话ID，确保每次提问都是独立的
+    session_id = get_timestamp_session_id()
+    print(f"[LOG] 强制生成新session_id: {session_id}")  # 添加日志
+    
+    # 清理旧会话
+    cleanup_old_sessions()
     
     # 获取会话
     session = session_manager.get_session(session_id)
@@ -416,6 +418,23 @@ def refresh_session_id():
     """刷新会话ID，确保每次调用都生成新的ID"""
     return get_timestamp_session_id()
 
+def cleanup_old_sessions():
+    """清理旧的会话，只保留最近的几个"""
+    print(f"[LOG] 清理前会话数量: {len(session_manager.sessions)}")  # 添加日志
+    if len(session_manager.sessions) > 10:  # 如果会话数量超过10个，清理旧的
+        # 按最后活动时间排序，保留最新的5个
+        sorted_sessions = sorted(session_manager.sessions.items(), 
+                               key=lambda x: x[1]['last_activity'], 
+                               reverse=True)
+        sessions_to_keep = sorted_sessions[:5]
+        sessions_to_remove = sorted_sessions[5:]
+        
+        for session_id, _ in sessions_to_remove:
+            session_manager.remove_session(session_id)
+            print(f"[LOG] 清理旧会话: {session_id}")  # 添加日志
+        
+        print(f"[LOG] 清理后会话数量: {len(session_manager.sessions)}")  # 添加日志
+
 # Create the Gradio interface
 with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft(), css="""
     .intermediate-results {
@@ -555,6 +574,9 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft(), css="""
     # 刷新会话按钮
     refresh_session_btn = gr.Button("🔄 New Session", variant="secondary", size="sm")
     
+    # 强制刷新会话按钮
+    force_refresh_btn = gr.Button("🔄 Force New Session", variant="primary", size="sm")
+    
     # 隐藏的会话ID组件 - 使用时间戳确保每个页面加载都有不同的ID
     session_id_state = gr.State(value=get_timestamp_session_id())
     
@@ -681,10 +703,24 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft(), css="""
         outputs=[session_display]
     )
     
+    # 强制刷新会话ID
+    force_refresh_btn.click(
+        fn=refresh_session_id,
+        outputs=[session_display]
+    )
+    
+    # 创建agent时自动生成新的会话ID
+    def create_agent_with_new_session(llm_model, source, base_url, api_key, data_path, verbose, session_id):
+        """创建agent时自动生成新的会话ID"""
+        new_session_id = get_timestamp_session_id()
+        print(f"[LOG] 创建agent时生成新会话ID: {new_session_id}")  # 添加日志
+        result = create_agent(llm_model, source, base_url, api_key, data_path, verbose, new_session_id)
+        return result[0], result[1], new_session_id
+    
     create_btn.click(
-        fn=create_agent,
+        fn=create_agent_with_new_session,
         inputs=[llm_model, source, base_url, api_key, data_path, verbose, session_display],
-        outputs=[status_text, config_info]
+        outputs=[status_text, config_info, session_display]
     )
     
     reset_btn.click(
