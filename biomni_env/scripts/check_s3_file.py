@@ -204,17 +204,22 @@ def download_file_with_resume(s3_bucket_url: str, file_path: str, local_dir: str
         with open(temp_file_path, mode) as f:
             downloaded = resume_pos
             last_progress_time = time.time()
+            session_start_time = time.time()  # 本次会话开始时间
+            session_downloaded = 0  # 本次会话下载的字节数
             
             for chunk in response.iter_content(chunk_size=chunk_size):
                 if chunk:
                     f.write(chunk)
                     downloaded += len(chunk)
+                    session_downloaded += len(chunk)
                     
                     # 显示进度（每秒更新一次）
                     current_time = time.time()
                     if current_time - last_progress_time >= 1.0:
                         progress = (downloaded / total_size) * 100
-                        speed = downloaded / (current_time - time.time() + 1)  # 避免除零
+                        # 计算实际下载速度（从上次进度更新到现在）
+                        time_diff = current_time - last_progress_time
+                        speed = session_downloaded / (current_time - session_start_time) if (current_time - session_start_time) > 0 else 0
                         print(f"📊 进度: {progress:.1f}% ({format_file_size(downloaded)}/{format_file_size(total_size)}) "
                               f"速度: {format_file_size(int(speed))}/s")
                         last_progress_time = current_time
