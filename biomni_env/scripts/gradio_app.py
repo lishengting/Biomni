@@ -171,6 +171,11 @@ def create_agent(llm_model: str, source: str, base_url: Optional[str], api_key: 
     else:
         print(f"[LOG] 使用现有会话: {session_id}")  # 添加日志
     
+    # 打印当前所有会话信息
+    print(f"[LOG] 当前活跃会话数量: {len(session_manager.sessions)}")
+    for sid, sess in session_manager.sessions.items():
+        print(f"[LOG] 会话 {sid}: agent={sess['agent'] is not None}, error={sess['agent_error']}")
+    
     try:
         from biomni.agent import A1
         
@@ -252,6 +257,8 @@ def ask_biomni_stream(question: str, session_id: str = ""):
     
     session_agent = session['agent']
     session_error = session['agent_error']
+    
+    print(f"[LOG] 提问时会话状态: agent={session_agent is not None}, error={session_error}")  # 添加日志
     
     if session_agent is None:
         yield f"❌ Biomni agent not initialized. Please configure and create an agent first.\nError: {session_error or 'No agent created'}", ""
@@ -399,6 +406,16 @@ def generate_session_id():
     """生成唯一的会话ID"""
     return str(uuid.uuid4())
 
+# 获取当前时间戳作为会话ID的一部分
+def get_timestamp_session_id():
+    """使用时间戳生成会话ID，确保每个页面加载都有不同的ID"""
+    import time
+    return f"session_{int(time.time() * 1000)}_{uuid.uuid4().hex[:8]}"
+
+def refresh_session_id():
+    """刷新会话ID，确保每次调用都生成新的ID"""
+    return get_timestamp_session_id()
+
 # Create the Gradio interface
 with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft(), css="""
     .intermediate-results {
@@ -527,8 +544,19 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft(), css="""
     gr.Markdown("# 🧬 Biomni AI Agent Demo")
     gr.Markdown("Configure your LLM settings and ask Biomni to run biomedical tasks!")
     
-    # 隐藏的会话ID组件
-    session_id_state = gr.State(value=generate_session_id())
+    # 显示当前会话ID（用于调试）
+    session_display = gr.Textbox(
+        label="Session ID (Debug)",
+        value=get_timestamp_session_id(),
+        interactive=False,
+        visible=True  # 临时设为可见，用于调试
+    )
+    
+    # 刷新会话按钮
+    refresh_session_btn = gr.Button("🔄 New Session", variant="secondary", size="sm")
+    
+    # 隐藏的会话ID组件 - 使用时间戳确保每个页面加载都有不同的ID
+    session_id_state = gr.State(value=get_timestamp_session_id())
     
     with gr.Row():
         with gr.Column(scale=1):
@@ -647,36 +675,42 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft(), css="""
             )
     
     # Event handlers
+    # 刷新会话ID
+    refresh_session_btn.click(
+        fn=refresh_session_id,
+        outputs=[session_display]
+    )
+    
     create_btn.click(
         fn=create_agent,
-        inputs=[llm_model, source, base_url, api_key, data_path, verbose, session_id_state],
+        inputs=[llm_model, source, base_url, api_key, data_path, verbose, session_display],
         outputs=[status_text, config_info]
     )
     
     reset_btn.click(
         fn=reset_agent,
-        inputs=[session_id_state],
+        inputs=[session_display],
         outputs=[status_text, config_info]
     )
     
     # Stop button
     stop_btn.click(
         fn=stop_execution,
-        inputs=[session_id_state],
+        inputs=[session_display],
         outputs=[intermediate_results, execution_log]
     )
     
     # Streaming ask function
     ask_btn.click(
         fn=ask_biomni_stream,
-        inputs=[question, session_id_state],
+        inputs=[question, session_display],
         outputs=[intermediate_results, execution_log]
     )
     
     # Also allow Enter key to submit question
     question.submit(
         fn=ask_biomni_stream,
-        inputs=[question, session_id_state],
+        inputs=[question, session_display],
         outputs=[intermediate_results, execution_log]
     )
 
