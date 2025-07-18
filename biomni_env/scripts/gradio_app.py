@@ -245,9 +245,12 @@ def ask_biomni_stream(question: str, session_id: str = ""):
     
     print(f"[LOG] 提问，session_id: {session_id}, question: {question[:50]}...")  # 添加日志
     
-    # 强制生成新的会话ID，确保每次提问都是独立的
-    session_id = get_timestamp_session_id()
-    print(f"[LOG] 强制生成新session_id: {session_id}")  # 添加日志
+    # 使用传入的会话ID，如果没有则生成新的
+    if not session_id or session_id == "":
+        session_id = get_timestamp_session_id()
+        print(f"[LOG] 生成新session_id: {session_id}")  # 添加日志
+    else:
+        print(f"[LOG] 使用传入的session_id: {session_id}")  # 添加日志
     
     # 清理旧会话
     cleanup_old_sessions()
@@ -589,6 +592,14 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft(), css="""
         visible=True  # 临时设为可见，用于调试
     )
     
+    # 显示会话状态
+    session_status = gr.Textbox(
+        label="Session Status",
+        value="No agent created",
+        interactive=False,
+        visible=True
+    )
+    
     # 刷新会话按钮
     refresh_session_btn = gr.Button("🔄 New Session", variant="secondary", size="sm")
     
@@ -731,13 +742,19 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft(), css="""
     def create_agent_with_current_session(llm_model, source, base_url, api_key, data_path, verbose, session_id):
         """创建agent时使用当前会话ID"""
         print(f"[LOG] 创建agent时使用会话ID: {session_id}")  # 添加日志
+        # 如果session_id为空，生成一个新的
+        if not session_id or session_id == "":
+            session_id = get_timestamp_session_id()
+            print(f"[LOG] 创建agent时生成新会话ID: {session_id}")  # 添加日志
         result = create_agent(llm_model, source, base_url, api_key, data_path, verbose, session_id)
-        return result[0], result[1], session_id
+        # 更新会话状态
+        session_status_text = f"Agent created for session: {session_id}"
+        return result[0], result[1], session_id, session_status_text
     
     create_btn.click(
         fn=create_agent_with_current_session,
         inputs=[llm_model, source, base_url, api_key, data_path, verbose, session_display],
-        outputs=[status_text, config_info, session_display]
+        outputs=[status_text, config_info, session_display, session_status]
     )
     
     reset_btn.click(
