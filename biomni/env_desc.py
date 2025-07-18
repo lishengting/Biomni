@@ -74,6 +74,8 @@ data_lake_dict = {
     "Virus-Host_PPI_P-HIPSTER_2020.parquet": "Virus-host protein-protein interactions from P-HIPSTER.",
     "txgnn_name_mapping.pkl": "Name mapping for TXGNN.",
     "txgnn_prediction.pkl": "Prediction data for TXGNN.",
+    "sgRNA/KO_SP_human.txt": "Human sgRNA knockout library for CRISPR gene editing experiments.",
+    "sgRNA/KO_SP_mouse.txt": "Mouse sgRNA knockout library for CRISPR gene editing experiments.",
 }
 
 # Updated library_content as a dictionary with detailed descriptions
