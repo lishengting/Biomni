@@ -246,7 +246,7 @@ def ask_biomni_stream(question: str, session_id: str = ""):
     print(f"[LOG] 提问，session_id: {session_id}, question: {question[:50]}...")  # 添加日志
     
     # 检查是否有有效的会话ID
-    if not session_id or session_id == "" or session_id == "No session assigned":
+    if not session_id or session_id == "":
         print(f"[LOG] 没有有效的session_id，提示用户先创建agent")  # 添加日志
         yield f"❌ No session assigned. Please click '🚀 Create Agent' button first to create a session.", ""
         return
@@ -585,22 +585,6 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft(), css="""
     gr.Markdown("# 🧬 Biomni AI Agent Demo")
     gr.Markdown("Configure your LLM settings and ask Biomni to run biomedical tasks!")
     
-    # 显示当前会话ID（用于调试）
-    session_display = gr.Textbox(
-        label="Session ID (Debug)",
-        value="No session assigned",
-        interactive=False,
-        visible=True  # 临时设为可见，用于调试
-    )
-    
-    # 显示会话状态
-    session_status = gr.Textbox(
-        label="Session Status",
-        value="No agent created",
-        interactive=False,
-        visible=True
-    )
-    
     # 隐藏的会话ID组件 - 初始为空
     session_id_state = gr.State(value="")
     
@@ -656,11 +640,12 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft(), css="""
                 create_btn = gr.Button("🚀 Create Agent", variant="primary")
                 reset_btn = gr.Button("🔄 Reset Agent", variant="secondary")
             
-            # Status display
+            # Status display - 整合session id信息
             status_text = gr.Textbox(
                 label="Status",
+                value="No session assigned. Click 'Create Agent' to start.",
                 interactive=False,
-                lines=2
+                lines=3
             )
             
             config_info = gr.Textbox(
@@ -683,14 +668,6 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft(), css="""
             with gr.Row():
                 ask_btn = gr.Button("🤖 Ask Biomni", variant="primary", scale=2)
                 stop_btn = gr.Button("⏹️ Stop", variant="stop", scale=1)
-            
-            # Status indicator
-            status = gr.Textbox(
-                label="Status",
-                value="Ready",
-                interactive=False,
-                lines=1
-            )
             
             # Multiple output areas
             with gr.Tab("Output"):
@@ -728,40 +705,40 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft(), css="""
         new_session_id = get_timestamp_session_id()
         print(f"[LOG] 创建agent时分配新会话ID: {new_session_id}")  # 添加日志
         result = create_agent(llm_model, source, base_url, api_key, data_path, verbose, new_session_id)
-        # 更新会话状态
-        session_status_text = f"Agent created for session: {new_session_id}"
-        return result[0], result[1], new_session_id, session_status_text
+        # 更新status显示，整合session id信息
+        status_text = f"✅ Agent created successfully!\nSession ID: {new_session_id}"
+        return status_text, result[1], new_session_id
     
     create_btn.click(
         fn=create_agent_with_new_session,
-        inputs=[llm_model, source, base_url, api_key, data_path, verbose, session_display],
-        outputs=[status_text, config_info, session_display, session_status]
+        inputs=[llm_model, source, base_url, api_key, data_path, verbose, session_id_state],
+        outputs=[status_text, config_info, session_id_state]
     )
     
     reset_btn.click(
         fn=reset_agent,
-        inputs=[session_display],
+        inputs=[session_id_state],
         outputs=[status_text, config_info]
     )
     
     # Stop button
     stop_btn.click(
         fn=stop_execution,
-        inputs=[session_display],
+        inputs=[session_id_state],
         outputs=[intermediate_results, execution_log]
     )
     
     # Streaming ask function
     ask_btn.click(
         fn=ask_biomni_stream,
-        inputs=[question, session_display],
+        inputs=[question, session_id_state],
         outputs=[intermediate_results, execution_log]
     )
     
     # Also allow Enter key to submit question
     question.submit(
         fn=ask_biomni_stream,
-        inputs=[question, session_display],
+        inputs=[question, session_id_state],
         outputs=[intermediate_results, execution_log]
     )
 
