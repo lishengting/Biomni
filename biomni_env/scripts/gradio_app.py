@@ -6,11 +6,64 @@ import re
 import json
 from typing import Optional
 
-# Global agent variable
+# Session management for multiple users
+import uuid
+from datetime import datetime
+from typing import Dict, Optional
+
+class SessionManager:
+    def __init__(self):
+        self.sessions: Dict[str, Dict] = {}
+        self.lock = threading.Lock()
+    
+    def create_session(self, session_id: str) -> Dict:
+        """创建新的用户会话"""
+        with self.lock:
+            session = {
+                'id': session_id,
+                'agent': None,
+                'agent_error': None,
+                'current_task': None,
+                'stop_flag': False,
+                'created_at': datetime.now(),
+                'last_activity': datetime.now()
+            }
+            self.sessions[session_id] = session
+            return session
+    
+    def get_session(self, session_id: str) -> Optional[Dict]:
+        """获取用户会话"""
+        with self.lock:
+            return self.sessions.get(session_id)
+    
+    def update_session(self, session_id: str, **kwargs):
+        """更新会话信息"""
+        with self.lock:
+            if session_id in self.sessions:
+                self.sessions[session_id].update(kwargs)
+                self.sessions[session_id]['last_activity'] = datetime.now()
+    
+    def remove_session(self, session_id: str):
+        """移除用户会话"""
+        with self.lock:
+            if session_id in self.sessions:
+                # 清理agent资源
+                session = self.sessions[session_id]
+                if session['agent']:
+                    try:
+                        session['agent'].stop()
+                    except:
+                        pass
+                del self.sessions[session_id]
+
+# 全局会话管理器
+session_manager = SessionManager()
+
+# 兼容性变量（用于向后兼容）
 agent = None
 agent_error = None
-current_task = None  # Track current running task
-stop_flag = False  # Flag to stop execution
+current_task = None
+stop_flag = False
 
 def parse_advanced_content(content: str) -> str:
     """
@@ -99,9 +152,24 @@ def parse_advanced_content(content: str) -> str:
     
     return f'<div class="content-wrapper">{content}</div>'
 
-def create_agent(llm_model: str, source: str, base_url: Optional[str], api_key: Optional[str], data_path: str, verbose: bool):
+def create_agent(llm_model: str, source: str, base_url: Optional[str], api_key: Optional[str], data_path: str, verbose: bool, session_id: str = ""):
     """Create a new Biomni agent with the specified configuration."""
     global agent, agent_error
+    
+    print(f"[LOG] 创建agent，session_id: {session_id}")  # 添加日志
+    
+    # 生成会话ID（如果未提供）
+    if not session_id or session_id == "":
+        session_id = str(uuid.uuid4())
+        print(f"[LOG] 生成新session_id: {session_id}")  # 添加日志
+    
+    # 创建或获取会话
+    session = session_manager.get_session(session_id)
+    if not session:
+        session = session_manager.create_session(session_id)
+        print(f"[LOG] 创建新会话: {session_id}")  # 添加日志
+    else:
+        print(f"[LOG] 使用现有会话: {session_id}")  # 添加日志
     
     try:
         from biomni.agent import A1
@@ -125,82 +193,119 @@ def create_agent(llm_model: str, source: str, base_url: Optional[str], api_key: 
             agent_params["api_key"] = api_key.strip()
             
         # Create the agent
-        agent = A1(**agent_params)
+        session_agent = A1(**agent_params)
+        session_manager.update_session(session_id, agent=session_agent, agent_error=None)
+        
+        # 更新全局变量（向后兼容）
+        agent = session_agent
         agent_error = None
         
         verbose_status = "enabled" if verbose else "disabled"
-        return "✅ Agent created successfully!", f"Current configuration:\n- Model: {llm_model}\n- Source: {source}\n- Base URL: {base_url or 'Default'}\n- Data Path: {data_path}\n- Verbose logging: {verbose_status}"
+        return "✅ Agent created successfully!", f"Current configuration:\n- Model: {llm_model}\n- Source: {source}\n- Base URL: {base_url or 'Default'}\n- Data Path: {data_path}\n- Verbose logging: {verbose_status}\n- Session ID: {session_id}"
         
     except Exception as e:
+        session_manager.update_session(session_id, agent=None, agent_error=str(e))
         agent = None
         agent_error = str(e)
         return f"❌ Failed to create agent: {str(e)}", ""
 
-def stop_execution():
+def stop_execution(session_id: str = ""):
     """Stop the current execution."""
     global stop_flag, agent
-    stop_flag = True
     
-    # Also call agent's stop method if agent exists
-    if agent:
-        agent.stop()
+    # 如果没有提供session_id，停止所有会话
+    if not session_id or session_id == "":
+        stop_flag = True
+        if agent:
+            agent.stop()
+        return "⏹️ Stopping execution...", "Execution stopped."
     
-    return "⏹️ Stopping execution...", "Execution stopped."
+    # 停止特定会话
+    session = session_manager.get_session(session_id)
+    if session:
+        session_manager.update_session(session_id, stop_flag=True)
+        if session['agent']:
+            session['agent'].stop()
+        return "⏹️ Stopping execution...", "Execution stopped."
+    
+    return "⏹️ No active session found.", "No session to stop."
 
-def ask_biomni_stream(question: str):
+def ask_biomni_stream(question: str, session_id: str = ""):
     """Ask a question to the Biomni agent with streaming output."""
     global agent, agent_error, current_task, stop_flag
     
-    if agent is None:
-        yield f"❌ Biomni agent not initialized. Please configure and create an agent first.\nError: {agent_error or 'No agent created'}", ""
+    print(f"[LOG] 提问，session_id: {session_id}, question: {question[:50]}...")  # 添加日志
+    
+    # 生成会话ID（如果未提供）
+    if not session_id or session_id == "":
+        session_id = str(uuid.uuid4())
+        print(f"[LOG] 生成新session_id: {session_id}")  # 添加日志
+    
+    # 获取会话
+    session = session_manager.get_session(session_id)
+    if not session:
+        # 如果没有会话，创建一个默认会话
+        session = session_manager.create_session(session_id)
+        print(f"[LOG] 创建新会话: {session_id}")  # 添加日志
+    else:
+        print(f"[LOG] 使用现有会话: {session_id}")  # 添加日志
+    
+    session_agent = session['agent']
+    session_error = session['agent_error']
+    
+    if session_agent is None:
+        yield f"❌ Biomni agent not initialized. Please configure and create an agent first.\nError: {session_error or 'No agent created'}", ""
         return
     
     if not question.strip():
         yield "❌ Please enter a question.", ""
         return
     
-    stop_flag = False
+    session_manager.update_session(session_id, stop_flag=False)
     
     try:
         # Clear previous execution logs
-        agent.clear_execution_logs()
+        session_agent.clear_execution_logs()
         
         # Start execution in a separate thread
         result_container = {}
         
         def execute_task():
             try:
-                result_container['result'] = agent.go(question.strip())
+                result_container['result'] = session_agent.go(question.strip())
                 result_container['completed'] = True
             except Exception as e:
                 result_container['error'] = str(e)
                 result_container['completed'] = True
         
         # Start the execution thread
-        current_task = threading.Thread(target=execute_task)
-        current_task.start()
+        session_task = threading.Thread(target=execute_task)
+        session_manager.update_session(session_id, current_task=session_task)
+        session_task.start()
         
         # Stream updates while task is running
         last_step_count = 0
         last_intermediate_count = 0
         
-        while current_task.is_alive():
-            if stop_flag:
+        while session_task.is_alive():
+            # 检查停止标志
+            session = session_manager.get_session(session_id)
+            if session and session['stop_flag']:
                 # Call agent's stop method to actually stop execution
-                if agent:
-                    agent.stop()
+                if session_agent:
+                    session_agent.stop()
                 # Stop showing updates
-                yield "⏹️ **Stopping execution...**", "\n".join([entry["formatted"] for entry in agent.get_execution_logs()])
-                current_task.join(timeout=1)  # Give it a moment to finish
+                yield "⏹️ **Stopping execution...**", "\n".join([entry["formatted"] for entry in session_agent.get_execution_logs()])
+                session_task.join(timeout=1)  # Give it a moment to finish
                 return
             
             # Get current logs
-            logs = agent.get_execution_logs()
+            logs = session_agent.get_execution_logs()
             execution_log = "\n".join([entry["formatted"] for entry in logs])
             
             # Get intermediate outputs
-            intermediate_outputs = agent.get_intermediate_outputs()
-            current_step = agent.get_current_step()
+            intermediate_outputs = session_agent.get_intermediate_outputs()
+            current_step = session_agent.get_current_step()
             
             # Check if we have new steps or intermediate results
             if len(logs) > last_step_count or len(intermediate_outputs) > last_intermediate_count:
@@ -230,11 +335,11 @@ def ask_biomni_stream(question: str):
             time.sleep(0.5)  # Update every 0.5 seconds for better responsiveness
         
         # Wait for task to complete
-        current_task.join()
+        session_task.join()
         
         # Handle results
         if 'error' in result_container:
-            execution_log = "\n".join([entry["formatted"] for entry in agent.get_execution_logs()])
+            execution_log = "\n".join([entry["formatted"] for entry in session_agent.get_execution_logs()])
             yield f"❌ **Error:** {result_container['error']}", execution_log
             return
         
@@ -242,13 +347,13 @@ def ask_biomni_stream(question: str):
             result = result_container['result']
             
             # Format the full execution log
-            execution_log = "\n".join([entry["formatted"] for entry in agent.get_execution_logs()])
+            execution_log = "\n".join([entry["formatted"] for entry in session_agent.get_execution_logs()])
             
             # Format the final output with advanced parsing
             intermediate_text = ""
             
             # Add intermediate outputs with advanced parsing
-            intermediate_outputs = agent.get_intermediate_outputs()
+            intermediate_outputs = session_agent.get_intermediate_outputs()
             if intermediate_outputs:
                 intermediate_text += f"<div style='margin: 30px 0; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 10px; text-align: center;'><h2 style='margin: 0; font-size: 1.5em;'>📊 Detailed Steps ({len(intermediate_outputs)} total)</h2></div>\n\n"
                 for output in intermediate_outputs:
@@ -263,10 +368,10 @@ def ask_biomni_stream(question: str):
             
             yield intermediate_text, execution_log
         else:
-            yield "❌ No result received.", "\n".join([entry["formatted"] for entry in agent.get_execution_logs()])
+            yield "❌ No result received.", "\n".join([entry["formatted"] for entry in session_agent.get_execution_logs()])
             
     except Exception as e:
-        execution_log = "\n".join([entry["formatted"] for entry in agent.get_execution_logs()]) if agent else ""
+        execution_log = "\n".join([entry["formatted"] for entry in session_agent.get_execution_logs()]) if session_agent else ""
         yield f"❌ Error processing question: {str(e)}", execution_log
 
 def ask_biomni(question: str):
@@ -275,12 +380,24 @@ def ask_biomni(question: str):
         final_result = result
     return final_result
 
-def reset_agent():
+def reset_agent(session_id: str = ""):
     """Reset the agent."""
     global agent, agent_error
-    agent = None
-    agent_error = None
+    
+    # 如果没有提供session_id，重置全局agent
+    if not session_id or session_id == "":
+        agent = None
+        agent_error = None
+        return "Agent reset. Please configure and create a new agent.", ""
+    
+    # 重置特定会话
+    session_manager.remove_session(session_id)
     return "Agent reset. Please configure and create a new agent.", ""
+
+# 生成唯一的会话ID
+def generate_session_id():
+    """生成唯一的会话ID"""
+    return str(uuid.uuid4())
 
 # Create the Gradio interface
 with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft(), css="""
@@ -410,6 +527,9 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft(), css="""
     gr.Markdown("# 🧬 Biomni AI Agent Demo")
     gr.Markdown("Configure your LLM settings and ask Biomni to run biomedical tasks!")
     
+    # 隐藏的会话ID组件
+    session_id_state = gr.State(value=generate_session_id())
+    
     with gr.Row():
         with gr.Column(scale=1):
             gr.Markdown("## ⚙️ Agent Configuration")
@@ -529,32 +649,34 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft(), css="""
     # Event handlers
     create_btn.click(
         fn=create_agent,
-        inputs=[llm_model, source, base_url, api_key, data_path, verbose],
+        inputs=[llm_model, source, base_url, api_key, data_path, verbose, session_id_state],
         outputs=[status_text, config_info]
     )
     
     reset_btn.click(
         fn=reset_agent,
+        inputs=[session_id_state],
         outputs=[status_text, config_info]
     )
     
     # Stop button
     stop_btn.click(
         fn=stop_execution,
+        inputs=[session_id_state],
         outputs=[intermediate_results, execution_log]
     )
     
     # Streaming ask function
     ask_btn.click(
         fn=ask_biomni_stream,
-        inputs=[question],
+        inputs=[question, session_id_state],
         outputs=[intermediate_results, execution_log]
     )
     
     # Also allow Enter key to submit question
     question.submit(
         fn=ask_biomni_stream,
-        inputs=[question],
+        inputs=[question, session_id_state],
         outputs=[intermediate_results, execution_log]
     )
 
