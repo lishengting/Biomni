@@ -176,6 +176,9 @@ def create_agent(llm_model: str, source: str, base_url: Optional[str], api_key: 
     for sid, sess in session_manager.sessions.items():
         print(f"[LOG] 会话 {sid}: agent={sess['agent'] is not None}, error={sess['agent_error']}")
     
+    # 打印全局agent状态
+    print(f"[LOG] 全局agent状态: agent={agent is not None}, error={agent_error}")
+    
     try:
         from biomni.agent import A1
         
@@ -201,17 +204,18 @@ def create_agent(llm_model: str, source: str, base_url: Optional[str], api_key: 
         session_agent = A1(**agent_params)
         session_manager.update_session(session_id, agent=session_agent, agent_error=None)
         
-        # 更新全局变量（向后兼容）
-        agent = session_agent
-        agent_error = None
+        # 不再更新全局变量，保持会话独立性
+        # agent = session_agent  # 注释掉，避免共享
+        # agent_error = None     # 注释掉，避免共享
         
         verbose_status = "enabled" if verbose else "disabled"
         return "✅ Agent created successfully!", f"Current configuration:\n- Model: {llm_model}\n- Source: {source}\n- Base URL: {base_url or 'Default'}\n- Data Path: {data_path}\n- Verbose logging: {verbose_status}\n- Session ID: {session_id}"
         
     except Exception as e:
         session_manager.update_session(session_id, agent=None, agent_error=str(e))
-        agent = None
-        agent_error = str(e)
+        # 不再更新全局变量，保持会话独立性
+        # agent = None  # 注释掉，避免共享
+        # agent_error = str(e)  # 注释掉，避免共享
         return f"❌ Failed to create agent: {str(e)}", ""
 
 def stop_execution(session_id: str = ""):
@@ -248,6 +252,9 @@ def ask_biomni_stream(question: str, session_id: str = ""):
     # 清理旧会话
     cleanup_old_sessions()
     
+    # 打印会话状态报告
+    print_session_status()
+    
     # 获取会话
     session = session_manager.get_session(session_id)
     if not session:
@@ -262,18 +269,11 @@ def ask_biomni_stream(question: str, session_id: str = ""):
     
     print(f"[LOG] 提问时会话状态: agent={session_agent is not None}, error={session_error}")  # 添加日志
     
-    # 如果当前会话没有agent，尝试使用全局agent
+    # 如果当前会话没有agent，提示用户先创建agent
     if session_agent is None:
-        if agent is not None:
-            # 使用全局agent
-            print(f"[LOG] 使用全局agent")  # 添加日志
-            session_agent = agent
-            session_manager.update_session(session_id, agent=agent, agent_error=None)
-        else:
-            # 提示用户先创建agent
-            print(f"[LOG] 没有可用的agent，提示用户先创建")  # 添加日志
-            yield f"❌ Biomni agent not initialized. Please configure and create an agent first.\n\n请先点击'🚀 Create Agent'按钮创建agent，然后再提问。", ""
-            return
+        print(f"[LOG] 会话 {session_id} 没有agent，提示用户先创建")  # 添加日志
+        yield f"❌ Biomni agent not initialized for session {session_id}.\n\n请先点击'🚀 Create Agent'按钮创建agent，然后再提问。\n\n注意：每个会话都需要独立创建agent。", ""
+        return
     
     if not question.strip():
         yield "❌ Please enter a question.", ""
@@ -443,6 +443,15 @@ def cleanup_old_sessions():
             print(f"[LOG] 清理旧会话: {session_id}")  # 添加日志
         
         print(f"[LOG] 清理后会话数量: {len(session_manager.sessions)}")  # 添加日志
+
+def print_session_status():
+    """打印所有会话状态，用于调试"""
+    print(f"[LOG] === 会话状态报告 ===")
+    print(f"[LOG] 全局agent: {agent is not None}")
+    print(f"[LOG] 活跃会话数量: {len(session_manager.sessions)}")
+    for sid, sess in session_manager.sessions.items():
+        print(f"[LOG] 会话 {sid}: agent={sess['agent'] is not None}, error={sess['agent_error']}")
+    print(f"[LOG] ===================")
 
 # Create the Gradio interface
 with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft(), css="""
