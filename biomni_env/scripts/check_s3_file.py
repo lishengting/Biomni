@@ -334,8 +334,8 @@ def check_multiple_files(s3_bucket_url: str, file_list: List[str], local_dir: Op
         
         # 如果指定了本地目录，检查本地文件大小
         if local_dir and result["accessible"]:
-            filename = os.path.basename(file_path)
-            local_file_path = os.path.join(local_dir, filename)
+            # 保持完整的目录结构
+            local_file_path = os.path.join(local_dir, file_path)
             
             if os.path.exists(local_file_path):
                 local_size = os.path.getsize(local_file_path)
