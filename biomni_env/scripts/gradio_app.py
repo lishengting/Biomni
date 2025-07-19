@@ -789,6 +789,14 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft(), css="""
                 placeholder="No data uploaded yet. Upload files to see them here."
             )
             
+            # Upload status display
+            upload_status = gr.Textbox(
+                label="Upload Status",
+                interactive=False,
+                lines=2,
+                placeholder="Upload status will appear here..."
+            )
+            
 
             
         with gr.Column(scale=3):
@@ -822,15 +830,10 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft(), css="""
                     file_descriptions = gr.Textbox(
                         label="File Descriptions (Optional)",
                         placeholder="One description per line",
-                        lines=2
+                        lines=1
                     )
                     
                     upload_btn = gr.Button("📤 Upload", variant="primary")
-                    upload_status = gr.Textbox(
-                        label="Upload Status",
-                        interactive=False,
-                        lines=1
-                    )
             
             # Multiple output areas
             with gr.Tab("Output"):
