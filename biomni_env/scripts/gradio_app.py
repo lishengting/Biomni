@@ -794,32 +794,30 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft(), css="""
         with gr.Column(scale=3):
             gr.Markdown("## 💬 Chat with Biomni")
             
-            # Chat interface and data upload in the same row
+            # Chat interface
+            question = gr.Textbox(
+                label="Your Question",
+                placeholder="Ask Biomni to run a biomedical task...",
+                lines=3
+            )
+            
+            # Control buttons
             with gr.Row():
-                with gr.Column(scale=2):
-                    # Chat interface
-                    question = gr.Textbox(
-                        label="Your Question",
-                        placeholder="Ask Biomni to run a biomedical task...",
-                        lines=3
-                    )
-                    
-                    # Control buttons
-                    with gr.Row():
-                        ask_btn = gr.Button("🤖 Ask Biomni", variant="primary", scale=2)
-                        stop_btn = gr.Button("⏹️ Stop", variant="stop", scale=1)
-                
+                ask_btn = gr.Button("🤖 Ask Biomni", variant="primary", scale=2)
+                stop_btn = gr.Button("⏹️ Stop", variant="stop", scale=1)
+            
+            # Data upload section below chat
+            gr.Markdown("### 📁 Upload Data")
+            with gr.Row():
                 with gr.Column(scale=1):
-                    # Data upload section
-                    gr.Markdown("### 📁 Upload Data")
-                    
                     # File upload component
                     file_upload = gr.File(
                         label="Data Files (CSV, TSV, TXT, JSON, Excel, Parquet, HDF5)",
                         file_count="multiple",
                         file_types=[".csv", ".tsv", ".txt", ".json", ".xlsx", ".xls", ".parquet", ".h5", ".h5ad"]
                     )
-                    
+                
+                with gr.Column(scale=1):
                     # Description inputs for each file
                     file_descriptions = gr.Textbox(
                         label="File Descriptions (Optional)",
@@ -831,7 +829,7 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft(), css="""
                     upload_status = gr.Textbox(
                         label="Upload Status",
                         interactive=False,
-                        lines=2
+                        lines=1
                     )
             
             # Multiple output areas
