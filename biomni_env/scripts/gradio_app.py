@@ -822,7 +822,7 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft(), css="""
                     file_upload = gr.File(
                         label="Data Files",
                         file_count="multiple",
-                        file_types=[".*"],
+                        file_types=[".csv", ".tsv", ".txt", ".json", ".xlsx", ".xls", ".parquet", ".h5", ".h5ad", ".fa", ".fq", ".fasta", ".fastq", ".bam", ".vcf", ".gff"],
                         height=70
                     )
                     # Description inputs for each file
