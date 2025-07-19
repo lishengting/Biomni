@@ -449,6 +449,86 @@ def ask_biomni(question: str):
         final_result = result
     return final_result
 
+
+def upload_and_add_data(files, descriptions, session_id: str = ""):
+    """Upload files and add them to the agent's data lake."""
+    if not session_id or session_id == "":
+        return "❌ No session assigned. Please create an agent first.", ""
+    
+    session = session_manager.get_session(session_id)
+    if not session or not session['agent']:
+        return "❌ Agent not found. Please create an agent first.", ""
+    
+    if not files:
+        return "❌ No files selected for upload.", ""
+    
+    try:
+        # Prepare data dictionary
+        data_dict = {}
+        for i, file in enumerate(files):
+            if file is not None:
+                # Get description for this file
+                description = descriptions[i] if i < len(descriptions) and descriptions[i].strip() else f"Uploaded file: {file.name}"
+                data_dict[file.name] = description
+        
+        # Add data to agent
+        success = session['agent'].add_data(data_dict)
+        
+        if success:
+            # List current custom data
+            custom_data = session['agent'].list_custom_data()
+            data_list = "\n".join([f"• {name}: {desc}" for name, desc in custom_data])
+            
+            return f"✅ Successfully added {len(data_dict)} file(s) to data lake.\n\nCurrent custom data:\n{data_list}", ""
+        else:
+            return "❌ Failed to add data to agent.", ""
+            
+    except Exception as e:
+        return f"❌ Error uploading data: {str(e)}", ""
+
+
+def list_custom_data(session_id: str = ""):
+    """List all custom data in the agent's data lake."""
+    if not session_id or session_id == "":
+        return "❌ No session assigned. Please create an agent first."
+    
+    session = session_manager.get_session(session_id)
+    if not session or not session['agent']:
+        return "❌ Agent not found. Please create an agent first."
+    
+    try:
+        custom_data = session['agent'].list_custom_data()
+        if custom_data:
+            data_list = "\n".join([f"• {name}: {desc}" for name, desc in custom_data])
+            return f"📊 Custom Data in Agent:\n\n{data_list}"
+        else:
+            return "📊 No custom data found in agent."
+    except Exception as e:
+        return f"❌ Error listing data: {str(e)}"
+
+
+def remove_custom_data(data_name: str, session_id: str = ""):
+    """Remove a custom data item from the agent's data lake."""
+    if not session_id or session_id == "":
+        return "❌ No session assigned. Please create an agent first."
+    
+    if not data_name.strip():
+        return "❌ Please specify a data name to remove."
+    
+    session = session_manager.get_session(session_id)
+    if not session or not session['agent']:
+        return "❌ Agent not found. Please create an agent first."
+    
+    try:
+        success = session['agent'].remove_custom_data(data_name.strip())
+        if success:
+            return f"✅ Successfully removed '{data_name}' from data lake."
+        else:
+            return f"❌ Data item '{data_name}' not found in data lake."
+    except Exception as e:
+        return f"❌ Error removing data: {str(e)}"
+
+
 def reset_agent(session_id: str = ""):
     """Reset the agent."""
     global agent, agent_error
@@ -744,6 +824,61 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft(), css="""
                 inputs=question
             )
     
+    # Data Management Tab
+    with gr.Tab("📊 Data Management"):
+        gr.Markdown("## 📁 Upload and Manage Data")
+        gr.Markdown("Upload your own data files to be used by the agent in biomedical tasks.")
+        
+        with gr.Row():
+            with gr.Column(scale=2):
+                # File upload component
+                file_upload = gr.File(
+                    label="Upload Data Files",
+                    file_count="multiple",
+                    file_types=[".csv", ".tsv", ".txt", ".json", ".xlsx", ".xls", ".parquet", ".h5", ".h5ad"],
+                    info="Select one or more data files to upload"
+                )
+                
+                # Description inputs for each file
+                file_descriptions = gr.Textbox(
+                    label="File Descriptions (Optional)",
+                    placeholder="Enter descriptions for your files, separated by newlines. If not provided, default descriptions will be used.",
+                    lines=3,
+                    info="One description per line, in the same order as uploaded files"
+                )
+                
+                with gr.Row():
+                    upload_btn = gr.Button("📤 Upload Files", variant="primary")
+                    list_data_btn = gr.Button("📋 List Data", variant="secondary")
+                
+                upload_status = gr.Textbox(
+                    label="Upload Status",
+                    interactive=False,
+                    lines=3
+                )
+            
+            with gr.Column(scale=1):
+                gr.Markdown("### 📊 Current Data")
+                data_list_display = gr.Textbox(
+                    label="Data in Agent",
+                    interactive=False,
+                    lines=10,
+                    placeholder="No data uploaded yet. Upload files to see them here."
+                )
+                
+                gr.Markdown("### 🗑️ Remove Data")
+                data_to_remove = gr.Textbox(
+                    label="Data Name to Remove",
+                    placeholder="Enter the exact name of the data to remove",
+                    info="Use the exact filename as shown in the data list"
+                )
+                remove_btn = gr.Button("🗑️ Remove Data", variant="stop")
+                remove_status = gr.Textbox(
+                    label="Remove Status",
+                    interactive=False,
+                    lines=2
+                )
+    
     # Event handlers
     # 创建agent时分配新的会话ID
     def create_agent_with_new_session(llm_model, source, base_url, api_key, data_path, verbose, session_id):
@@ -787,6 +922,35 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft(), css="""
         fn=ask_biomni_stream,
         inputs=[question, session_id_state],
         outputs=[intermediate_results, execution_log]
+    )
+    
+    # Data management event handlers
+    def handle_upload(files, descriptions, session_id):
+        """Handle file upload with descriptions."""
+        if not files:
+            return "❌ No files selected for upload.", ""
+        
+        # Split descriptions by newlines
+        desc_list = descriptions.split('\n') if descriptions.strip() else []
+        
+        return upload_and_add_data(files, desc_list, session_id)
+    
+    upload_btn.click(
+        fn=handle_upload,
+        inputs=[file_upload, file_descriptions, session_id_state],
+        outputs=[upload_status, data_list_display]
+    )
+    
+    list_data_btn.click(
+        fn=list_custom_data,
+        inputs=[session_id_state],
+        outputs=[data_list_display]
+    )
+    
+    remove_btn.click(
+        fn=remove_custom_data,
+        inputs=[data_to_remove, session_id_state],
+        outputs=[remove_status]
     )
 
 if __name__ == "__main__":
