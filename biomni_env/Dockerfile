@@ -170,6 +170,34 @@ RUN . /opt/biomni/venv/bin/activate && \
 
 # 工具目录已在前面创建并设置权限
 
+USER root
+
+ENV MAKEFLAGS="-j16"
+# 安装所有R包（合并多个RUN命令）
+RUN Rscript -e "install.packages(c('ggplot2', 'dplyr', 'tidyr', 'readr', 'stringr', 'lme4'), repos='https://mirrors.ustc.edu.cn/CRAN/')" && \
+    Rscript -e "install.packages('Matrix', repos='https://mirrors.ustc.edu.cn/CRAN/')" && \
+    Rscript -e "install.packages('Rcpp', repos='https://mirrors.ustc.edu.cn/CRAN/')" && \
+    Rscript -e "install.packages(c('devtools', 'remotes'), repos='https://mirrors.ustc.edu.cn/CRAN/')" && \
+    Rscript -e "install.packages('harmony', repos='https://mirrors.ustc.edu.cn/CRAN/')" && \
+    Rscript -e "if (!require('BiocManager', quietly = TRUE)) install.packages('BiocManager', repos='https://mirrors.ustc.edu.cn/CRAN/')" && \
+    Rscript -e "BiocManager::install(version = BiocManager::version(), update = TRUE, ask = FALSE)" && \
+    Rscript -e "options(BioC_mirror='https://mirrors.westlake.edu.cn/bioconductor', repos='https://mirrors.ustc.edu.cn/CRAN/'); BiocManager::install('DESeq2', update = FALSE, ask = FALSE)" && \
+    Rscript -e "options(BioC_mirror='https://mirrors.westlake.edu.cn/bioconductor', repos='https://mirrors.ustc.edu.cn/CRAN/'); BiocManager::install('DADA2', update = FALSE, ask = FALSE)" && \
+    Rscript -e "options(BioC_mirror='https://mirrors.westlake.edu.cn/bioconductor', repos='https://mirrors.ustc.edu.cn/CRAN/'); BiocManager::install('xcms', update = FALSE, ask = FALSE)" && \
+    Rscript -e "options(BioC_mirror='https://mirrors.westlake.edu.cn/bioconductor', repos='https://mirrors.ustc.edu.cn/CRAN/'); BiocManager::install('FlowCore', update = FALSE, ask = FALSE)" && \
+    Rscript -e "options(BioC_mirror='https://mirrors.westlake.edu.cn/bioconductor', repos='https://mirrors.ustc.edu.cn/CRAN/'); BiocManager::install('edgeR', update = FALSE, ask = FALSE)" && \
+    Rscript -e "options(BioC_mirror='https://mirrors.westlake.edu.cn/bioconductor', repos='https://mirrors.ustc.edu.cn/CRAN/'); BiocManager::install('limma', update = FALSE, ask = FALSE)" && \
+    Rscript -e "options(BioC_mirror='https://mirrors.westlake.edu.cn/bioconductor', repos='https://mirrors.ustc.edu.cn/CRAN/'); BiocManager::install('clusterProfiler', update = FALSE, ask = FALSE)" && \
+    Rscript -e "install.packages('WGCNA', repos='https://mirrors.ustc.edu.cn/CRAN/')" && \
+    Rscript -e "install.packages(c('dynamicTreeCut', 'fastcluster', 'matrixStats', 'Hmisc', 'foreach', 'doParallel'), repos='https://mirrors.ustc.edu.cn/CRAN/')" && \
+    Rscript -e "options(BioC_mirror='https://mirrors.westlake.edu.cn/bioconductor', repos='https://mirrors.ustc.edu.cn/CRAN/'); BiocManager::install(c('impute', 'preprocessCore', 'GO.db', 'AnnotationDbi'), update = FALSE, ask = FALSE)"
+
+RUN Rscript -e "if (!require('devtools', quietly = TRUE)) install.packages('devtools', repos='https://mirrors.ustc.edu.cn/CRAN/')" && \
+    Rscript -e "devtools::install_github('liulab-dfci/MAGeCKFlute')"
+
+# 切换回biomni用户
+USER biomni
+
 # 复制CLI工具安装脚本
 COPY --chown=biomni:biomni install_cli_tools.sh /opt/biomni/
 COPY --chown=biomni:biomni cli_tools_config.json /opt/biomni/
@@ -205,11 +233,19 @@ RUN cd /opt/biomni && \
     cp /opt/biomni/downloads/muscle-linux-x86.v5.3 /opt/biomni_tools/bin/muscle && \
     chmod +x /opt/biomni_tools/bin/muscle && \
     # 安装HOMER
-    cp /opt/biomni/downloads/configureHomer.pl /opt/biomni_tools/bin/ && \
-    chmod +x /opt/biomni_tools/bin/configureHomer.pl && \
     mkdir -p /opt/biomni_tools/homer && \
-    /opt/biomni_tools/bin/configureHomer.pl -install -local /opt/biomni_tools/homer -b && \
-    # 创建HOMER的符号链接
+    cp /opt/biomni/downloads/configureHomer.pl /opt/biomni_tools/homer/ && \
+    chmod +x /opt/biomni_tools/homer/configureHomer.pl && \
+    cd /opt/biomni_tools/homer && \
+    ./configureHomer.pl -install && \
+    # 检查HOMER安装是否成功
+    if [ ! -d "/opt/biomni_tools/homer/bin" ] || [ -z "$(ls -A /opt/biomni_tools/homer/bin 2>/dev/null)" ]; then \
+        echo "ERROR: HOMER installation failed! /opt/biomni_tools/homer/bin/ directory does not exist or is empty." && \
+        echo "Please check the HOMER installation process." && \
+        exit 1; \
+    fi && \
+    echo "HOMER installation successful. Found $(ls /opt/biomni_tools/homer/bin/ | wc -l) tools in bin directory." && \
+    # 创建HOMER的符号链接到bin目录
     ln -sf /opt/biomni_tools/homer/bin/* /opt/biomni_tools/bin/ && \
     # 安装BWA（从GitHub克隆源码编译）
     git clone https://github.com/lh3/bwa.git /opt/biomni/tmp_build/bwa && \
@@ -221,37 +257,16 @@ RUN cd /opt/biomni && \
     rm -rf /opt/biomni/tmp_build
 
 # 安装R包（切换到root用户安装，然后切换回biomni用户）
-USER root
-
-ENV MAKEFLAGS="-j16"
-# 安装所有R包（合并多个RUN命令）
-RUN Rscript -e "install.packages(c('ggplot2', 'dplyr', 'tidyr', 'readr', 'stringr', 'lme4'), repos='https://mirrors.ustc.edu.cn/CRAN/')" && \
-    Rscript -e "install.packages('Matrix', repos='https://mirrors.ustc.edu.cn/CRAN/')" && \
-    Rscript -e "install.packages('Rcpp', repos='https://mirrors.ustc.edu.cn/CRAN/')" && \
-    Rscript -e "install.packages(c('devtools', 'remotes'), repos='https://mirrors.ustc.edu.cn/CRAN/')" && \
-    Rscript -e "install.packages('harmony', repos='https://mirrors.ustc.edu.cn/CRAN/')" && \
-    Rscript -e "if (!require('BiocManager', quietly = TRUE)) install.packages('BiocManager', repos='https://mirrors.ustc.edu.cn/CRAN/')" && \
-    Rscript -e "BiocManager::install(version = BiocManager::version(), update = TRUE, ask = FALSE)" && \
-    Rscript -e "options(BioC_mirror='https://mirrors.westlake.edu.cn/bioconductor', repos='https://mirrors.ustc.edu.cn/CRAN/'); BiocManager::install('DESeq2', update = FALSE, ask = FALSE)" && \
-    Rscript -e "options(BioC_mirror='https://mirrors.westlake.edu.cn/bioconductor', repos='https://mirrors.ustc.edu.cn/CRAN/'); BiocManager::install('DADA2', update = FALSE, ask = FALSE)" && \
-    Rscript -e "options(BioC_mirror='https://mirrors.westlake.edu.cn/bioconductor', repos='https://mirrors.ustc.edu.cn/CRAN/'); BiocManager::install('xcms', update = FALSE, ask = FALSE)" && \
-    Rscript -e "options(BioC_mirror='https://mirrors.westlake.edu.cn/bioconductor', repos='https://mirrors.ustc.edu.cn/CRAN/'); BiocManager::install('FlowCore', update = FALSE, ask = FALSE)" && \
-    Rscript -e "options(BioC_mirror='https://mirrors.westlake.edu.cn/bioconductor', repos='https://mirrors.ustc.edu.cn/CRAN/'); BiocManager::install('edgeR', update = FALSE, ask = FALSE)" && \
-    Rscript -e "options(BioC_mirror='https://mirrors.westlake.edu.cn/bioconductor', repos='https://mirrors.ustc.edu.cn/CRAN/'); BiocManager::install('limma', update = FALSE, ask = FALSE)" && \
-    Rscript -e "options(BioC_mirror='https://mirrors.westlake.edu.cn/bioconductor', repos='https://mirrors.ustc.edu.cn/CRAN/'); BiocManager::install('clusterProfiler', update = FALSE, ask = FALSE)" && \
-    Rscript -e "install.packages('WGCNA', repos='https://mirrors.ustc.edu.cn/CRAN/')" && \
-    Rscript -e "install.packages(c('dynamicTreeCut', 'fastcluster', 'matrixStats', 'Hmisc', 'foreach', 'doParallel'), repos='https://mirrors.ustc.edu.cn/CRAN/')" && \
-    Rscript -e "options(BioC_mirror='https://mirrors.westlake.edu.cn/bioconductor', repos='https://mirrors.ustc.edu.cn/CRAN/'); BiocManager::install(c('impute', 'preprocessCore', 'GO.db', 'AnnotationDbi'), update = FALSE, ask = FALSE)"
-
-RUN Rscript -e "if (!require('devtools', quietly = TRUE)) install.packages('devtools', repos='https://mirrors.ustc.edu.cn/CRAN/')" && \
-    Rscript -e "devtools::install_github('liulab-dfci/MAGeCKFlute')"
-
-# 切换回biomni用户
-USER biomni
 
 # 设置环境变量
-#ENV PATH="/opt/biomni/venv/bin:$PATH"
+ENV PATH="/opt/biomni/venv/bin:$PATH"
 ENV HOMER="/opt/biomni_tools/homer"
+
+# 创建自动激活虚拟环境的bash配置文件
+RUN echo 'source /opt/biomni/venv/bin/activate' >> /home/biomni/.bashrc && \
+    echo 'echo "🐍 Python virtual environment activated: $(python --version)"' >> /home/biomni/.bashrc && \
+    echo 'echo "📁 Working directory: $(pwd)"' >> /home/biomni/.bashrc && \
+    echo 'echo "🔧 Available tools: biomni_tools/bin is in PATH"' >> /home/biomni/.bashrc
 
 # 暴露Jupyter和Gradio端口
 EXPOSE 8888 7860
