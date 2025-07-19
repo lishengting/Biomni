@@ -833,18 +833,16 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft(), css="""
             with gr.Column(scale=2):
                 # File upload component
                 file_upload = gr.File(
-                    label="Upload Data Files",
+                    label="Upload Data Files (CSV, TSV, TXT, JSON, Excel, Parquet, HDF5)",
                     file_count="multiple",
-                    file_types=[".csv", ".tsv", ".txt", ".json", ".xlsx", ".xls", ".parquet", ".h5", ".h5ad"],
-                    info="Select one or more data files to upload"
+                    file_types=[".csv", ".tsv", ".txt", ".json", ".xlsx", ".xls", ".parquet", ".h5", ".h5ad"]
                 )
                 
                 # Description inputs for each file
                 file_descriptions = gr.Textbox(
-                    label="File Descriptions (Optional)",
+                    label="File Descriptions (Optional) - One description per line, in the same order as uploaded files",
                     placeholder="Enter descriptions for your files, separated by newlines. If not provided, default descriptions will be used.",
-                    lines=3,
-                    info="One description per line, in the same order as uploaded files"
+                    lines=3
                 )
                 
                 with gr.Row():
@@ -868,9 +866,8 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft(), css="""
                 
                 gr.Markdown("### 🗑️ Remove Data")
                 data_to_remove = gr.Textbox(
-                    label="Data Name to Remove",
-                    placeholder="Enter the exact name of the data to remove",
-                    info="Use the exact filename as shown in the data list"
+                    label="Data Name to Remove (Use the exact filename as shown in the data list)",
+                    placeholder="Enter the exact name of the data to remove"
                 )
                 remove_btn = gr.Button("🗑️ Remove Data", variant="stop")
                 remove_status = gr.Textbox(
