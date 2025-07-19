@@ -12,6 +12,66 @@ from biomni.llm import get_llm
 from biomni.utils import parse_hpo_obo
 
 
+# Global variable to store current agent's model configuration
+_current_agent_config = {
+    "model": "gpt-4o",
+    "source": None,
+    "base_url": None,
+    "api_key": "EMPTY"
+}
+
+
+def set_current_agent_config(model: str, source=None, base_url=None, api_key="EMPTY"):
+    """Set the current agent's model configuration for database.py to use.
+    
+    Args:
+        model (str): Model name
+        source (str, optional): Source provider
+        base_url (str, optional): Base URL for API
+        api_key (str, optional): API key
+    """
+    global _current_agent_config
+    _current_agent_config.update({
+        "model": model,
+        "source": source,
+        "base_url": base_url,
+        "api_key": api_key
+    })
+
+
+def get_current_session_config() -> dict:
+    """Get the current session's model configuration from environment or config file.
+    
+    Returns:
+        dict: Configuration containing model, source, base_url, api_key
+    """
+    global _current_agent_config
+    
+    # First try to get from global agent config
+    if _current_agent_config["model"] != "gpt-4o" or _current_agent_config["source"] is not None:
+        return _current_agent_config.copy()
+    
+    # Try to get from environment variables
+    config = {
+        "model": os.environ.get("BIOMNI_CURRENT_MODEL", "gpt-4o"),
+        "source": os.environ.get("BIOMNI_CURRENT_SOURCE"),
+        "base_url": os.environ.get("BIOMNI_CURRENT_BASE_URL"),
+        "api_key": os.environ.get("BIOMNI_CURRENT_API_KEY", "EMPTY")
+    }
+    
+    # If not in environment, try to read from config file
+    config_file = os.environ.get("BIOMNI_SESSION_CONFIG_FILE")
+    if config_file and os.path.exists(config_file):
+        try:
+            with open(config_file, 'r') as f:
+                file_config = json.load(f)
+                config.update(file_config)
+        except Exception:
+            pass
+    
+    return config
+
+
 # Function to map HPO terms to names
 def get_hpo_names(hpo_terms: list[str], data_lake_path: str) -> list[str]:
     """Retrieve the names of given HPO terms.
@@ -32,7 +92,7 @@ def get_hpo_names(hpo_terms: list[str], data_lake_path: str) -> list[str]:
     return hpo_names
 
 
-def _query_llm_for_api(prompt, schema, system_template, model="gpt-4o", api_key=None, base_url=None, source=None):
+def _query_llm_for_api(prompt, schema, system_template, model=None, api_key=None, base_url=None, source=None):
     """Helper function to query any LLM for generating API calls based on natural language prompts.
 
     Parameters
@@ -40,10 +100,10 @@ def _query_llm_for_api(prompt, schema, system_template, model="gpt-4o", api_key=
     prompt (str): Natural language query to process
     schema (dict): API schema to include in the system prompt
     system_template (str): Template string for the system prompt (should have {schema} placeholder)
-    model (str): Model name to use (default: "gpt-4o")
-    api_key (str, optional): API key. If None, will try to get from appropriate env variable
-    base_url (str, optional): Custom base URL for API. If None, will try to get from appropriate env variable
-    source (str, optional): Source provider: "OpenAI", "Anthropic", "Custom", etc. If None, auto-detect from model
+    model (str, optional): Model name to use. If None, will use current session config
+    api_key (str, optional): API key. If None, will use current session config
+    base_url (str, optional): Custom base URL for API. If None, will use current session config
+    source (str, optional): Source provider: "OpenAI", "Anthropic", "Custom", etc. If None, will use current session config
 
     Returns
     -------
@@ -51,13 +111,21 @@ def _query_llm_for_api(prompt, schema, system_template, model="gpt-4o", api_key=
 
     """
     try:
+        # Get current session configuration if parameters are not provided
+        if model is None or api_key is None or base_url is None or source is None:
+            session_config = get_current_session_config()
+            model = model or session_config.get("model", "gpt-4o")
+            api_key = api_key or session_config.get("api_key", "EMPTY")
+            base_url = base_url or session_config.get("base_url")
+            source = source or session_config.get("source")
+
         # Get the LLM instance using the existing get_llm function
         llm = get_llm(
             model=model,
             temperature=0.1,  # Lower temperature for more consistent API generation
             source=source,
             base_url=base_url,
-            api_key=api_key or "EMPTY"
+            api_key=api_key
         )
 
         # Format the system prompt with the schema

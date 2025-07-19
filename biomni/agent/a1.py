@@ -140,6 +140,19 @@ class A1:
         module2api = read_module2api()
         
         self._log("INIT", "🤖", f"Initializing LLM: {llm}")
+        
+        # Set environment variables for database.py to use
+        os.environ["BIOMNI_CURRENT_MODEL"] = llm
+        if source:
+            os.environ["BIOMNI_CURRENT_SOURCE"] = source
+        if base_url:
+            os.environ["BIOMNI_CURRENT_BASE_URL"] = base_url
+        if api_key:
+            os.environ["BIOMNI_CURRENT_API_KEY"] = api_key
+        
+        # Set global configuration for database.py
+        from biomni.tool.database import set_current_agent_config
+        set_current_agent_config(llm, source, base_url, api_key)
             
         self.llm = get_llm(llm, stop_sequences=["</execute>", "</solution>"], base_url=base_url, api_key=api_key, source=source)
         

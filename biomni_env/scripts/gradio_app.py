@@ -1,4 +1,5 @@
 import gradio as gr
+import json
 import os
 import threading
 import time
@@ -170,6 +171,32 @@ def create_agent(llm_model: str, source: str, base_url: Optional[str], api_key: 
         print(f"[LOG] 创建新会话: {session_id}")  # 添加日志
     else:
         print(f"[LOG] 使用现有会话: {session_id}")  # 添加日志
+    
+    # Set environment variables for database.py to use
+    os.environ["BIOMNI_CURRENT_MODEL"] = llm_model
+    if source and source != "Auto-detect":
+        os.environ["BIOMNI_CURRENT_SOURCE"] = source
+    if base_url and base_url.strip():
+        os.environ["BIOMNI_CURRENT_BASE_URL"] = base_url.strip()
+    if api_key and api_key.strip():
+        os.environ["BIOMNI_CURRENT_API_KEY"] = api_key.strip()
+    
+    # Also create a config file for the session
+    config_data = {
+        "model": llm_model,
+        "source": source if source != "Auto-detect" else None,
+        "base_url": base_url.strip() if base_url and base_url.strip() else None,
+        "api_key": api_key.strip() if api_key and api_key.strip() else "EMPTY"
+    }
+    
+    config_file_path = f"/tmp/biomni_session_{session_id}.json"
+    try:
+        with open(config_file_path, 'w') as f:
+            json.dump(config_data, f)
+        os.environ["BIOMNI_SESSION_CONFIG_FILE"] = config_file_path
+        print(f"[LOG] 创建配置文件: {config_file_path}")
+    except Exception as e:
+        print(f"[LOG] 创建配置文件失败: {e}")
     
     # 打印当前所有会话信息
     print(f"[LOG] 当前活跃会话数量: {len(session_manager.sessions)}")
