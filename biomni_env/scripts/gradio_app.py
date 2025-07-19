@@ -781,30 +781,6 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft(), css="""
                 lines=4
             )
             
-            # Data Management Section
-            gr.Markdown("## 📁 Data Management")
-            
-            # File upload component
-            file_upload = gr.File(
-                label="Upload Data Files (CSV, TSV, TXT, JSON, Excel, Parquet, HDF5)",
-                file_count="multiple",
-                file_types=[".csv", ".tsv", ".txt", ".json", ".xlsx", ".xls", ".parquet", ".h5", ".h5ad"]
-            )
-            
-            # Description inputs for each file
-            file_descriptions = gr.Textbox(
-                label="File Descriptions (Optional) - One description per line, in the same order as uploaded files",
-                placeholder="Enter descriptions for your files, separated by newlines. If not provided, default descriptions will be used.",
-                lines=2
-            )
-            
-            upload_btn = gr.Button("📤 Upload Files", variant="primary")
-            upload_status = gr.Textbox(
-                label="Upload Status",
-                interactive=False,
-                lines=2
-            )
-            
             # Current data display
             data_list_display = gr.Textbox(
                 label="Current Data in Agent",
@@ -813,20 +789,50 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft(), css="""
                 placeholder="No data uploaded yet. Upload files to see them here."
             )
             
+
+            
         with gr.Column(scale=3):
             gr.Markdown("## 💬 Chat with Biomni")
             
-            # Chat interface
-            question = gr.Textbox(
-                label="Your Question",
-                placeholder="Ask Biomni to run a biomedical task...",
-                lines=3
-            )
-            
-            # Control buttons
+            # Chat interface and data upload in the same row
             with gr.Row():
-                ask_btn = gr.Button("🤖 Ask Biomni", variant="primary", scale=2)
-                stop_btn = gr.Button("⏹️ Stop", variant="stop", scale=1)
+                with gr.Column(scale=2):
+                    # Chat interface
+                    question = gr.Textbox(
+                        label="Your Question",
+                        placeholder="Ask Biomni to run a biomedical task...",
+                        lines=3
+                    )
+                    
+                    # Control buttons
+                    with gr.Row():
+                        ask_btn = gr.Button("🤖 Ask Biomni", variant="primary", scale=2)
+                        stop_btn = gr.Button("⏹️ Stop", variant="stop", scale=1)
+                
+                with gr.Column(scale=1):
+                    # Data upload section
+                    gr.Markdown("### 📁 Upload Data")
+                    
+                    # File upload component
+                    file_upload = gr.File(
+                        label="Data Files (CSV, TSV, TXT, JSON, Excel, Parquet, HDF5)",
+                        file_count="multiple",
+                        file_types=[".csv", ".tsv", ".txt", ".json", ".xlsx", ".xls", ".parquet", ".h5", ".h5ad"]
+                    )
+                    
+                    # Description inputs for each file
+                    file_descriptions = gr.Textbox(
+                        label="File Descriptions (Optional)",
+                        placeholder="One description per line",
+                        lines=2
+                    )
+                    
+                    upload_btn = gr.Button("📤 Upload", variant="primary")
+                    upload_status = gr.Textbox(
+                        label="Upload Status",
+                        interactive=False,
+                        lines=2
+                    )
             
             # Multiple output areas
             with gr.Tab("Output"):
