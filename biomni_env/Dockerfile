@@ -259,14 +259,13 @@ RUN cd /opt/biomni && \
 # 安装R包（切换到root用户安装，然后切换回biomni用户）
 
 # 设置环境变量
-ENV PATH="/opt/biomni/venv/bin:$PATH"
 ENV HOMER="/opt/biomni_tools/homer"
 
 # 创建自动激活虚拟环境的bash配置文件
 RUN echo 'source /opt/biomni/venv/bin/activate' >> /home/biomni/.bashrc && \
     echo 'echo "🐍 Python virtual environment activated: $(python --version)"' >> /home/biomni/.bashrc && \
     echo 'echo "📁 Working directory: $(pwd)"' >> /home/biomni/.bashrc && \
-    echo 'echo "🔧 Available tools: biomni_tools/bin is in PATH"' >> /home/biomni/.bashrc
+    echo 'echo "🔧 Available tools in /opt/biomni_tools/bin"' >> /home/biomni/.bashrc
 
 # 暴露Jupyter和Gradio端口
 EXPOSE 8888 7860
