@@ -709,16 +709,24 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft(), css="""
         padding-left: 20px;
     }
     
-    /* 修复执行状态文字颜色 */
-    .intermediate-results .execution-status,
-    .intermediate-results .execution-steps,
-    .intermediate-results .detailed-steps {
+    /* 强制所有带背景色的div使用白色文字 */
+    .intermediate-results div {
+        color: white !important;
+    }
+    
+    /* 确保普通内容区域保持黑色文字 */
+    .intermediate-results div:not([style*="background"]) {
         color: #333 !important;
-        background-color: #f8f9fa !important;
-        padding: 8px 12px !important;
-        border-radius: 4px !important;
-        margin: 5px 0 !important;
-        border: 1px solid #e9ecef !important;
+    }
+    
+    /* 特别针对状态栏 */
+    .intermediate-results div[style*="background: linear-gradient"],
+    .intermediate-results div[style*="background-color: rgb(220, 53, 69)"],
+    .intermediate-results div[style*="background-color: #dc3545"],
+    .intermediate-results div[style*="background-color: purple"],
+    .intermediate-results div[style*="background-color: #6f42c1"] {
+        color: white !important;
+        font-weight: bold !important;
     }
 """) as demo:
     gr.Markdown("# 🧬 Biomni AI Agent Demo")
