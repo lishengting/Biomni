@@ -708,6 +708,18 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft(), css="""
         margin: 10px 0;
         padding-left: 20px;
     }
+    
+    /* 修复执行状态文字颜色 */
+    .intermediate-results .execution-status,
+    .intermediate-results .execution-steps,
+    .intermediate-results .detailed-steps {
+        color: #333 !important;
+        background-color: #f8f9fa !important;
+        padding: 8px 12px !important;
+        border-radius: 4px !important;
+        margin: 5px 0 !important;
+        border: 1px solid #e9ecef !important;
+    }
 """) as demo:
     gr.Markdown("# 🧬 Biomni AI Agent Demo")
     gr.Markdown("Configure your LLM settings and ask Biomni to run biomedical tasks!")
@@ -813,7 +825,7 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft(), css="""
                     # Control buttons
                     with gr.Row():
                         ask_btn = gr.Button("🤖 Ask Biomni", variant="primary", scale=2)
-                        stop_btn = gr.Button("⏹️ Stop", variant="stop", scale=1)
+                        stop_btn = gr.Button("⏹️ Stop", variant="stop", scale=1, interactive=False)
                     
                 with gr.Column(scale=1):
                     # Data upload section below chat
@@ -831,7 +843,7 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft(), css="""
                         placeholder="One description per line",
                         lines=1
                     )
-                    upload_btn = gr.Button("📤 Upload", variant="primary")
+                    upload_btn = gr.Button("📤 Upload", variant="primary", interactive=False)
             
             # Multiple output areas
             with gr.Tab("Output"):
@@ -911,6 +923,14 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft(), css="""
         data_list = get_current_data_list(result[2])  # result[2] is the new session_id
         return result[0], result[1], result[2], data_list
     
+    # 开始执行时启用Stop按钮，禁用Ask按钮
+    def start_execution(question, session_id):
+        return gr.Button(interactive=False), gr.Button(interactive=True)
+    
+    # 停止执行时禁用Stop按钮，启用Ask按钮
+    def stop_execution_state():
+        return gr.Button(interactive=True), gr.Button(interactive=False)
+    
     create_btn.click(
         fn=create_agent_and_update_data,
         inputs=[llm_model, source, base_url, api_key, data_path, verbose, session_id_state],
@@ -928,13 +948,23 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft(), css="""
         fn=stop_execution,
         inputs=[session_id_state],
         outputs=[intermediate_results, execution_log]
+    ).then(
+        fn=stop_execution_state,
+        outputs=[ask_btn, stop_btn]
     )
     
     # Streaming ask function
     ask_btn.click(
+        fn=start_execution,
+        inputs=[question, session_id_state],
+        outputs=[ask_btn, stop_btn]
+    ).then(
         fn=ask_biomni_stream,
         inputs=[question, session_id_state],
         outputs=[intermediate_results, execution_log]
+    ).then(
+        fn=stop_execution_state,
+        outputs=[ask_btn, stop_btn]
     )
     
     # Also allow Enter key to submit question
@@ -944,10 +974,23 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft(), css="""
         outputs=[intermediate_results, execution_log]
     )
     
+    # 文件选择时启用上传按钮
+    def enable_upload_button(files):
+        return gr.Button(interactive=bool(files))
+    
+    file_upload.change(
+        fn=enable_upload_button,
+        inputs=[file_upload],
+        outputs=[upload_btn]
+    )
+    
     upload_btn.click(
         fn=handle_upload,
         inputs=[file_upload, file_descriptions, session_id_state],
         outputs=[upload_status, data_list_display]
+    ).then(
+        fn=lambda: gr.Button(interactive=False),
+        outputs=[upload_btn]
     )
     
     # Update data list when session changes
