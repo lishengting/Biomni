@@ -719,14 +719,31 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft(), css="""
         color: #333 !important;
     }
     
-    /* 特别针对状态栏 */
+    /* 特别针对状态栏 - 使用更具体的选择器 */
     .intermediate-results div[style*="background: linear-gradient"],
     .intermediate-results div[style*="background-color: rgb(220, 53, 69)"],
     .intermediate-results div[style*="background-color: #dc3545"],
     .intermediate-results div[style*="background-color: purple"],
-    .intermediate-results div[style*="background-color: #6f42c1"] {
+    .intermediate-results div[style*="background-color: #6f42c1"],
+    .intermediate-results div[style*="background-color: red"],
+    .intermediate-results div[style*="background-color: #ff0000"],
+    .intermediate-results div[style*="background-color: #dc3545"],
+    .intermediate-results div[style*="background-color: #6f42c1"],
+    .intermediate-results div[style*="background-color: #007bff"] {
         color: white !important;
         font-weight: bold !important;
+    }
+    
+    /* 强制所有span和文本元素在有色背景上使用白色 */
+    .intermediate-results div[style*="background"] * {
+        color: white !important;
+    }
+    
+    /* 特别针对执行状态文字 */
+    .intermediate-results div:contains("Execution Stopped"),
+    .intermediate-results div:contains("Execution Steps"),
+    .intermediate-results div:contains("Detailed Steps") {
+        color: white !important;
     }
 """) as demo:
     gr.Markdown("# 🧬 Biomni AI Agent Demo")
