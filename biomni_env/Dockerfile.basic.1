@@ -90,9 +90,7 @@ RUN /opt/miniconda3/bin/conda tos accept --override-channels --channel https://r
     /opt/miniconda3/bin/conda clean -afy
 
 # 手动pip安装，显示详细日志
-# 先安装兼容版本的transformers避免版本冲突
-RUN /opt/miniconda3/bin/conda run -n biomni_e1 pip install --no-build-isolation --no-cache-dir "transformers>=4.35,<4.40" && \
-    /opt/miniconda3/bin/conda run -n biomni_e1 pip install --no-build-isolation --no-cache-dir -r requirements.txt
+RUN /opt/miniconda3/bin/conda run -n biomni_e1 pip install --no-cache-dir -r requirements.txt
 
 # 创建biomni用户
 RUN useradd -u 1005 -m -s /bin/bash biomni && \
