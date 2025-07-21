@@ -34,9 +34,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# 配置pip官方镜像源（如需国内源可自行切换）
-RUN pip config set global.index-url https://pypi.org/simple && \
-    pip config set global.trusted-host pypi.org
+# 复制pip配置文件
+COPY --chown=1005:1005 pip.conf /opt/biomni/
+
+# 配置pip以支持更长的超时和重试
+RUN mkdir -p /opt/miniconda3/pip && \
+    cp /opt/biomni/pip.conf /opt/miniconda3/pip/pip.conf && \
+    mkdir -p /home/biomni/.pip && \
+    cp /opt/biomni/pip.conf /home/biomni/.pip/pip.conf && \
+    echo 'export PIP_CONFIG_FILE=/opt/miniconda3/pip/pip.conf' >> /opt/miniconda3/etc/profile.d/conda.sh
 
 # 安装Miniconda - 使用官方源
 RUN wget -qO /tmp/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
@@ -58,7 +64,8 @@ COPY --chown=1005:1005 environment.yml ./
 RUN /opt/miniconda3/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main && \
     /opt/miniconda3/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r && \
     /opt/miniconda3/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/msys2 && \
-    /opt/miniconda3/bin/conda env create -n biomni_e1 -f environment.yml && \
+    /opt/miniconda3/bin/conda env create -n biomni_e1 -f environment.yml --no-builds && \
+    /opt/miniconda3/bin/conda run -n biomni_e1 pip install -r requirements.txt && \
     /opt/miniconda3/bin/conda clean -afy
 
 # 创建biomni用户
