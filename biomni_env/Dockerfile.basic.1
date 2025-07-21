@@ -47,6 +47,9 @@ RUN wget -qO /tmp/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-la
     /opt/miniconda3/bin/conda config --set show_channel_urls yes && \
     /opt/miniconda3/bin/conda clean -afy
 
+# 安装pyyaml用于解析yml
+RUN pip install pyyaml
+
 # 复制pip配置文件
 COPY --chown=1005:1005 pip.conf /opt/biomni/
 
@@ -57,15 +60,21 @@ RUN mkdir -p /opt/miniconda3/pip && \
     cp /opt/biomni/pip.conf /home/biomni/.pip/pip.conf && \
     echo 'export PIP_CONFIG_FILE=/opt/miniconda3/pip/pip.conf' >> /opt/miniconda3/etc/profile.d/conda.sh
 
-    # 复制环境文件并使用conda安装
+# 复制环境文件
 COPY --chown=1005:1005 environment.yml ./
 
-# 创建conda环境并安装依赖
+# 自动生成requirements.txt
+RUN python3 -c "import yaml; f=open('environment.yml'); d=yaml.safe_load(f); f.close(); pip_list = []; [pip_list.extend(dep['pip']) for dep in d['dependencies'] if isinstance(dep, dict) and 'pip' in dep]; open('requirements.txt','w').write('\n'.join(pip_list))"
+
+# 创建conda环境（只装conda包，不装pip部分）
 RUN /opt/miniconda3/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main && \
     /opt/miniconda3/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r && \
     /opt/miniconda3/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/msys2 && \
-    /opt/miniconda3/bin/conda env create -n biomni_e1 -f environment.yml && \
+    /opt/miniconda3/bin/conda env create -n biomni_e1 -f environment.yml --no-default-packages && \
     /opt/miniconda3/bin/conda clean -afy
+
+# 手动pip安装，显示详细日志
+RUN /opt/miniconda3/bin/conda run -n biomni_e1 pip install --no-build-isolation --no-cache-dir -r requirements.txt
 
 # 创建biomni用户
 RUN useradd -u 1005 -m -s /bin/bash biomni && \

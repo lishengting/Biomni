@@ -77,6 +77,13 @@ COPY --chown=biomni:biomni pip.conf /opt/biomni/
 # 切换到biomni用户
 USER biomni
 
+# 配置pip以支持更长的超时和重试
+RUN mkdir -p /opt/miniconda3/envs/biomni_e1/pip && \
+    cp /opt/biomni/pip.conf /opt/miniconda3/envs/biomni_e1/pip/pip.conf && \
+    mkdir -p /home/biomni/.pip && \
+    cp /opt/biomni/pip.conf /home/biomni/.pip/pip.conf && \
+    echo 'export PIP_CONFIG_FILE=/opt/miniconda3/envs/biomni_e1/pip/pip.conf' >> /opt/miniconda3/envs/biomni_e1/etc/conda/activate.d/env_vars.sh
+
 # 配置R使用国内镜像
 RUN echo "options(repos = c(CRAN = 'https://mirrors.ustc.edu.cn/CRAN/'))" > ~/.Rprofile && \
     echo "options(BioC_mirror = 'https://mirrors.ustc.edu.cn/bioconductor')" >> ~/.Rprofile
@@ -95,13 +102,6 @@ RUN conda run -n biomni_e1 Rscript install_r_packages.R || echo "Some R packages
 
 # 安装CLI工具
 RUN conda run -n biomni_e1 bash install_cli_tools.sh || echo "Some CLI tools may have failed, continuing..."
-
-# 配置pip以支持更长的超时和重试
-RUN mkdir -p /opt/miniconda3/envs/biomni_e1/pip && \
-    cp /opt/biomni/pip.conf /opt/miniconda3/envs/biomni_e1/pip/pip.conf && \
-    mkdir -p /home/biomni/.pip && \
-    cp /opt/biomni/pip.conf /home/biomni/.pip/pip.conf && \
-    echo 'export PIP_CONFIG_FILE=/opt/miniconda3/envs/biomni_e1/pip/pip.conf' >> /opt/miniconda3/envs/biomni_e1/etc/conda/activate.d/env_vars.sh
 
 # 设置环境变量
 ENV PATH="/opt/miniconda3/envs/biomni_e1/bin:$PATH"
