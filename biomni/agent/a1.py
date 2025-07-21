@@ -17,7 +17,6 @@ from biomni.llm import get_llm, SourceType
 from biomni.model.retriever import ToolRetriever
 from biomni.tool.support_tools import run_python_repl
 from biomni.tool.tool_registry import ToolRegistry
-from biomni.env_desc import data_lake_dict
 from biomni.utils import (
     check_and_download_s3_files,
     download_and_unzip,
@@ -83,14 +82,14 @@ class A1:
             
         benchmark_dir = os.path.join(path, "biomni_data", "benchmark")
         data_lake_dir = os.path.join(path, "biomni_data", "data_lake")
-        
+
         # Create the biomni_data directory structure
         os.makedirs(benchmark_dir, exist_ok=True)
         os.makedirs(data_lake_dir, exist_ok=True)
         
         self._log("INIT", "📁", f"Benchmark directory: {benchmark_dir}")
         self._log("INIT", "📁", f"Data lake directory: {data_lake_dir}")
-        
+
         expected_data_lake_files = list(data_lake_dict.keys())
         
         self._log("INIT", "📋", f"Expected data lake files: {len(expected_data_lake_files)}")
@@ -104,7 +103,7 @@ class A1:
             s3_bucket_url="https://biomni-release.s3.amazonaws.com",
             local_data_lake_path=data_lake_dir,
             expected_files=expected_data_lake_files,
-            folder="data_lake"
+            folder="data_lake",
         )
         
         self._log("DOWNLOAD", "✅", "Data lake files check completed")
@@ -1118,8 +1117,8 @@ Each library is listed with its description to help you understand its functiona
                     # Try to correct it
                     self._log("ERROR", "⏹", str(response))
                     state["messages"].append(
-                        AIMessage(
-                            content="There are no tags (e.g. <execute><solution>). Please follow the instruction, fix and update."
+                        HumanMessage(
+                            content="Each response must include thinking process followed by either <execute> or <solution> tag. But there are no tags in the current response. Please follow the instruction, fix and regenerate the response again."
                         )
                     )
                     state["next_step"] = "generate"
