@@ -198,7 +198,6 @@ COPY --chown=biomni:biomni downloads/ /opt/biomni/downloads/
 
 # 安装命令行工具（使用预下载的文件）
 RUN cd /opt/biomni && \
-    chmod +x install_cli_tools.sh && \
     # 设置环境变量
     export BIOMNI_TOOLS_DIR="/opt/biomni_tools" && \
     export BIOMNI_AUTO_INSTALL=1 && \
@@ -258,6 +257,8 @@ COPY --chown=biomni:biomni install_r_packages.R /opt/biomni/
 COPY --chown=biomni:biomni environment.yml /opt/biomni/
 COPY --chown=biomni:biomni bio_env.yml /opt/biomni/
 COPY --chown=biomni:biomni r_packages.yml /opt/biomni/
+
+RUN chmod +x install_cli_tools.sh
 
 # 设置环境变量
 ENV HOMER="/opt/biomni_tools/homer"
