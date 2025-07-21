@@ -57,6 +57,7 @@ show_help() {
 # 创建必要的目录
 create_directories() {
     echo -e "${YELLOW}创建必要的目录...${NC}"
+    echo -e "${BLUE}执行命令: mkdir -p data notebooks results biomni_results${NC}"
     mkdir -p data notebooks results biomni_results
     echo -e "${GREEN}目录创建完成！${NC}"
 }
@@ -69,6 +70,7 @@ build_image() {
     
     case $profile in
         "basic"|"full"|"dev"|"basic.1"|"full.1"|"dev.1")
+            echo -e "${BLUE}执行命令: docker compose --profile $profile build $progress_flag${NC}"
             docker compose --profile $profile build $progress_flag
             ;;
         *)
@@ -89,30 +91,35 @@ start_service() {
     
     case $profile in
         "basic")
+            echo -e "${BLUE}执行命令: docker compose --profile basic up -d biomni-basic${NC}"
             docker compose --profile basic up -d biomni-basic
             echo -e "${GREEN}旧版基础环境已启动！${NC}"
             echo -e "${BLUE}Jupyter Notebook: http://0.0.0.0:8888${NC}"
             echo -e "${BLUE}Gradio: http://0.0.0.0:7860${NC}"
             ;;
         "full")
+            echo -e "${BLUE}执行命令: docker compose --profile full up -d biomni-full${NC}"
             docker compose --profile full up -d biomni-full
             echo -e "${GREEN}旧版完整环境已启动！${NC}"
             echo -e "${BLUE}Jupyter Notebook: http://0.0.0.0:8889${NC}"
             echo -e "${BLUE}Gradio: http://0.0.0.0:7861${NC}"
             ;;
         "dev")
+            echo -e "${BLUE}执行命令: docker compose --profile dev up -d biomni-dev${NC}"
             docker compose --profile dev up -d biomni-dev
             echo -e "${GREEN}旧版开发环境已启动！${NC}"
             echo -e "${BLUE}Jupyter Notebook: http://0.0.0.0:8890${NC}"
             echo -e "${BLUE}Gradio: http://0.0.0.0:7862${NC}"
             ;;
         "basic.1")
+            echo -e "${BLUE}执行命令: docker compose --profile basic.1 up -d biomni-basic.1${NC}"
             docker compose --profile basic.1 up -d biomni-basic.1
             echo -e "${GREEN}新版基础环境已启动！${NC}"
             echo -e "${BLUE}Jupyter Notebook: http://0.0.0.0:9998${NC}"
             echo -e "${BLUE}Gradio: http://0.0.0.0:9860${NC}"
             ;;
         "full.1")
+            echo -e "${BLUE}执行命令: docker compose --profile full.1 up -d biomni-full.1${NC}"
             docker compose --profile full.1 up -d biomni-full.1
             echo -e "${GREEN}新版完整环境已启动！${NC}"
             echo -e "${BLUE}完整工具已集成，无需额外设置${NC}"
@@ -120,6 +127,7 @@ start_service() {
             echo -e "${BLUE}Gradio: http://0.0.0.0:9861${NC}"
             ;;
         "dev.1")
+            echo -e "${BLUE}执行命令: docker compose --profile dev.1 up -d biomni-dev.1${NC}"
             docker compose --profile dev.1 up -d biomni-dev.1
             echo -e "${GREEN}新版开发环境已启动！${NC}"
             echo -e "${BLUE}Jupyter Notebook: http://0.0.0.0:9990${NC}"
@@ -163,30 +171,43 @@ stop_containers() {
     case $profile in
         "basic"|"full"|"dev"|"basic.1"|"full.1"|"dev.1")
             echo -e "${YELLOW}停止 $profile 环境容器...${NC}"
+            echo -e "${BLUE}执行命令: docker compose --profile $profile down${NC}"
             docker compose --profile $profile down
             echo -e "${GREEN}$profile 环境容器已停止！${NC}"
             ;;
         "all")
             echo -e "${YELLOW}停止所有旧版环境容器...${NC}"
+            echo -e "${BLUE}执行命令: docker compose --profile basic down${NC}"
             docker compose --profile basic down
+            echo -e "${BLUE}执行命令: docker compose --profile full down${NC}"
             docker compose --profile full down
+            echo -e "${BLUE}执行命令: docker compose --profile dev down${NC}"
             docker compose --profile dev down
             echo -e "${GREEN}所有旧版环境容器已停止！${NC}"
             ;;
         "all.1")
             echo -e "${YELLOW}停止所有新版环境容器...${NC}"
+            echo -e "${BLUE}执行命令: docker compose --profile basic.1 down${NC}"
             docker compose --profile basic.1 down
+            echo -e "${BLUE}执行命令: docker compose --profile full.1 down${NC}"
             docker compose --profile full.1 down
+            echo -e "${BLUE}执行命令: docker compose --profile dev.1 down${NC}"
             docker compose --profile dev.1 down
             echo -e "${GREEN}所有新版环境容器已停止！${NC}"
             ;;
         "all.all")
             echo -e "${YELLOW}停止所有Biomni容器...${NC}"
+            echo -e "${BLUE}执行命令: docker compose --profile basic down${NC}"
             docker compose --profile basic down
+            echo -e "${BLUE}执行命令: docker compose --profile full down${NC}"
             docker compose --profile full down
+            echo -e "${BLUE}执行命令: docker compose --profile dev down${NC}"
             docker compose --profile dev down
+            echo -e "${BLUE}执行命令: docker compose --profile basic.1 down${NC}"
             docker compose --profile basic.1 down
+            echo -e "${BLUE}执行命令: docker compose --profile full.1 down${NC}"
             docker compose --profile full.1 down
+            echo -e "${BLUE}执行命令: docker compose --profile dev.1 down${NC}"
             docker compose --profile dev.1 down
             echo -e "${GREEN}所有容器已停止！${NC}"
             ;;
@@ -204,36 +225,55 @@ clean_all() {
     case $profile in
         "basic"|"full"|"dev"|"basic.1"|"full.1"|"dev.1")
             echo -e "${YELLOW}清理 $profile 环境容器和镜像...${NC}"
+            echo -e "${BLUE}执行命令: docker compose --profile $profile down --rmi local --volumes --remove-orphans${NC}"
             docker compose --profile $profile down --rmi local --volumes --remove-orphans
             echo -e "${GREEN}$profile 环境清理完成！${NC}"
             ;;
         "all")
             echo -e "${YELLOW}清理所有旧版环境容器和镜像...${NC}"
+            echo -e "${BLUE}执行命令: docker compose --profile basic down --rmi local --volumes --remove-orphans${NC}"
             docker compose --profile basic down --rmi local --volumes --remove-orphans
+            echo -e "${BLUE}执行命令: docker compose --profile full down --rmi local --volumes --remove-orphans${NC}"
             docker compose --profile full down --rmi local --volumes --remove-orphans
+            echo -e "${BLUE}执行命令: docker compose --profile dev down --rmi local --volumes --remove-orphans${NC}"
             docker compose --profile dev down --rmi local --volumes --remove-orphans
             echo -e "${GREEN}所有旧版环境清理完成！${NC}"
             ;;
         "all.1")
             echo -e "${YELLOW}清理所有新版环境容器和镜像...${NC}"
+            echo -e "${BLUE}执行命令: docker compose --profile basic.1 down --rmi local --volumes --remove-orphans${NC}"
             docker compose --profile basic.1 down --rmi local --volumes --remove-orphans
+            echo -e "${BLUE}执行命令: docker compose --profile full.1 down --rmi local --volumes --remove-orphans${NC}"
             docker compose --profile full.1 down --rmi local --volumes --remove-orphans
+            echo -e "${BLUE}执行命令: docker compose --profile dev.1 down --rmi local --volumes --remove-orphans${NC}"
             docker compose --profile dev.1 down --rmi local --volumes --remove-orphans
             echo -e "${GREEN}所有新版环境清理完成！${NC}"
             ;;
         "all.all")
             echo -e "${YELLOW}清理所有Biomni容器和镜像...${NC}"
+            echo -e "${BLUE}执行命令: docker compose --profile basic down${NC}"
             docker compose --profile basic down
+            echo -e "${BLUE}执行命令: docker compose --profile full down${NC}"
             docker compose --profile full down
+            echo -e "${BLUE}执行命令: docker compose --profile dev down${NC}"
             docker compose --profile dev down
+            echo -e "${BLUE}执行命令: docker compose --profile basic.1 down${NC}"
             docker compose --profile basic.1 down
+            echo -e "${BLUE}执行命令: docker compose --profile full.1 down${NC}"
             docker compose --profile full.1 down
+            echo -e "${BLUE}执行命令: docker compose --profile dev.1 down${NC}"
             docker compose --profile dev.1 down
+            echo -e "${BLUE}执行命令: docker compose --profile basic down --rmi local --volumes --remove-orphans${NC}"
             docker compose --profile basic down --rmi local --volumes --remove-orphans
+            echo -e "${BLUE}执行命令: docker compose --profile full down --rmi local --volumes --remove-orphans${NC}"
             docker compose --profile full down --rmi local --volumes --remove-orphans
+            echo -e "${BLUE}执行命令: docker compose --profile dev down --rmi local --volumes --remove-orphans${NC}"
             docker compose --profile dev down --rmi local --volumes --remove-orphans
+            echo -e "${BLUE}执行命令: docker compose --profile basic.1 down --rmi local --volumes --remove-orphans${NC}"
             docker compose --profile basic.1 down --rmi local --volumes --remove-orphans
+            echo -e "${BLUE}执行命令: docker compose --profile full.1 down --rmi local --volumes --remove-orphans${NC}"
             docker compose --profile full.1 down --rmi local --volumes --remove-orphans
+            echo -e "${BLUE}执行命令: docker compose --profile dev.1 down --rmi local --volumes --remove-orphans${NC}"
             docker compose --profile dev.1 down --rmi local --volumes --remove-orphans
             echo -e "${GREEN}所有环境清理完成！${NC}"
             ;;
@@ -249,6 +289,7 @@ show_logs() {
     local profile=$1
     case $profile in
         "basic"|"full"|"dev"|"basic.1"|"full.1"|"dev.1")
+            echo -e "${BLUE}执行命令: docker compose --profile $profile logs -f${NC}"
             docker compose --profile $profile logs -f
             ;;
         *)
@@ -263,21 +304,27 @@ enter_shell() {
     local profile=$1
     case $profile in
         "basic")
+            echo -e "${BLUE}执行命令: docker compose --profile basic exec biomni-basic /bin/bash${NC}"
             docker compose --profile basic exec biomni-basic /bin/bash
             ;;
         "full")
+            echo -e "${BLUE}执行命令: docker compose --profile full exec biomni-full /bin/bash${NC}"
             docker compose --profile full exec biomni-full /bin/bash
             ;;
         "dev")
+            echo -e "${BLUE}执行命令: docker compose --profile dev exec biomni-dev /bin/bash${NC}"
             docker compose --profile dev exec biomni-dev /bin/bash
             ;;
         "basic.1")
+            echo -e "${BLUE}执行命令: docker compose --profile basic.1 exec biomni-basic.1 /bin/bash${NC}"
             docker compose --profile basic.1 exec biomni-basic.1 /bin/bash
             ;;
         "full.1")
+            echo -e "${BLUE}执行命令: docker compose --profile full.1 exec biomni-full.1 /bin/bash${NC}"
             docker compose --profile full.1 exec biomni-full.1 /bin/bash
             ;;
         "dev.1")
+            echo -e "${BLUE}执行命令: docker compose --profile dev.1 exec biomni-dev.1 /bin/bash${NC}"
             docker compose --profile dev.1 exec biomni-dev.1 /bin/bash
             ;;
         *)
@@ -385,21 +432,33 @@ main() {
         "status")
             echo -e "${BLUE}Biomni容器状态:${NC}"
             echo -e "${YELLOW}旧版环境:${NC}"
+            echo -e "${BLUE}执行命令: docker compose --profile basic ps -a${NC}"
             docker compose --profile basic ps -a
+            echo -e "${BLUE}执行命令: docker compose --profile full ps -a${NC}"
             docker compose --profile full ps -a
+            echo -e "${BLUE}执行命令: docker compose --profile dev ps -a${NC}"
             docker compose --profile dev ps -a
             echo -e "${YELLOW}新版环境:${NC}"
+            echo -e "${BLUE}执行命令: docker compose --profile basic.1 ps -a${NC}"
             docker compose --profile basic.1 ps -a
+            echo -e "${BLUE}执行命令: docker compose --profile full.1 ps -a${NC}"
             docker compose --profile full.1 ps -a
+            echo -e "${BLUE}执行命令: docker compose --profile dev.1 ps -a${NC}"
             docker compose --profile dev.1 ps -a
             ;;
         "pull")
             echo -e "${YELLOW}拉取最新镜像...${NC}"
+            echo -e "${BLUE}执行命令: docker compose --profile basic pull${NC}"
             docker compose --profile basic pull
+            echo -e "${BLUE}执行命令: docker compose --profile full pull${NC}"
             docker compose --profile full pull
+            echo -e "${BLUE}执行命令: docker compose --profile dev pull${NC}"
             docker compose --profile dev pull
+            echo -e "${BLUE}执行命令: docker compose --profile basic.1 pull${NC}"
             docker compose --profile basic.1 pull
+            echo -e "${BLUE}执行命令: docker compose --profile full.1 pull${NC}"
             docker compose --profile full.1 pull
+            echo -e "${BLUE}执行命令: docker compose --profile dev.1 pull${NC}"
             docker compose --profile dev.1 pull
             echo -e "${GREEN}镜像拉取完成！${NC}"
             ;;
