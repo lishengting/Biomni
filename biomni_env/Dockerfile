@@ -110,11 +110,6 @@ RUN . /opt/biomni/venv/bin/activate && \
     pip config list && \
     pip install --upgrade pip setuptools wheel
 
-# 复制环境文件
-COPY --chown=biomni:biomni environment.yml /opt/biomni/
-COPY --chown=biomni:biomni bio_env.yml /opt/biomni/
-COPY --chown=biomni:biomni r_packages.yml /opt/biomni/
-
 # 大包，单独安装
 RUN . /opt/biomni/venv/bin/activate && \
     pip install scvi-tools
@@ -198,11 +193,6 @@ RUN Rscript -e "if (!require('devtools', quietly = TRUE)) install.packages('devt
 # 切换回biomni用户
 USER biomni
 
-# 复制CLI工具安装脚本
-COPY --chown=biomni:biomni install_cli_tools.sh /opt/biomni/
-COPY --chown=biomni:biomni cli_tools_config.json /opt/biomni/
-COPY --chown=biomni:biomni install_r_packages.R /opt/biomni/
-
 # 复制预下载的工具文件
 COPY --chown=biomni:biomni downloads/ /opt/biomni/downloads/
 
@@ -259,6 +249,15 @@ RUN cd /opt/biomni && \
 USER root
 RUN pip install langchain_aws
 USER biomni
+
+# 复制CLI工具安装脚本
+COPY --chown=biomni:biomni install_cli_tools.sh /opt/biomni/
+COPY --chown=biomni:biomni cli_tools_config.json /opt/biomni/
+COPY --chown=biomni:biomni install_r_packages.R /opt/biomni/
+# 复制环境文件
+COPY --chown=biomni:biomni environment.yml /opt/biomni/
+COPY --chown=biomni:biomni bio_env.yml /opt/biomni/
+COPY --chown=biomni:biomni r_packages.yml /opt/biomni/
 
 # 设置环境变量
 ENV HOMER="/opt/biomni_tools/homer"
