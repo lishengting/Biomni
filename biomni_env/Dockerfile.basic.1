@@ -90,7 +90,8 @@ RUN /opt/miniconda3/bin/conda tos accept --override-channels --channel https://r
     /opt/miniconda3/bin/conda clean -afy
 
 # 手动pip安装，显示详细日志
-RUN /opt/miniconda3/bin/conda run -n biomni_e1 pip install --no-cache-dir -r requirements.txt
+RUN /opt/miniconda3/bin/conda run -n biomni_e1 pip install --upgrade pip setuptools wheel && \
+    /opt/miniconda3/bin/conda run -n biomni_e1 pip install $(cat requirements.txt | grep -v '^#' | tr '\n' ' ')
 
 # 创建biomni用户
 RUN useradd -u 1005 -m -s /bin/bash biomni && \
