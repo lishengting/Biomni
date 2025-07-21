@@ -5,7 +5,6 @@ channels:
   - bioconda
 dependencies:
   - python=3.11
-  - sentencepiece
   - pip
   - pip:
       - numpy==2.1
@@ -35,4 +34,5 @@ dependencies:
       - ipykernel
       - pytest
       - transformers
+      - sentencepiece
       - langchain_aws
