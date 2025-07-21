@@ -33,21 +33,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# 配置国内pip镜像源
-RUN pip config set global.index-url https://pypi.mirrors.ustc.edu.cn/simple && \
-    pip config set global.trusted-host pypi.mirrors.ustc.edu.cn
+# 配置pip官方镜像源（如需国内源可自行切换）
+RUN pip config set global.index-url https://pypi.org/simple && \
+    pip config set global.trusted-host pypi.org
 
 # 复制环境文件并使用conda安装
 COPY --chown=1005:1005 environment.yml ./
 
-# 安装Miniconda - 使用国内镜像
-RUN wget -qO /tmp/miniconda.sh https://mirrors.ustc.edu.cn/anaconda/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
+# 安装Miniconda - 使用官方源
+RUN wget -qO /tmp/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
     bash /tmp/miniconda.sh -b -p /opt/miniconda3 && \
     rm /tmp/miniconda.sh && \
-    # 配置国内镜像源
-    /opt/miniconda3/bin/conda config --add channels https://mirrors.ustc.edu.cn/anaconda/pkgs/main && \
-    /opt/miniconda3/bin/conda config --add channels https://mirrors.ustc.edu.cn/anaconda/pkgs/free && \
-    /opt/miniconda3/bin/conda config --add channels https://mirrors.ustc.edu.cn/anaconda/cloud/conda-forge && \
+    # 配置官方conda源
+    /opt/miniconda3/bin/conda config --add channels https://repo.anaconda.com/pkgs/main && \
+    /opt/miniconda3/bin/conda config --add channels https://repo.anaconda.com/pkgs/free && \
+    /opt/miniconda3/bin/conda config --add channels https://repo.anaconda.com/pkgs/r && \
+    /opt/miniconda3/bin/conda config --add channels https://repo.anaconda.com/pkgs/msys2 && \
+    /opt/miniconda3/bin/conda config --add channels conda-forge && \
     /opt/miniconda3/bin/conda config --set show_channel_urls yes && \
     /opt/miniconda3/bin/conda clean -afy
 
