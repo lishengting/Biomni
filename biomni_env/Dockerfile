@@ -256,7 +256,9 @@ RUN cd /opt/biomni && \
     # 清理临时文件
     rm -rf /opt/biomni/tmp_build
 
-# 安装R包（切换到root用户安装，然后切换回biomni用户）
+USER root
+RUN pip install langchain_aws
+USER biomni
 
 # 设置环境变量
 ENV HOMER="/opt/biomni_tools/homer"

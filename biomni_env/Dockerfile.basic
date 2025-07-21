@@ -37,7 +37,7 @@ RUN pip install --upgrade pip setuptools wheel && \
     # Jupyter环境
     jupyter notebook ipykernel pytest
 
-RUN pip install langchain_aws
+RUN pip install langchain_aws biopython
 
 # 开发模式安装biomni源码
 # RUN pip install -e /opt/biomni
