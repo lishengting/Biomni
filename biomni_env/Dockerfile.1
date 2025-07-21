@@ -44,15 +44,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# 安装Miniconda - 使用国内镜像
-RUN wget -qO /tmp/miniconda.sh https://mirrors.ustc.edu.cn/anaconda/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
+# 安装Miniconda - 使用官方源
+RUN wget -qO /tmp/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
     bash /tmp/miniconda.sh -b -p $CONDA_DIR && \
     rm /tmp/miniconda.sh && \
-    # 配置国内镜像源
-    conda config --add channels https://mirrors.ustc.edu.cn/anaconda/pkgs/main && \
-    conda config --add channels https://mirrors.ustc.edu.cn/anaconda/pkgs/free && \
-    conda config --add channels https://mirrors.ustc.edu.cn/anaconda/cloud/conda-forge && \
-    conda config --add channels https://mirrors.ustc.edu.cn/anaconda/cloud/bioconda && \
+    # 配置官方conda源
+    conda config --add channels https://repo.anaconda.com/pkgs/main && \
+    conda config --add channels https://repo.anaconda.com/pkgs/free && \
+    conda config --add channels https://repo.anaconda.com/pkgs/r && \
+    conda config --add channels https://repo.anaconda.com/pkgs/msys2 && \
+    conda config --add channels conda-forge && \
+    conda config --add channels bioconda && \
     conda config --set show_channel_urls yes && \
     conda clean -afy
 
@@ -69,6 +71,8 @@ COPY --chown=biomni:biomni environment.yml bio_env.yml r_packages.yml ./
 COPY --chown=biomni:biomni install_cli_tools.sh cli_tools_config.json ./
 COPY --chown=biomni:biomni install_r_packages.R ./
 COPY --chown=biomni:biomni setup.sh ./
+# 复制pip配置文件
+COPY --chown=biomni:biomni pip.conf /opt/biomni/
 
 # 切换到biomni用户
 USER biomni
@@ -78,7 +82,10 @@ RUN echo "options(repos = c(CRAN = 'https://mirrors.ustc.edu.cn/CRAN/'))" > ~/.R
     echo "options(BioC_mirror = 'https://mirrors.ustc.edu.cn/bioconductor')" >> ~/.Rprofile
 
 # 创建conda环境并安装所有依赖
-RUN conda env create -n biomni_e1 -f environment.yml && \
+RUN conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main && \
+    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r && \
+    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/msys2 && \
+    conda env create -n biomni_e1 -f environment.yml && \
     conda env update -n biomni_e1 -f bio_env.yml && \
     conda env update -n biomni_e1 -f r_packages.yml && \
     conda clean -afy
@@ -88,6 +95,13 @@ RUN conda run -n biomni_e1 Rscript install_r_packages.R || echo "Some R packages
 
 # 安装CLI工具
 RUN conda run -n biomni_e1 bash install_cli_tools.sh || echo "Some CLI tools may have failed, continuing..."
+
+# 配置pip以支持更长的超时和重试
+RUN mkdir -p /opt/miniconda3/envs/biomni_e1/pip && \
+    cp /opt/biomni/pip.conf /opt/miniconda3/envs/biomni_e1/pip/pip.conf && \
+    mkdir -p /home/biomni/.pip && \
+    cp /opt/biomni/pip.conf /home/biomni/.pip/pip.conf && \
+    echo 'export PIP_CONFIG_FILE=/opt/miniconda3/envs/biomni_e1/pip/pip.conf' >> /opt/miniconda3/envs/biomni_e1/etc/conda/activate.d/env_vars.sh
 
 # 设置环境变量
 ENV PATH="/opt/miniconda3/envs/biomni_e1/bin:$PATH"
