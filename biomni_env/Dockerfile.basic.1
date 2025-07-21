@@ -54,7 +54,10 @@ RUN wget -qO /tmp/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-la
     /opt/miniconda3/bin/conda clean -afy
 
 # 创建conda环境并安装依赖
-RUN /opt/miniconda3/bin/conda env create -n biomni_e1 -f environment.yml && \
+RUN /opt/miniconda3/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main && \
+    /opt/miniconda3/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r && \
+    /opt/miniconda3/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/msys2 && \
+    /opt/miniconda3/bin/conda env create -n biomni_e1 -f environment.yml && \
     /opt/miniconda3/bin/conda clean -afy
 
 # 创建biomni用户
