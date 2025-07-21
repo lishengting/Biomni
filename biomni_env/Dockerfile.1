@@ -16,8 +16,8 @@ ENV PATH="$CONDA_DIR/bin:$PATH"
 WORKDIR /opt/biomni
 
 # 配置国内Ubuntu镜像源
-RUN sed -i 's@archive.ubuntu.com@mirrors.tuna.tsinghua.edu.cn@g' /etc/apt/sources.list && \
-    sed -i 's@security.ubuntu.com@mirrors.tuna.tsinghua.edu.cn@g' /etc/apt/sources.list
+RUN sed -i 's@archive.ubuntu.com@mirrors.ustc.edu.cn@g' /etc/apt/sources.list && \
+    sed -i 's@security.ubuntu.com@mirrors.ustc.edu.cn@g' /etc/apt/sources.list
 
 # 更新系统和安装基础工具 - 合并为单个RUN命令
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -45,15 +45,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # 安装Miniconda - 使用国内镜像
-RUN wget -qO /tmp/miniconda.sh https://mirrors.tuna.tsinghua.edu.cn/anaconda/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
+RUN wget -qO /tmp/miniconda.sh https://mirrors.ustc.edu.cn/anaconda/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
     bash /tmp/miniconda.sh -b -p $CONDA_DIR && \
     rm /tmp/miniconda.sh && \
     # 配置国内镜像源
-    conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main && \
-    conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/free && \
-    conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/r && \
-    conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge && \
-    conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/bioconda && \
+    conda config --add channels https://mirrors.ustc.edu.cn/anaconda/pkgs/main && \
+    conda config --add channels https://mirrors.ustc.edu.cn/anaconda/pkgs/free && \
+    conda config --add channels https://mirrors.ustc.edu.cn/anaconda/cloud/conda-forge && \
+    conda config --add channels https://mirrors.ustc.edu.cn/anaconda/cloud/bioconda && \
     conda config --set show_channel_urls yes && \
     conda clean -afy
 
@@ -75,8 +74,8 @@ COPY --chown=biomni:biomni setup.sh ./
 USER biomni
 
 # 配置R使用国内镜像
-RUN echo "options(repos = c(CRAN = 'https://mirrors.tuna.tsinghua.edu.cn/CRAN/'))" > ~/.Rprofile && \
-    echo "options(BioC_mirror = 'https://mirrors.westlake.edu.cn/bioconductor')" >> ~/.Rprofile
+RUN echo "options(repos = c(CRAN = 'https://mirrors.ustc.edu.cn/CRAN/'))" > ~/.Rprofile && \
+    echo "options(BioC_mirror = 'https://mirrors.ustc.edu.cn/bioconductor')" >> ~/.Rprofile
 
 # 创建conda环境并安装所有依赖
 RUN conda env create -n biomni_e1 -f environment.yml && \

@@ -34,20 +34,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # 配置国内pip镜像源
-RUN pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple && \
-    pip config set global.trusted-host mirrors.tuna.tsinghua.edu.cn
+RUN pip config set global.index-url https://pypi.mirrors.ustc.edu.cn/simple && \
+    pip config set global.trusted-host pypi.mirrors.ustc.edu.cn
 
 # 复制环境文件并使用conda安装
 COPY --chown=1005:1005 environment.yml ./
 
 # 安装Miniconda - 使用国内镜像
-RUN wget -qO /tmp/miniconda.sh https://mirrors.tuna.tsinghua.edu.cn/anaconda/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
+RUN wget -qO /tmp/miniconda.sh https://mirrors.ustc.edu.cn/anaconda/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
     bash /tmp/miniconda.sh -b -p /opt/miniconda3 && \
     rm /tmp/miniconda.sh && \
     # 配置国内镜像源
-    /opt/miniconda3/bin/conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main && \
-    /opt/miniconda3/bin/conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/free && \
-    /opt/miniconda3/bin/conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge && \
+    /opt/miniconda3/bin/conda config --add channels https://mirrors.ustc.edu.cn/anaconda/pkgs/main && \
+    /opt/miniconda3/bin/conda config --add channels https://mirrors.ustc.edu.cn/anaconda/pkgs/free && \
+    /opt/miniconda3/bin/conda config --add channels https://mirrors.ustc.edu.cn/anaconda/cloud/conda-forge && \
     /opt/miniconda3/bin/conda config --set show_channel_urls yes && \
     /opt/miniconda3/bin/conda clean -afy
 
