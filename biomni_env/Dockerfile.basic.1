@@ -11,9 +11,9 @@ ENV PATH="/opt/biomni_tools/bin:$PATH"
 # 设置工作目录
 WORKDIR /opt/biomni
 
-# 配置国内APT镜像源
-RUN sed -i 's@deb.debian.org@mirrors.tuna.tsinghua.edu.cn@g' /etc/apt/sources.list && \
-    sed -i 's@security.debian.org@mirrors.tuna.tsinghua.edu.cn@g' /etc/apt/sources.list
+# 配置国内APT镜像源  # 基础镜像根本没有这个文件，所以不需要配置
+#RUN sed -i 's@deb.debian.org@mirrors.tuna.tsinghua.edu.cn@g' /etc/apt/sources.list && \
+#    sed -i 's@security.debian.org@mirrors.tuna.tsinghua.edu.cn@g' /etc/apt/sources.list
 
 # 安装系统依赖 - 合并为单个RUN命令
 RUN apt-get update && apt-get install -y --no-install-recommends \
