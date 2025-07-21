@@ -34,16 +34,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# 复制pip配置文件
-COPY --chown=1005:1005 pip.conf /opt/biomni/
-
-# 配置pip以支持更长的超时和重试
-RUN mkdir -p /opt/miniconda3/pip && \
-    cp /opt/biomni/pip.conf /opt/miniconda3/pip/pip.conf && \
-    mkdir -p /home/biomni/.pip && \
-    cp /opt/biomni/pip.conf /home/biomni/.pip/pip.conf && \
-    echo 'export PIP_CONFIG_FILE=/opt/miniconda3/pip/pip.conf' >> /opt/miniconda3/etc/profile.d/conda.sh
-
 # 安装Miniconda - 使用官方源
 RUN wget -qO /tmp/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
     bash /tmp/miniconda.sh -b -p /opt/miniconda3 && \
@@ -56,6 +46,16 @@ RUN wget -qO /tmp/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-la
     /opt/miniconda3/bin/conda config --add channels conda-forge && \
     /opt/miniconda3/bin/conda config --set show_channel_urls yes && \
     /opt/miniconda3/bin/conda clean -afy
+
+# 复制pip配置文件
+COPY --chown=1005:1005 pip.conf /opt/biomni/
+
+# 配置pip以支持更长的超时和重试
+RUN mkdir -p /opt/miniconda3/pip && \
+    cp /opt/biomni/pip.conf /opt/miniconda3/pip/pip.conf && \
+    mkdir -p /home/biomni/.pip && \
+    cp /opt/biomni/pip.conf /home/biomni/.pip/pip.conf && \
+    echo 'export PIP_CONFIG_FILE=/opt/miniconda3/pip/pip.conf' >> /opt/miniconda3/etc/profile.d/conda.sh
 
     # 复制环境文件并使用conda安装
 COPY --chown=1005:1005 environment.yml ./
