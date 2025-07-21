@@ -60,17 +60,24 @@ RUN mkdir -p /opt/miniconda3/pip && \
     cp /opt/biomni/pip.conf /home/biomni/.pip/pip.conf && \
     echo 'export PIP_CONFIG_FILE=/opt/miniconda3/pip/pip.conf' >> /opt/miniconda3/etc/profile.d/conda.sh
 
-# 复制环境文件
+# 复制原始 environment.yml
 COPY --chown=1005:1005 environment.yml ./
 
-# 自动生成requirements.txt
-RUN python3 -c "import yaml; f=open('environment.yml'); d=yaml.safe_load(f); f.close(); pip_list = []; [pip_list.extend(dep['pip']) for dep in d['dependencies'] if isinstance(dep, dict) and 'pip' in dep]; open('requirements.txt','w').write('\n'.join(pip_list))"
+# 自动生成 requirements.txt 并生成只含 conda 包的 environment.conda.yml
+RUN pip install pyyaml && \
+    python3 -c "import yaml; f=open('environment.yml'); d=yaml.safe_load(f); f.close(); pip_list = []; new_deps = [];\
+for dep in d['dependencies']:\
+    if isinstance(dep, dict) and 'pip' in dep: pip_list.extend(dep['pip'])\
+    else: new_deps.append(dep);\
+d['dependencies'] = new_deps;\
+open('requirements.txt','w').write('\\n'.join(pip_list));\
+open('environment.conda.yml','w').write(yaml.dump(d, sort_keys=False))"
 
-# 创建conda环境（只装conda包，不装pip部分）
+# 创建conda环境（只装conda包）
 RUN /opt/miniconda3/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main && \
     /opt/miniconda3/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r && \
     /opt/miniconda3/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/msys2 && \
-    /opt/miniconda3/bin/conda env create -n biomni_e1 -f environment.yml --no-default-packages && \
+    /opt/miniconda3/bin/conda env create -n biomni_e1 -f environment.conda.yml && \
     /opt/miniconda3/bin/conda clean -afy
 
 # 手动pip安装，显示详细日志
