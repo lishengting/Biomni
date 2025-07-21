@@ -37,9 +37,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN pip config set global.index-url https://pypi.org/simple && \
     pip config set global.trusted-host pypi.org
 
-# 复制环境文件并使用conda安装
-COPY --chown=1005:1005 environment.yml ./
-
 # 安装Miniconda - 使用官方源
 RUN wget -qO /tmp/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
     bash /tmp/miniconda.sh -b -p /opt/miniconda3 && \
@@ -52,6 +49,9 @@ RUN wget -qO /tmp/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-la
     /opt/miniconda3/bin/conda config --add channels conda-forge && \
     /opt/miniconda3/bin/conda config --set show_channel_urls yes && \
     /opt/miniconda3/bin/conda clean -afy
+
+    # 复制环境文件并使用conda安装
+COPY --chown=1005:1005 environment.yml ./
 
 # 创建conda环境并安装依赖
 RUN /opt/miniconda3/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main && \
