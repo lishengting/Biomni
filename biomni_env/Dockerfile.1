@@ -31,16 +31,9 @@ RUN mkdir -p /opt/biomni_tools/bin && \
 
 # 复制额外的配置文件
 COPY --chown=biomni:biomni bio_env.yml r_packages.yml ./
-COPY --chown=biomni:biomni install_cli_tools.sh cli_tools_config.json ./
-COPY --chown=biomni:biomni install_r_packages.R ./
-COPY --chown=biomni:biomni setup.sh ./
 
 # 切换到biomni用户
 USER biomni
-
-# 配置R使用国内镜像
-RUN echo "options(repos = c(CRAN = 'https://mirrors.ustc.edu.cn/CRAN/'))" > ~/.Rprofile && \
-    echo "options(BioC_mirror = 'https://mirrors.ustc.edu.cn/bioconductor')" >> ~/.Rprofile
 
 # 拆分 bio_env.yml
 RUN cat <<EOF > split_bio_env.py
@@ -74,7 +67,8 @@ EOF
 RUN python3 split_bio_env.py && rm split_bio_env.py
 
 # 用 conda 安装 conda-only 依赖
-RUN /opt/miniconda3/bin/conda env update -n biomni_e1 -f bio_env.conda.yml
+RUN /opt/miniconda3/bin/conda env update -n biomni_e1 -f bio_env.conda.yml && \
+    /opt/miniconda3/bin/conda env update -n biomni_e1 -f r_packages.yml 
 
 # 分批安装 pip requirements
 RUN for f in requirements.*.txt; do \
@@ -86,14 +80,19 @@ RUN for f in requirements.*.txt; do \
 ENV MAKEFLAGS="-j16"
 RUN echo $FORCE_R_REBUILD
 # 安装额外的R包
-USER root
-RUN /usr/bin/Rscript install_r_packages.R 2>&1 | tee install_r_packages.log || echo "Some R packages may have failed, continuing... (see install_r_packages.log)"
-USER biomni
+# 配置R使用国内镜像
+RUN echo "options(repos = c(CRAN = 'https://mirrors.ustc.edu.cn/CRAN/'))" > ~/.Rprofile && \
+    echo "options(BioC_mirror = 'https://mirrors.ustc.edu.cn/bioconductor')" >> ~/.Rprofile
 
+COPY --chown=biomni:biomni install_r_packages.R ./
+RUN /opt/miniconda3/envs/biomni_e1/bin/Rscript install_r_packages.R 2>&1 | tee install_r_packages.log || echo "Some R packages may have failed, continuing... (see install_r_packages.log)"
+
+COPY --chown=biomni:biomni install_cli_tools.sh cli_tools_config.json ./
 # 安装CLI工具
 RUN /bin/bash install_cli_tools.sh --auto 2>&1 | tee install_cli_tools.log || echo "Some CLI tools may have failed, continuing... (see install_cli_tools.log)"
 
 # 自动激活conda环境
+COPY --chown=biomni:biomni setup.sh ./
 RUN echo 'source /opt/miniconda3/etc/profile.d/conda.sh' >> /home/biomni/.bashrc && \
     echo 'conda activate biomni_e1' >> /home/biomni/.bashrc && \
     echo 'echo "🟢 Conda环境已激活: $(conda info --envs | grep "*" | awk "{print \$1}")"' >> /home/biomni/.bashrc
