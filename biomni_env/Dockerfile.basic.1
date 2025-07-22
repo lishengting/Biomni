@@ -124,8 +124,8 @@ open('requirements.extra.txt', 'w').write('\n'.join(extra_packages))
 open('environment.conda.yml', 'w').write(yaml.dump(d, sort_keys=False))
 
 print(f"基础包数量: {len(base_packages)}")
-print(f"额外包数量: {len(extra_packages)}")
 print(f"基础包: {base_packages}")
+print(f"额外包数量: {len(extra_packages)}")
 print(f"额外包: {extra_packages}")
 EOF
 RUN python3 split_env.py && rm split_env.py
