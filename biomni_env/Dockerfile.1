@@ -6,6 +6,7 @@ FROM biomni-basic.1
 # 设置环境变量
 ENV PATH="/opt/biomni_tools/bin:$PATH"
 ENV HOMER="/opt/biomni_tools/homer"
+ENV PIP_CONFIG_FILE="/opt/miniconda3/pip/pip.conf"
 
 # 切换到root用户进行系统级安装
 USER root
