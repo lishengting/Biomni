@@ -135,6 +135,10 @@ print(f"基础包: {base_packages}")
 print(f"在environment.yml中找到的基础包: {base_packages_found}")
 print(f"额外包数量: {len(extra_packages)}")
 print(f"额外包: {extra_packages}")
+print("=== environment.conda.yml 内容 ===")
+print(yaml.dump(d, sort_keys=False))
+print("=== 原始 environment.yml 中的 conda 包 ===")
+print(f"conda包: {new_deps}")
 EOF
 RUN python3 split_env.py && rm split_env.py
 
