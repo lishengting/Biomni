@@ -42,10 +42,45 @@ USER biomni
 RUN echo "options(repos = c(CRAN = 'https://mirrors.ustc.edu.cn/CRAN/'))" > ~/.Rprofile && \
     echo "options(BioC_mirror = 'https://mirrors.ustc.edu.cn/bioconductor')" >> ~/.Rprofile
 
-# 更新conda环境，添加额外的依赖
-RUN /opt/miniconda3/bin/conda env update -n biomni_e1 -f bio_env.yml
-RUN /opt/miniconda3/bin/conda env update -n biomni_e1 -f r_packages.yml && \
-    /opt/miniconda3/bin/conda clean -afy
+# 拆分 bio_env.yml
+RUN cat <<EOF > split_bio_env.py
+import yaml
+import math
+
+with open('bio_env.yml') as f:
+    d = yaml.safe_load(f)
+
+conda_deps = []
+pip_deps = []
+for dep in d['dependencies']:
+    if isinstance(dep, dict) and 'pip' in dep:
+        pip_deps.extend(dep['pip'])
+    else:
+        conda_deps.append(dep)
+
+# 写入 conda-only yml
+d['dependencies'] = conda_deps
+with open('bio_env.conda.yml', 'w') as f:
+    yaml.dump(d, f, sort_keys=False)
+
+# 拆分 pip requirements
+chunk_size = 10
+for i in range(math.ceil(len(pip_deps)/chunk_size)):
+    chunk = pip_deps[i*chunk_size:(i+1)*chunk_size]
+    fname = f'requirements.{i+1:02d}.txt'
+    with open(fname, 'w') as f:
+        f.write('\n'.join(chunk))
+EOF
+RUN python3 split_bio_env.py && rm split_bio_env.py
+
+# 用 conda 安装 conda-only 依赖
+RUN /opt/miniconda3/bin/conda env update -n biomni_e1 -f bio_env.conda.yml
+
+# 分批安装 pip requirements
+RUN for f in requirements.*.txt; do \
+      echo "==== 安装 $f ===="; \
+      pip install -r $f; \
+    done
 
 # 安装额外的R包
 RUN /opt/miniconda3/envs/biomni_e1/bin/Rscript install_r_packages.R || echo "Some R packages may have failed, continuing..."
