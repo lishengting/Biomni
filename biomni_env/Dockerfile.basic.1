@@ -93,12 +93,8 @@ RUN python3 split_env.py && rm split_env.py
 RUN /opt/miniconda3/bin/conda env create -n biomni_e1 -f environment.conda.yml && \
     /opt/miniconda3/bin/conda clean -afy
 
-# 为conda环境配置pip
-RUN mkdir -p /opt/miniconda3/envs/biomni_e1/pip && \
-    cp /opt/biomni/pip.conf /opt/miniconda3/envs/biomni_e1/pip/pip.conf
-
 # 设置pip配置文件环境变量
-ENV PIP_CONFIG_FILE=/opt/miniconda3/envs/biomni_e1/pip/pip.conf
+ENV PIP_CONFIG_FILE=/opt/miniconda3/pip/pip.conf
 
 # 直接使用环境中的pip - 确保使用pip.conf配置
 # 见他妈的鬼了，之前用/opt/miniconda3/bin/conda run -n biomni_e1 pip install要启动两个多小时，现在直接用pip安装，几秒钟就开始安装了
