@@ -11,6 +11,8 @@ import yaml
 import subprocess
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional
+import re
+import importlib.util
 
 # 添加项目根目录到Python路径
 project_root = Path(__file__).parent.parent.parent
@@ -265,6 +267,29 @@ def parse_cli_tools_config(file_path: str) -> List[Dict[str, str]]:
     
     return tools
 
+def parse_r_packages_from_rscript(file_path: str) -> List[str]:
+    """自动解析install_r_packages.R中的R包名"""
+    packages = set()
+    try:
+        with open(file_path, 'r') as f:
+            content = f.read()
+        # 解析cran_packages和bioc_packages
+        for var in ["cran_packages", "bioc_packages"]:
+            m = re.search(rf'{var}\s*<-\s*c\(([^)]*)\)', content, re.MULTILINE)
+            if m:
+                pkgs = m.group(1)
+                for p in re.findall(r'"([^"]+)"', pkgs):
+                    packages.add(p)
+        # 解析WGCNA、clusterProfiler等特殊包
+        for special in ["WGCNA", "clusterProfiler"]:
+            packages.add(special)
+        # 解析install_if_missing调用
+        for m in re.finditer(r'install_if_missing\(("|\")(.*?)("|\")', content):
+            packages.add(m.group(2))
+    except Exception as e:
+        print(f"⚠️ 解析 {file_path} 失败: {e}")
+    return list(sorted(packages))
+
 def check_environment_packages() -> Dict[str, Dict[str, Tuple[bool, str]]]:
     """检查environment.yml中的包"""
     print(f"\n🔍 检查environment.yml包")
@@ -328,25 +353,26 @@ def check_bio_env_packages() -> Dict[str, Tuple[bool, str]]:
     return results
 
 def check_r_packages() -> Dict[str, Tuple[bool, str]]:
-    """检查R包"""
+    """检查R包，包括r_packages.yml和install_r_packages.R"""
     print(f"\n🔍 检查R包")
     print("=" * 80)
     
-    file_path = "r_packages.yml"
-    if not os.path.exists(file_path):
-        print(f"❌ {file_path} 文件不存在")
+    yml_file = "r_packages.yml"
+    rscript_file = "install_r_packages.R"
+    pkgs = set()
+    if os.path.exists(yml_file):
+        pkgs.update(parse_r_packages_yml(yml_file))
+    if os.path.exists(rscript_file):
+        pkgs.update(parse_r_packages_from_rscript(rscript_file))
+    if not pkgs:
+        print("❌ 未找到R包配置")
         return {}
-    
-    packages = parse_r_packages_yml(file_path)
     results = {}
-    
-    if packages:
-        print(f"📦 检查 {len(packages)} 个R包:")
-        for pkg in packages:
-            exists, status = check_r_package(pkg)
-            results[f"r:{pkg}"] = (exists, status)
-            print(f"   {pkg}: {status}")
-    
+    print(f"📦 检查 {len(pkgs)} 个R包:")
+    for pkg in sorted(pkgs):
+        exists, status = check_r_package(pkg)
+        results[f"r:{pkg}"] = (exists, status)
+        print(f"   {pkg}: {status}")
     return results
 
 def check_cli_tools() -> Dict[str, Tuple[bool, str]]:
@@ -535,9 +561,65 @@ def generate_summary_report(all_results: Dict[str, Dict[str, Tuple[bool, str]]])
         else:
             print("❌ 大量组件缺失，建议重新安装")
 
+# 检查env_desc.py中的所有数据、模块和工具
+
+def check_env_desc():
+    print(f"\n🔍 检查env_desc.py中的所有数据、模块和工具")
+    print("=" * 80)
+    env_desc_path = os.path.join(os.path.dirname(__file__), "..", "env_desc.py")
+    env_desc_path = os.path.abspath(env_desc_path)
+    if not os.path.exists(env_desc_path):
+        print(f"❌ 未找到env_desc.py: {env_desc_path}")
+        return {}
+    # 动态导入env_desc.py
+    spec = importlib.util.spec_from_file_location("env_desc", env_desc_path)
+    if spec is None or spec.loader is None:
+        print(f"❌ 无法加载env_desc.py: {env_desc_path}")
+        return {}
+    env_desc = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(env_desc)
+    results = {}
+    # 检查数据文件
+    if hasattr(env_desc, "data_lake_dict"):
+        print(f"📁 检查 data_lake_dict 数据文件: {len(env_desc.data_lake_dict)} 个")
+        for fname in env_desc.data_lake_dict:
+            exists, status = check_file_exists(fname)
+            results[f"data:{fname}"] = (exists, status)
+            print(f"   {fname}: {status}")
+    # 检查Python包、R包、CLI工具
+    if hasattr(env_desc, "library_content_dict"):
+        py_pkgs, r_pkgs, cli_tools = set(), set(), set()
+        for k in env_desc.library_content_dict:
+            desc = env_desc.library_content_dict[k]
+            if "[Python Package]" in desc:
+                py_pkgs.add(k)
+            elif "[R Package]" in desc:
+                r_pkgs.add(k)
+            elif "[CLI Tool]" in desc:
+                cli_tools.add(k)
+        # 检查Python包
+        print(f"🐍 检查Python包: {len(py_pkgs)} 个")
+        for pkg in sorted(py_pkgs):
+            exists, status = check_pip_package(pkg)
+            results[f"py:{pkg}"] = (exists, status)
+            print(f"   {pkg}: {status}")
+        # 检查R包
+        print(f"📦 检查R包: {len(r_pkgs)} 个")
+        for pkg in sorted(r_pkgs):
+            exists, status = check_r_package(pkg)
+            results[f"r:{pkg}"] = (exists, status)
+            print(f"   {pkg}: {status}")
+        # 检查CLI工具
+        print(f"🔧 检查CLI工具: {len(cli_tools)} 个")
+        for tool in sorted(cli_tools):
+            exists, status = check_cli_tool(tool, tool)
+            results[f"cli:{tool}"] = (exists, status)
+            print(f"   {tool}: {status}")
+    return results
+
 def main():
     """主函数"""
-    print("🧬 Biomni文件检测工具")
+    print("🧬 Biomni环境检测工具 (check_env.py)")
     print("=" * 80)
     
     # 获取数据路径
@@ -565,6 +647,9 @@ def main():
     # 检查数据文件
     all_results["Data Lake文件"] = check_data_lake_files(data_lake_path)
     all_results["Benchmark文件"] = check_benchmark_files(benchmark_path)
+    
+    # 检查env_desc.py
+    all_results["env_desc内容"] = check_env_desc()
     
     # 生成总结报告
     generate_summary_report(all_results)
