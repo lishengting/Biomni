@@ -152,11 +152,13 @@ ENV PIP_CONFIG_FILE=/opt/miniconda3/pip/pip.conf
 # 直接使用环境中的pip - 确保使用pip.conf配置
 # 见他妈的鬼了，之前用/opt/miniconda3/bin/conda run -n biomni_e1 pip install要启动两个多小时，现在直接用pip安装，几秒钟就开始安装了
 RUN /opt/miniconda3/envs/biomni_e1/bin/pip config list && \
-    cat requirements.base.txt && \
-    echo "------------------" && \
-    cat requirements.extra.txt && \
     /opt/miniconda3/envs/biomni_e1/bin/pip install --upgrade pip setuptools wheel && \
-    /opt/miniconda3/envs/biomni_e1/bin/pip install -r requirements.base.txt && \
+    cat requirements.base.txt && \
+    echo "" && \
+    /opt/miniconda3/envs/biomni_e1/bin/pip install -r requirements.base.txt
+
+RUN cat requirements.extra.txt && \
+    echo "" && \
     /opt/miniconda3/envs/biomni_e1/bin/pip install -r requirements.extra.txt
 
 # 创建biomni用户
