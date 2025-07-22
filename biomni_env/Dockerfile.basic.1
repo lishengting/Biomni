@@ -149,7 +149,10 @@ EOF
 RUN python3 split_env.py && rm split_env.py
 
 # 创建conda环境（只装conda包）
-RUN /opt/miniconda3/bin/conda env create -n biomni_e1 -f environment.conda.yml && \
+RUN /opt/miniconda3/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main && \
+    /opt/miniconda3/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r && \
+    /opt/miniconda3/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/msys2 && \
+    /opt/miniconda3/bin/conda env create -n biomni_e1 -f environment.conda.yml && \
     /opt/miniconda3/bin/conda clean -afy
 
 # 设置pip配置文件环境变量
