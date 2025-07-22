@@ -100,6 +100,8 @@ for dep in d['dependencies']:
 
 # 将 pip 包分为基础包和额外包
 extra_packages = []
+base_packages_found = []
+
 for pkg in pip_list:
     # 检查是否是基础包
     is_base = False
@@ -109,10 +111,12 @@ for pkg in pip_list:
             base_name = base_pkg.split('==')[0]
             if pkg.startswith(base_name + '==') or pkg == base_name:
                 is_base = True
+                base_packages_found.append(pkg)
                 break
         else:
-            if pkg.startswith(base_pkg + '==') or pkg == base_name:
+            if pkg.startswith(base_pkg + '==') or pkg == base_pkg:
                 is_base = True
+                base_packages_found.append(pkg)
                 break
     
     if not is_base:
@@ -125,6 +129,7 @@ open('environment.conda.yml', 'w').write(yaml.dump(d, sort_keys=False))
 
 print(f"基础包数量: {len(base_packages)}")
 print(f"基础包: {base_packages}")
+print(f"在environment.yml中找到的基础包: {base_packages_found}")
 print(f"额外包数量: {len(extra_packages)}")
 print(f"额外包: {extra_packages}")
 EOF
