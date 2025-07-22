@@ -79,6 +79,7 @@ RUN /opt/miniconda3/bin/conda env update -n biomni_e1 -f bio_env.conda.yml
 # 分批安装 pip requirements
 RUN for f in requirements.*.txt; do \
       echo "==== 安装 $f ===="; \
+      cat $f; echo ""; \
       pip install -r $f; \
     done
 
