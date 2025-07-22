@@ -21,6 +21,8 @@ WORKDIR /opt/biomni
 RUN apt-get update && apt-get install -y --no-install-recommends \
     # 基础工具
     wget curl git vim nano ca-certificates \
+    # Python环境
+    python3 python3-pip python3-dev \
     # 编译环境
     build-essential gcc g++ make cmake \
     # 系统依赖
@@ -45,15 +47,15 @@ RUN wget -qO /tmp/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-la
     /opt/miniconda3/bin/conda config --add channels https://repo.anaconda.com/pkgs/free && \
     /opt/miniconda3/bin/conda config --add channels https://repo.anaconda.com/pkgs/r && \
     /opt/miniconda3/bin/conda config --add channels https://repo.anaconda.com/pkgs/msys2 && \
+    /opt/miniconda3/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main && \
+    /opt/miniconda3/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r && \
+    /opt/miniconda3/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/msys2 && \
     /opt/miniconda3/bin/conda config --add channels conda-forge && \
     /opt/miniconda3/bin/conda config --set show_channel_urls yes && \
     /opt/miniconda3/bin/conda clean -afy
 
-# 安装pyyaml用于解析yml
-RUN pip install pyyaml
-
 # 复制pip配置文件
-COPY --chown=1005:1005 pip.conf /opt/biomni/
+COPY pip.conf /opt/biomni/
 
 # 配置pip以支持更长的超时和重试
 RUN mkdir -p /opt/miniconda3/pip && \
@@ -63,7 +65,10 @@ RUN mkdir -p /opt/miniconda3/pip && \
     echo 'export PIP_CONFIG_FILE=/opt/miniconda3/pip/pip.conf' >> /opt/miniconda3/etc/profile.d/conda.sh
 
 # 复制原始 environment.yml
-COPY --chown=1005:1005 environment.yml ./
+COPY environment.yml ./
+
+# 安装pyyaml用于解析yml
+RUN pip3 install pyyaml
 
 # 自动生成 requirements.txt 和 environment.conda.yml
 RUN cat <<EOF > split_env.py
@@ -85,16 +90,25 @@ EOF
 RUN python3 split_env.py && rm split_env.py
 
 # 创建conda环境（只装conda包）
-RUN /opt/miniconda3/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main && \
-    /opt/miniconda3/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r && \
-    /opt/miniconda3/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/msys2 && \
-    /opt/miniconda3/bin/conda env create -n biomni_e1 -f environment.conda.yml && \
+RUN /opt/miniconda3/bin/conda env create -n biomni_e1 -f environment.conda.yml && \
     /opt/miniconda3/bin/conda clean -afy
 
 # 手动pip安装，显示详细日志
+RUN /opt/miniconda3/bin/conda run -n biomni_e1 pip install --upgrade pip setuptools wheel && \
+    /opt/miniconda3/bin/conda run -n biomni_e1 pip install \
+    # 基础科学计算
+    numpy==2.1 pandas matplotlib scipy statsmodels scikit-learn \
+    # AI/ML相关
+    gradio langchain langgraph==0.3.18 langchain_openai langchain_anthropic \
+    langchain_community langchain-google-genai langchain_ollama openai \
+    # 数据处理
+    beautifulsoup4 lxml tqdm seaborn networkx requests pyyaml \
+    # Jupyter环境
+    jupyter notebook ipykernel pytest \
+    langchain_aws biopython
+
+# 增量安装requirements.txt
 RUN /opt/miniconda3/bin/conda run -n biomni_e1 pip install --no-cache-dir -r requirements.txt
-# RUN /opt/miniconda3/bin/conda run -n biomni_e1 pip install --upgrade pip setuptools wheel && \
-#     /opt/miniconda3/bin/conda run -n biomni_e1 pip install $(cat requirements.txt | grep -v '^#' | tr '\n' ' ')
 
 # 创建biomni用户
 RUN useradd -u 1005 -m -s /bin/bash biomni && \
