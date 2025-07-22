@@ -4,7 +4,9 @@
 # Run this script after creating the conda environment if you encounter issues with R packages
 
 # Set repository
-options(repos = c(CRAN = "https://cran.rstudio.com/"))
+#options(repos = c(CRAN = "https://cran.rstudio.com/"))
+options(repos = c(CRAN = 'https://mirrors.ustc.edu.cn/CRAN/'))
+options(BioC_mirror = 'https://mirrors.ustc.edu.cn/bioconductor')
 
 # Function to install a package if it's not already installed
 install_if_missing <- function(package_name, bioconductor = FALSE) {

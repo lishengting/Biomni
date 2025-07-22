@@ -83,6 +83,7 @@ RUN for f in requirements.*.txt; do \
       pip install -r $f; \
     done
 
+ENV MAKEFLAGS="-j16"
 RUN echo $FORCE_R_REBUILD
 # 安装额外的R包
 USER root
