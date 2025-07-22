@@ -1,38 +1,18 @@
 # Biomni Environment Dockerfile - 优化版
-# 基于Ubuntu 22.04，使用国内镜像源，整合setup.sh逻辑
+# 基于biomni-basic.1镜像，避免重复构建基础环境
 
-FROM ubuntu:22.04
+FROM biomni-basic.1
 
 # 设置环境变量
-ENV DEBIAN_FRONTEND=noninteractive
-ENV PYTHONUNBUFFERED=1
 ENV PATH="/opt/biomni_tools/bin:$PATH"
-ENV LANG=C.UTF-8
-ENV LC_ALL=C.UTF-8
-ENV CONDA_DIR="/opt/miniconda3"
-ENV PATH="$CONDA_DIR/bin:$PATH"
+ENV HOMER="/opt/biomni_tools/homer"
 
-# 设置工作目录
-WORKDIR /opt/biomni
+# 切换到root用户进行系统级安装
+USER root
 
-# 配置国内Ubuntu镜像源
-RUN sed -i 's@archive.ubuntu.com@mirrors.ustc.edu.cn@g' /etc/apt/sources.list && \
-    sed -i 's@security.ubuntu.com@mirrors.ustc.edu.cn@g' /etc/apt/sources.list
-
-# 更新系统和安装基础工具 - 合并为单个RUN命令
+# 安装额外的系统依赖（生物信息学工具）
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    # 基础工具
-    wget curl git vim nano htop ca-certificates \
-    # 编译环境
-    build-essential gcc g++ make cmake \
-    # 系统依赖
-    jq unzip zip bzip2 gzip xz-utils \
-    # 科学计算依赖
-    libz-dev libbz2-dev liblzma-dev \
-    libcurl4-openssl-dev libssl-dev \
-    libxml2-dev libpng-dev libjpeg-dev \
-    libfreetype6-dev libtiff5-dev \
-    libblas-dev liblapack-dev libgsl-dev \
+    # 额外的科学计算依赖
     libcairo2-dev libpango1.0-dev \
     libhdf5-dev libnetcdf-dev \
     # R环境
@@ -44,69 +24,33 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# 安装Miniconda - 使用官方源
-RUN wget -qO /tmp/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
-    bash /tmp/miniconda.sh -b -p $CONDA_DIR && \
-    rm /tmp/miniconda.sh && \
-    # 配置官方conda源
-    conda config --add channels https://repo.anaconda.com/pkgs/main && \
-    conda config --add channels https://repo.anaconda.com/pkgs/free && \
-    conda config --add channels https://repo.anaconda.com/pkgs/r && \
-    conda config --add channels https://repo.anaconda.com/pkgs/msys2 && \
-    conda config --add channels conda-forge && \
-    conda config --add channels bioconda && \
-    conda config --set show_channel_urls yes && \
-    conda clean -afy
-
-# 创建biomni用户
-RUN useradd -u 1005 -m -s /bin/bash biomni && \
-    chown -R biomni:biomni /opt/biomni /opt/miniconda3
-
 # 创建工具目录
 RUN mkdir -p /opt/biomni_tools/bin && \
     chown -R biomni:biomni /opt/biomni_tools
 
-# 复制所有配置文件
-COPY --chown=biomni:biomni environment.yml bio_env.yml r_packages.yml ./
+# 复制额外的配置文件
+COPY --chown=biomni:biomni bio_env.yml r_packages.yml ./
 COPY --chown=biomni:biomni install_cli_tools.sh cli_tools_config.json ./
 COPY --chown=biomni:biomni install_r_packages.R ./
 COPY --chown=biomni:biomni setup.sh ./
-# 复制pip配置文件
-COPY --chown=biomni:biomni pip.conf /opt/biomni/
 
 # 切换到biomni用户
 USER biomni
-
-# 配置pip以支持更长的超时和重试
-RUN mkdir -p /opt/miniconda3/envs/biomni_e1/pip && \
-    cp /opt/biomni/pip.conf /opt/miniconda3/envs/biomni_e1/pip/pip.conf && \
-    mkdir -p /home/biomni/.pip && \
-    cp /opt/biomni/pip.conf /home/biomni/.pip/pip.conf && \
-    echo 'export PIP_CONFIG_FILE=/opt/miniconda3/envs/biomni_e1/pip/pip.conf' >> /opt/miniconda3/envs/biomni_e1/etc/conda/activate.d/env_vars.sh
 
 # 配置R使用国内镜像
 RUN echo "options(repos = c(CRAN = 'https://mirrors.ustc.edu.cn/CRAN/'))" > ~/.Rprofile && \
     echo "options(BioC_mirror = 'https://mirrors.ustc.edu.cn/bioconductor')" >> ~/.Rprofile
 
-# 创建conda环境并安装所有依赖
-RUN conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main && \
-    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r && \
-    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/msys2 && \
-    conda env create -n biomni_e1 -f environment.yml && \
-    conda env update -n biomni_e1 -f bio_env.yml && \
-    conda env update -n biomni_e1 -f r_packages.yml && \
-    conda clean -afy
+# 更新conda环境，添加额外的依赖
+RUN /opt/miniconda3/bin/conda env update -n biomni_e1 -f bio_env.yml && \
+    /opt/miniconda3/bin/conda env update -n biomni_e1 -f r_packages.yml && \
+    /opt/miniconda3/bin/conda clean -afy
 
 # 安装额外的R包
-RUN conda run -n biomni_e1 Rscript install_r_packages.R || echo "Some R packages may have failed, continuing..."
+RUN /opt/miniconda3/envs/biomni_e1/bin/Rscript install_r_packages.R || echo "Some R packages may have failed, continuing..."
 
 # 安装CLI工具
-RUN conda run -n biomni_e1 bash install_cli_tools.sh || echo "Some CLI tools may have failed, continuing..."
-
-# 设置环境变量
-ENV PATH="/opt/miniconda3/envs/biomni_e1/bin:$PATH"
-ENV CONDA_DEFAULT_ENV="biomni_e1"
-ENV HOMER="/opt/biomni_tools/homer"
+RUN /opt/miniconda3/envs/biomni_e1/bin/bash install_cli_tools.sh || echo "Some CLI tools may have failed, continuing..."
 
 # 暴露端口
 EXPOSE 8888 7860
