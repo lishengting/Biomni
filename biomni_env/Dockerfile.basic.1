@@ -1,12 +1,14 @@
 # Biomni Basic Environment Dockerfile - 优化版
 # 快速部署基础AI代理环境，使用国内镜像源
 
-FROM python:3.11-slim
+FROM ubuntu:22.04
 
 # 设置环境变量
-ENV PYTHONUNBUFFERED=1
 ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
 ENV PATH="/opt/biomni_tools/bin:$PATH"
+ENV LANG=C.UTF-8
+ENV LC_ALL=C.UTF-8
 
 # 设置工作目录
 WORKDIR /opt/biomni
@@ -90,8 +92,9 @@ RUN /opt/miniconda3/bin/conda tos accept --override-channels --channel https://r
     /opt/miniconda3/bin/conda clean -afy
 
 # 手动pip安装，显示详细日志
-RUN /opt/miniconda3/bin/conda run -n biomni_e1 pip install --upgrade pip setuptools wheel && \
-    /opt/miniconda3/bin/conda run -n biomni_e1 pip install $(cat requirements.txt | grep -v '^#' | tr '\n' ' ')
+RUN /opt/miniconda3/bin/conda run -n biomni_e1 pip install --no-cache-dir -r requirements.txt
+# RUN /opt/miniconda3/bin/conda run -n biomni_e1 pip install --upgrade pip setuptools wheel && \
+#     /opt/miniconda3/bin/conda run -n biomni_e1 pip install $(cat requirements.txt | grep -v '^#' | tr '\n' ' ')
 
 # 创建biomni用户
 RUN useradd -u 1005 -m -s /bin/bash biomni && \
