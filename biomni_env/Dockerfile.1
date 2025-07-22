@@ -85,7 +85,9 @@ RUN for f in requirements.*.txt; do \
 
 RUN echo $FORCE_R_REBUILD
 # 安装额外的R包
+USER root
 RUN /usr/bin/Rscript install_r_packages.R 2>&1 | tee install_r_packages.log || echo "Some R packages may have failed, continuing... (see install_r_packages.log)"
+USER biomni
 
 # 安装CLI工具
 RUN /bin/bash install_cli_tools.sh --auto 2>&1 | tee install_cli_tools.log || echo "Some CLI tools may have failed, continuing... (see install_cli_tools.log)"
