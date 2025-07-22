@@ -68,24 +68,65 @@ RUN mkdir -p /opt/miniconda3/pip && \
 COPY environment.yml ./
 
 # 安装pyyaml用于解析yml
-RUN pip3 install pyyaml
+RUN pip3 install pyyaml 
 
-# 自动生成 requirements.txt 和 environment.conda.yml
+# 自动生成 requirements.base.txt、requirements.txt 和 environment.conda.yml
 RUN cat <<EOF > split_env.py
 import yaml
+
+# 基础包列表（预先安装的包）
+base_packages = [
+    'numpy==2.1', 'pandas', 'matplotlib', 'scipy', 'statsmodels', 'scikit-learn',
+    'gradio', 'langchain', 'langgraph==0.3.18', 'langchain_openai', 'langchain_anthropic',
+    'langchain_community', 'langchain-google-genai', 'langchain_ollama', 'openai',
+    'beautifulsoup4', 'lxml', 'tqdm', 'seaborn', 'networkx', 'requests', 'pyyaml',
+    'jupyter', 'notebook', 'ipykernel', 'pytest', 'langchain_aws'
+]
+
+# 读取 environment.yml
 f = open('environment.yml')
 d = yaml.safe_load(f)
 f.close()
+
 pip_list = []
 new_deps = []
+
+# 分离 conda 和 pip 依赖
 for dep in d['dependencies']:
     if isinstance(dep, dict) and 'pip' in dep:
         pip_list.extend(dep['pip'])
     else:
         new_deps.append(dep)
-d['dependencies'] = new_deps
-open('requirements.txt', 'w').write('\n'.join(pip_list))
+
+# 将 pip 包分为基础包和额外包
+extra_packages = []
+for pkg in pip_list:
+    # 检查是否是基础包
+    is_base = False
+    for base_pkg in base_packages:
+        # 处理版本号匹配
+        if '==' in base_pkg:
+            base_name = base_pkg.split('==')[0]
+            if pkg.startswith(base_name + '==') or pkg == base_name:
+                is_base = True
+                break
+        else:
+            if pkg.startswith(base_pkg + '==') or pkg == base_name:
+                is_base = True
+                break
+    
+    if not is_base:
+        extra_packages.append(pkg)
+
+# 写入文件
+open('requirements.base.txt', 'w').write('\n'.join(base_packages))
+open('requirements.extra.txt', 'w').write('\n'.join(extra_packages))
 open('environment.conda.yml', 'w').write(yaml.dump(d, sort_keys=False))
+
+print(f"基础包数量: {len(base_packages)}")
+print(f"额外包数量: {len(extra_packages)}")
+print(f"基础包: {base_packages}")
+print(f"额外包: {extra_packages}")
 EOF
 RUN python3 split_env.py && rm split_env.py
 
@@ -99,23 +140,13 @@ ENV PIP_CONFIG_FILE=/opt/miniconda3/pip/pip.conf
 # 直接使用环境中的pip - 确保使用pip.conf配置
 # 见他妈的鬼了，之前用/opt/miniconda3/bin/conda run -n biomni_e1 pip install要启动两个多小时，现在直接用pip安装，几秒钟就开始安装了
 RUN /opt/miniconda3/envs/biomni_e1/bin/pip config list && \
-    cat requirements.txt && \
+    echo "=== 基础包 ===" && \
+    cat requirements.base.txt && \
+    echo "=== 额外包 ===" && \
+    cat requirements.extra.txt && \
     /opt/miniconda3/envs/biomni_e1/bin/pip install --upgrade pip setuptools wheel && \
-    /opt/miniconda3/envs/biomni_e1/bin/pip install $(cat requirements.txt | grep -v '^#' | tr '\n' ' ')
-    # /opt/miniconda3/envs/biomni_e1/bin/pip install \
-    # # 基础科学计算
-    # numpy==2.1 pandas matplotlib scipy statsmodels scikit-learn \
-    # # AI/ML相关
-    # gradio langchain langgraph==0.3.18 langchain_openai langchain_anthropic \
-    # langchain_community langchain-google-genai langchain_ollama openai \
-    # # 数据处理
-    # beautifulsoup4 lxml tqdm seaborn networkx requests pyyaml \
-    # # Jupyter环境
-    # jupyter notebook ipykernel pytest && \
-    # /opt/miniconda3/envs/biomni_e1/bin/pip install langchain_aws biopython 
-
-# # 见鬼，还是不能用-r requirements.txt，哪怕前面全装好了，还是每个包会下载好多个版本，Installing build dependencies还是消耗很长时间。
-# RUN /opt/miniconda3/envs/biomni_e1/bin/pip install -r requirements.txt
+    /opt/miniconda3/envs/biomni_e1/bin/pip install -r requirements.base.txt && \
+    /opt/miniconda3/envs/biomni_e1/bin/pip install -r requirements.extra.txt
 
 # 创建biomni用户
 RUN useradd -u 1005 -m -s /bin/bash biomni && \
