@@ -80,7 +80,7 @@ base_packages = [
     'gradio', 'langchain', 'langgraph==0.3.18', 'langchain_openai', 'langchain_anthropic',
     'langchain_community', 'langchain-google-genai', 'langchain_ollama', 'openai',
     'beautifulsoup4', 'lxml', 'tqdm', 'seaborn', 'networkx', 'requests', 'pyyaml',
-    'jupyter', 'notebook', 'ipykernel', 'pytest', 'langchain_aws'
+    'jupyter', 'notebook', 'ipykernel', 'pytest'
 ]
 
 # 读取 environment.yml
@@ -157,11 +157,12 @@ RUN /opt/miniconda3/envs/biomni_e1/bin/pip config list && \
     /opt/miniconda3/envs/biomni_e1/bin/pip install --upgrade pip setuptools wheel && \
     cat requirements.base.txt && \
     echo "" && \
-    /opt/miniconda3/envs/biomni_e1/bin/pip install $(cat requirements.base.txt | grep -v '^#' | tr '\n' ' ')
+    /opt/miniconda3/envs/biomni_e1/bin/pip install -r requirements.base.txt
 
+# 哪怕你前面全装好了，还是不能用-r requirements.txt，每个包依旧会下载好多个版本，Installing build dependencies还是消耗很长时间。
 RUN cat requirements.extra.txt && \
     echo "" && \
-    /opt/miniconda3/envs/biomni_e1/bin/pip install $(cat requirements.extra.txt | grep -v '^#' | tr '\n' ' ')
+    /opt/miniconda3/envs/biomni_e1/bin/pip install -r requirements.extra.txt
 
 # 创建biomni用户
 RUN useradd -u 1005 -m -s /bin/bash biomni && \
