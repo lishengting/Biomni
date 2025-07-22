@@ -83,6 +83,7 @@ RUN for f in requirements.*.txt; do \
       pip install -r $f; \
     done
 
+RUN echo $FORCE_R_REBUILD
 # 安装额外的R包
 RUN /usr/bin/Rscript install_r_packages.R 2>&1 | tee install_r_packages.log || echo "Some R packages may have failed, continuing... (see install_r_packages.log)"
 
