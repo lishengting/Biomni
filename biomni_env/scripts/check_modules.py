@@ -65,9 +65,27 @@ def check_conda_package(package_name: str) -> Tuple[bool, str]:
         try:
             data = json.loads(stdout)
             if data:  # 如果返回了包信息
-                return True, f"✅ 已安装 (conda)"
+                version = data[0].get('version', '未知版本') if data else '未知版本'
+                return True, f"✅ 已安装 (conda, {version})"
             else:
-                return False, "❌ 未安装"
+                # 检查是否有其他版本可用
+                search_cmd = ["conda", "search", package_name, "--json"]
+                search_returncode, search_stdout, search_stderr = run_command(search_cmd)
+                if search_returncode == 0:
+                    try:
+                        search_data = json.loads(search_stdout)
+                        if search_data and package_name in search_data:
+                            versions = [pkg.get('version', '') for pkg in search_data[package_name]]
+                            available_versions = ', '.join(versions[:3])  # 只显示前3个版本
+                            if len(versions) > 3:
+                                available_versions += f" ... (共{len(versions)}个版本)"
+                            return False, f"❌ 未安装 (可用版本: {available_versions})"
+                        else:
+                            return False, "❌ 未安装 (包不存在)"
+                    except json.JSONDecodeError:
+                        return False, "❌ 未安装"
+                else:
+                    return False, "❌ 未安装"
         except json.JSONDecodeError:
             return False, "❌ 解析conda输出失败"
     else:
@@ -75,7 +93,13 @@ def check_conda_package(package_name: str) -> Tuple[bool, str]:
 
 def check_pip_package(package_name: str) -> Tuple[bool, str]:
     """检查pip包是否已安装"""
-    cmd = [sys.executable, "-m", "pip", "show", package_name]
+    # 处理版本号
+    base_name = package_name
+    expected_version = None
+    if '==' in package_name:
+        base_name, expected_version = package_name.split('==', 1)
+    
+    cmd = [sys.executable, "-m", "pip", "show", base_name]
     returncode, stdout, stderr = run_command(cmd)
     
     if returncode == 0:
@@ -86,9 +110,47 @@ def check_pip_package(package_name: str) -> Tuple[bool, str]:
             if line.startswith('Version:'):
                 version = line.split(':', 1)[1].strip()
                 break
-        return True, f"✅ 已安装 (pip, {version})"
+        
+        # 检查版本是否匹配
+        if expected_version and version != expected_version:
+            return False, f"❌ 版本不匹配 (期望: {expected_version}, 实际: {version})"
+        else:
+            return True, f"✅ 已安装 (pip, {version})"
     else:
-        return False, "❌ 未安装"
+        # 检查是否有其他版本可用
+        search_cmd = [sys.executable, "-m", "pip", "index", "versions", base_name]
+        search_returncode, search_stdout, search_stderr = run_command(search_cmd)
+        
+        if search_returncode == 0:
+            # 解析可用版本
+            lines = search_stdout.strip().split('\n')
+            available_versions = []
+            for line in lines:
+                if 'Available versions:' in line:
+                    # 提取版本信息
+                    versions_str = line.split('Available versions:')[1].strip()
+                    available_versions = [v.strip() for v in versions_str.split(',')]
+                    break
+            
+            if available_versions:
+                version_display = ', '.join(available_versions[:3])  # 只显示前3个版本
+                if len(available_versions) > 3:
+                    version_display += f" ... (共{len(available_versions)}个版本)"
+                
+                if expected_version:
+                    return False, f"❌ 未安装 (期望版本: {expected_version}, 可用版本: {version_display})"
+                else:
+                    return False, f"❌ 未安装 (可用版本: {version_display})"
+            else:
+                if expected_version:
+                    return False, f"❌ 未安装 (期望版本: {expected_version})"
+                else:
+                    return False, "❌ 未安装"
+        else:
+            if expected_version:
+                return False, f"❌ 未安装 (期望版本: {expected_version})"
+            else:
+                return False, "❌ 未安装"
 
 def check_r_package(package_name: str) -> Tuple[bool, str]:
     """检查R包是否已安装"""
