@@ -93,9 +93,10 @@ RUN python3 split_env.py && rm split_env.py
 RUN /opt/miniconda3/bin/conda env create -n biomni_e1 -f environment.conda.yml && \
     /opt/miniconda3/bin/conda clean -afy
 
-# 手动pip安装，显示详细日志
-RUN /opt/miniconda3/bin/conda run -n biomni_e1 pip install --upgrade pip setuptools wheel && \
-    /opt/miniconda3/bin/conda run -n biomni_e1 pip install \
+# 手动pip安装，显示详细日志 - 使用conda activate加速
+RUN /opt/miniconda3/bin/conda activate biomni_e1 && \
+    pip install --upgrade pip setuptools wheel && \
+    pip install \
     # 基础科学计算
     numpy==2.1 pandas matplotlib scipy statsmodels scikit-learn \
     # AI/ML相关
@@ -104,11 +105,12 @@ RUN /opt/miniconda3/bin/conda run -n biomni_e1 pip install --upgrade pip setupto
     # 数据处理
     beautifulsoup4 lxml tqdm seaborn networkx requests pyyaml \
     # Jupyter环境
-    jupyter notebook ipykernel pytest \
-    langchain_aws biopython
+    jupyter notebook ipykernel pytest && \
+    pip install langchain_aws biopython
 
-# 增量安装requirements.txt
-RUN /opt/miniconda3/bin/conda run -n biomni_e1 pip install --no-cache-dir -r requirements.txt
+# 增量安装requirements.txt - 使用conda activate加速
+RUN /opt/miniconda3/bin/conda activate biomni_e1 && \
+    pip install --no-cache-dir -r requirements.txt
 
 # 创建biomni用户
 RUN useradd -u 1005 -m -s /bin/bash biomni && \
