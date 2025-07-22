@@ -122,6 +122,9 @@ for pkg in pip_list:
     if not is_base:
         extra_packages.append(pkg)
 
+# 更新dependencies，只保留conda包
+d['dependencies'] = new_deps
+
 # 写入文件
 open('requirements.base.txt', 'w').write('\n'.join(base_packages))
 open('requirements.extra.txt', 'w').write('\n'.join(extra_packages))
