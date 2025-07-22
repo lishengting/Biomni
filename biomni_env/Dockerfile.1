@@ -43,8 +43,8 @@ RUN echo "options(repos = c(CRAN = 'https://mirrors.ustc.edu.cn/CRAN/'))" > ~/.R
     echo "options(BioC_mirror = 'https://mirrors.ustc.edu.cn/bioconductor')" >> ~/.Rprofile
 
 # 更新conda环境，添加额外的依赖
-RUN /opt/miniconda3/bin/conda env update -n biomni_e1 -f bio_env.yml && \
-    /opt/miniconda3/bin/conda env update -n biomni_e1 -f r_packages.yml && \
+RUN /opt/miniconda3/bin/conda env update -n biomni_e1 -f bio_env.yml
+RUN /opt/miniconda3/bin/conda env update -n biomni_e1 -f r_packages.yml && \
     /opt/miniconda3/bin/conda clean -afy
 
 # 安装额外的R包
