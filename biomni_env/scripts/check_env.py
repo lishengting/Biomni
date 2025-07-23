@@ -60,28 +60,63 @@ def run_command(cmd: List[str], capture_output: bool = True) -> Tuple[int, str, 
 
 def check_conda_package(package_name: str) -> Tuple[bool, str]:
     """检查conda包是否已安装"""
-    cmd = ["conda", "list", package_name, "--json"]
+    # 处理版本号 - 支持 =, >=, <=, >, < 等版本约束
+    base_name = package_name
+    expected_version = None
+    version_constraint = None
+    
+    # 检查各种版本约束符号
+    for op in ['>=', '<=', '>', '<', '=']:
+        if op in package_name:
+            parts = package_name.split(op, 1)
+            if len(parts) == 2:
+                base_name = parts[0].strip()
+                expected_version = parts[1].strip()
+                version_constraint = op
+                break
+    
+    # 使用基础包名检查是否安装
+    cmd = ["conda", "list", base_name, "--json"]
     returncode, stdout, stderr = run_command(cmd)
     
     if returncode == 0:
         try:
             data = json.loads(stdout)
             if data:  # 如果返回了包信息
-                version = data[0].get('version', '未知版本') if data else '未知版本'
-                return True, f"✅ 已安装 (conda, {version})"
+                installed_version = data[0].get('version', '未知版本') if data else '未知版本'
+                
+                # 如果有版本约束，检查版本是否匹配
+                if expected_version and version_constraint:
+                    # 简单的版本比较（这里可以扩展为更复杂的版本比较逻辑）
+                    if version_constraint == '=' and installed_version != expected_version:
+                        return False, f"❌ 版本不匹配 (期望: {expected_version}, 实际: {installed_version})"
+                    elif version_constraint == '>=' and installed_version < expected_version:
+                        return False, f"❌ 版本过低 (期望: >={expected_version}, 实际: {installed_version})"
+                    elif version_constraint == '<=' and installed_version > expected_version:
+                        return False, f"❌ 版本过高 (期望: <={expected_version}, 实际: {installed_version})"
+                    elif version_constraint == '>' and installed_version <= expected_version:
+                        return False, f"❌ 版本过低 (期望: >{expected_version}, 实际: {installed_version})"
+                    elif version_constraint == '<' and installed_version >= expected_version:
+                        return False, f"❌ 版本过高 (期望: <{expected_version}, 实际: {installed_version})"
+                
+                return True, f"✅ 已安装 (conda, {installed_version})"
             else:
                 # 检查是否有其他版本可用
-                search_cmd = ["conda", "search", package_name, "--json"]
+                search_cmd = ["conda", "search", base_name, "--json"]
                 search_returncode, search_stdout, search_stderr = run_command(search_cmd)
                 if search_returncode == 0:
                     try:
                         search_data = json.loads(search_stdout)
-                        if search_data and package_name in search_data:
-                            versions = [pkg.get('version', '') for pkg in search_data[package_name]]
+                        if search_data and base_name in search_data:
+                            versions = [pkg.get('version', '') for pkg in search_data[base_name]]
                             available_versions = ', '.join(versions[:3])  # 只显示前3个版本
                             if len(versions) > 3:
                                 available_versions += f" ... (共{len(versions)}个版本)"
-                            return False, f"❌ 未安装 (可用版本: {available_versions})"
+                            
+                            if expected_version:
+                                return False, f"❌ 未安装 (期望版本: {package_name}, 可用版本: {available_versions})"
+                            else:
+                                return False, f"❌ 未安装 (可用版本: {available_versions})"
                         else:
                             return False, "❌ 未安装 (包不存在)"
                     except json.JSONDecodeError:
