@@ -261,21 +261,14 @@ install_tool() {
             return 1
         fi
 
-        # Check if BWA repository already exists in downloads
-        local bwa_repo="$TOOLS_DIR/downloads/bwa"
-        if [ ! -d "$bwa_repo" ]; then
-            echo -e "${YELLOW}Cloning BWA repository...${NC}"
-            git clone "$download_url" "$bwa_repo"
-            if [ $? -ne 0 ]; then
-                echo -e "${RED}Failed to clone BWA repository from $download_url${NC}"
-                return 1
-            fi
-        else
-            echo -e "${GREEN}BWA repository already exists in downloads, skipping clone.${NC}"
-        fi
+        echo -e "${YELLOW}Cloning BWA repository from $download_url...${NC}"
+        mkdir -p "$TOOLS_DIR/$tool_dir_name"
+        git clone "$download_url" "$TOOLS_DIR/$tool_dir_name"
 
-        # Copy repository to tool directory
-        cp -r "$bwa_repo/*" "$TOOLS_DIR/$tool_dir_name"
+        if [ $? -ne 0 ]; then
+            echo -e "${RED}Failed to clone BWA repository from $download_url${NC}"
+            return 1
+        fi
 
         # Compile BWA
         echo -e "${YELLOW}Compiling BWA...${NC}"
