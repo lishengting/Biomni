@@ -169,7 +169,7 @@ install_tool() {
 
         # Create symlinks to HOMER binaries
         echo -e "${YELLOW}Creating symlinks to HOMER binaries...${NC}"
-        for homer_bin in "$TOOLS_DIR/$tool_dir_name/homer/bin/"*; do
+        for homer_bin in "$TOOLS_DIR/$tool_dir_name/bin/"*; do
             if [ -f "$homer_bin" ] && [ -x "$homer_bin" ]; then
                 ln -sf "$homer_bin" "$TOOLS_DIR/bin/$(basename "$homer_bin")"
             fi
@@ -177,14 +177,14 @@ install_tool() {
 
         # Create a sourceable environment setup file
         echo "#!/bin/bash" > "$TOOLS_DIR/$tool_dir_name/homer_env.sh"
-        echo "export PATH=\"$TOOLS_DIR/$tool_dir_name/homer/bin:\$PATH\"" >> "$TOOLS_DIR/$tool_dir_name/homer_env.sh"
-        echo "export HOMER=\"$TOOLS_DIR/$tool_dir_name/homer\"" >> "$TOOLS_DIR/$tool_dir_name/homer_env.sh"
+        echo "export PATH=\"$TOOLS_DIR/$tool_dir_name/bin:\$PATH\"" >> "$TOOLS_DIR/$tool_dir_name/homer_env.sh"
+        echo "export HOMER=\"$TOOLS_DIR/$tool_dir_name\"" >> "$TOOLS_DIR/$tool_dir_name/homer_env.sh"
         chmod +x "$TOOLS_DIR/$tool_dir_name/homer_env.sh"
 
         # Add the HOMER environment to the global setup_path.sh
         echo "# HOMER environment" >> "$TOOLS_DIR/setup_path.sh"
-        echo "export PATH=\"$TOOLS_DIR/$tool_dir_name/homer/bin:\$PATH\"" >> "$TOOLS_DIR/setup_path.sh"
-        echo "export HOMER=\"$TOOLS_DIR/$tool_dir_name/homer\"" >> "$TOOLS_DIR/setup_path.sh"
+        echo "export PATH=\"$TOOLS_DIR/$tool_dir_name/bin:\$PATH\"" >> "$TOOLS_DIR/setup_path.sh"
+        echo "export HOMER=\"$TOOLS_DIR/$tool_dir_name\"" >> "$TOOLS_DIR/setup_path.sh"
 
         echo -e "${GREEN}HOMER installed successfully!${NC}"
         echo -e "${YELLOW}To use HOMER, you may need to source the environment file:${NC}"
