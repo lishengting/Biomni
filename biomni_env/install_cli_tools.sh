@@ -71,6 +71,7 @@ cleanup_old_installations
 # Create fresh directories
 mkdir -p "$TOOLS_DIR"
 mkdir -p "$TOOLS_DIR/bin"
+mkdir -p "$TOOLS_DIR/downloads"
 
 # Add the tools bin directory to PATH in the current session
 # Remove any old paths first to avoid duplicates
@@ -131,15 +132,21 @@ install_tool() {
     if [ "$tool_name" = "HOMER" ]; then
         echo -e "${YELLOW}Installing HOMER via Perl script...${NC}"
 
-        # Download the configuration script directly to the bin directory
-        wget -v "$download_url" -O "$TOOLS_DIR/bin/configureHomer.pl"
-
-        if [ $? -ne 0 ]; then
-            echo -e "${RED}Failed to download HOMER configuration script from $download_url${NC}"
-            return 1
+        # Check if configureHomer.pl already exists in downloads
+        local homer_script="$TOOLS_DIR/downloads/configureHomer.pl"
+        if [ ! -f "$homer_script" ]; then
+            echo -e "${YELLOW}Downloading HOMER configuration script...${NC}"
+            wget -v "$download_url" -O "$homer_script"
+            if [ $? -ne 0 ]; then
+                echo -e "${RED}Failed to download HOMER configuration script from $download_url${NC}"
+                return 1
+            fi
+        else
+            echo -e "${GREEN}HOMER configuration script already exists in downloads, skipping download.${NC}"
         fi
 
-        # Make the script executable
+        # Copy the script to bin directory
+        cp "$homer_script" "$TOOLS_DIR/bin/configureHomer.pl"
         chmod +x "$TOOLS_DIR/bin/configureHomer.pl"
 
         # Create a HOMER installation directory
@@ -190,13 +197,21 @@ install_tool() {
     elif [ "$tool_name" = "FastTree" ]; then
         echo -e "${YELLOW}Installing FastTree from source...${NC}"
 
-        # Download the source
-        wget -v "$download_url" -O "$TOOLS_DIR/$tool_dir_name/FastTree.c"
-
-        if [ $? -ne 0 ]; then
-            echo -e "${RED}Failed to download FastTree source from $download_url${NC}"
-            return 1
+        # Check if FastTree.c already exists in downloads
+        local fasttree_source="$TOOLS_DIR/downloads/FastTree.c"
+        if [ ! -f "$fasttree_source" ]; then
+            echo -e "${YELLOW}Downloading FastTree source...${NC}"
+            wget -v "$download_url" -O "$fasttree_source"
+            if [ $? -ne 0 ]; then
+                echo -e "${RED}Failed to download FastTree source from $download_url${NC}"
+                return 1
+            fi
+        else
+            echo -e "${GREEN}FastTree source already exists in downloads, skipping download.${NC}"
         fi
+
+        # Copy source to tool directory
+        cp "$fasttree_source" "$TOOLS_DIR/$tool_dir_name/FastTree.c"
 
         # Compile FastTree
         echo -e "${YELLOW}Compiling FastTree...${NC}"
@@ -246,15 +261,21 @@ install_tool() {
             return 1
         fi
 
-        # Clone the repository
-        echo -e "${YELLOW}Cloning BWA repository from $download_url...${NC}"
-        mkdir -p "$TOOLS_DIR/$tool_dir_name"
-        git clone "$download_url" "$TOOLS_DIR/$tool_dir_name"
-
-        if [ $? -ne 0 ]; then
-            echo -e "${RED}Failed to clone BWA repository from $download_url${NC}"
-            return 1
+        # Check if BWA repository already exists in downloads
+        local bwa_repo="$TOOLS_DIR/downloads/bwa"
+        if [ ! -d "$bwa_repo" ]; then
+            echo -e "${YELLOW}Cloning BWA repository...${NC}"
+            git clone "$download_url" "$bwa_repo"
+            if [ $? -ne 0 ]; then
+                echo -e "${RED}Failed to clone BWA repository from $download_url${NC}"
+                return 1
+            fi
+        else
+            echo -e "${GREEN}BWA repository already exists in downloads, skipping clone.${NC}"
         fi
+
+        # Copy repository to tool directory
+        cp -r "$bwa_repo" "$TOOLS_DIR/$tool_dir_name"
 
         # Compile BWA
         echo -e "${YELLOW}Compiling BWA...${NC}"
@@ -285,59 +306,69 @@ install_tool() {
     # Download the tool
     echo -e "${YELLOW}Downloading $tool_name from: $download_url${NC}"
 
-    # Determine file extension
+    # Determine file extension and download path
+    local download_file=""
     if [[ "$download_url" == *".zip" ]]; then
-        # Use -v for verbose output to help diagnose issues
-        wget -v "$download_url" -O "$TOOLS_DIR/$tool_dir_name.zip"
-
-        if [ $? -ne 0 ]; then
-            echo -e "${RED}Failed to download $tool_name from $download_url${NC}"
-            echo -e "${YELLOW}Please check your internet connection and try again.${NC}"
-            echo -e "${YELLOW}If the problem persists, the download URL may be incorrect or the server may be down.${NC}"
-            return 1
+        download_file="$TOOLS_DIR/downloads/$tool_dir_name.zip"
+        if [ ! -f "$download_file" ]; then
+            wget -v "$download_url" -O "$download_file"
+            if [ $? -ne 0 ]; then
+                echo -e "${RED}Failed to download $tool_name from $download_url${NC}"
+                echo -e "${YELLOW}Please check your internet connection and try again.${NC}"
+                echo -e "${YELLOW}If the problem persists, the download URL may be incorrect or the server may be down.${NC}"
+                return 1
+            fi
+        else
+            echo -e "${GREEN}Download file already exists, skipping download.${NC}"
         fi
 
         echo -e "${YELLOW}Extracting $tool_name...${NC}"
-        unzip -q -o "$TOOLS_DIR/$tool_dir_name.zip" -d "$TOOLS_DIR/$tool_dir_name"
+        unzip -q -o "$download_file" -d "$TOOLS_DIR/$tool_dir_name"
 
         if [ $? -ne 0 ]; then
             echo -e "${RED}Failed to extract $tool_name.${NC}"
             return 1
         fi
 
-        # Clean up
-        rm "$TOOLS_DIR/$tool_dir_name.zip"
     elif [[ "$download_url" == *".tar.gz" ]]; then
-        # Use -v for verbose output to help diagnose issues
-        wget -v "$download_url" -O "$TOOLS_DIR/$tool_dir_name.tar.gz"
-
-        if [ $? -ne 0 ]; then
-            echo -e "${RED}Failed to download $tool_name from $download_url${NC}"
-            echo -e "${YELLOW}Please check your internet connection and try again.${NC}"
-            echo -e "${YELLOW}If the problem persists, the download URL may be incorrect or the server may be down.${NC}"
-            return 1
+        download_file="$TOOLS_DIR/downloads/$tool_dir_name.tar.gz"
+        if [ ! -f "$download_file" ]; then
+            wget -v "$download_url" -O "$download_file"
+            if [ $? -ne 0 ]; then
+                echo -e "${RED}Failed to download $tool_name from $download_url${NC}"
+                echo -e "${YELLOW}Please check your internet connection and try again.${NC}"
+                echo -e "${YELLOW}If the problem persists, the download URL may be incorrect or the server may be down.${NC}"
+                return 1
+            fi
+        else
+            echo -e "${GREEN}Download file already exists, skipping download.${NC}"
         fi
 
         echo -e "${YELLOW}Extracting $tool_name...${NC}"
         mkdir -p "$TOOLS_DIR/$tool_dir_name"
-        tar -xzf "$TOOLS_DIR/$tool_dir_name.tar.gz" -C "$TOOLS_DIR/$tool_dir_name" --strip-components=1
+        tar -xzf "$download_file" -C "$TOOLS_DIR/$tool_dir_name" --strip-components=1
 
         if [ $? -ne 0 ]; then
             echo -e "${RED}Failed to extract $tool_name.${NC}"
             return 1
         fi
 
-        # Clean up
-        rm "$TOOLS_DIR/$tool_dir_name.tar.gz"
     # Handle executable files directly (for MUSCLE)
     elif [[ "$tool_name" = "MUSCLE" ]]; then
-        echo -e "${YELLOW}Downloading $tool_name binary...${NC}"
-        wget -v "$download_url" -O "$TOOLS_DIR/$tool_dir_name/$binary_name"
-
-        if [ $? -ne 0 ]; then
-            echo -e "${RED}Failed to download $tool_name from $download_url${NC}"
-            return 1
+        download_file="$TOOLS_DIR/downloads/$binary_name"
+        if [ ! -f "$download_file" ]; then
+            echo -e "${YELLOW}Downloading $tool_name binary...${NC}"
+            wget -v "$download_url" -O "$download_file"
+            if [ $? -ne 0 ]; then
+                echo -e "${RED}Failed to download $tool_name from $download_url${NC}"
+                return 1
+            fi
+        else
+            echo -e "${GREEN}Binary already exists in downloads, skipping download.${NC}"
         fi
+
+        # Copy to tool directory
+        cp "$download_file" "$TOOLS_DIR/$tool_dir_name/$binary_name"
 
         # Make executable
         chmod +x "$TOOLS_DIR/$tool_dir_name/$binary_name"
