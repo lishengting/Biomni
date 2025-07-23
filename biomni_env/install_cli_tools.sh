@@ -153,7 +153,7 @@ install_tool() {
         # First copy configureHomer.pl to the target directory, then run it there
         mv "$TOOLS_DIR/bin/configureHomer.pl" "$TOOLS_DIR/$tool_dir_name/"
         cd "$TOOLS_DIR/$tool_dir_name"
-        ./configureHomer.pl -install -b
+        ./configureHomer.pl -install
 
         if [ $? -ne 0 ]; then
             echo -e "${RED}Failed to install HOMER.${NC}"
