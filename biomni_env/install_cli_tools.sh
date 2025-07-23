@@ -275,7 +275,7 @@ install_tool() {
         fi
 
         # Copy repository to tool directory
-        cp -r "$bwa_repo" "$TOOLS_DIR/$tool_dir_name"
+        cp -r "$bwa_repo/*" "$TOOLS_DIR/$tool_dir_name"
 
         # Compile BWA
         echo -e "${YELLOW}Compiling BWA...${NC}"
