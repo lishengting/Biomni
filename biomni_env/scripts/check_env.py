@@ -87,17 +87,43 @@ def check_conda_package(package_name: str) -> Tuple[bool, str]:
                 
                 # 如果有版本约束，检查版本是否匹配
                 if expected_version and version_constraint:
-                    # 简单的版本比较（这里可以扩展为更复杂的版本比较逻辑）
-                    if version_constraint == '=' and installed_version != expected_version:
-                        return False, f"❌ 版本不匹配 (期望: {expected_version}, 实际: {installed_version})"
-                    elif version_constraint == '>=' and installed_version < expected_version:
-                        return False, f"❌ 版本过低 (期望: >={expected_version}, 实际: {installed_version})"
-                    elif version_constraint == '<=' and installed_version > expected_version:
-                        return False, f"❌ 版本过高 (期望: <={expected_version}, 实际: {installed_version})"
-                    elif version_constraint == '>' and installed_version <= expected_version:
-                        return False, f"❌ 版本过低 (期望: >{expected_version}, 实际: {installed_version})"
-                    elif version_constraint == '<' and installed_version >= expected_version:
-                        return False, f"❌ 版本过高 (期望: <{expected_version}, 实际: {installed_version})"
+                    # 版本比较函数
+                    def version_starts_with(installed, expected):
+                        """检查安装版本是否以期望版本开头"""
+                        return installed.startswith(expected + '.') or installed == expected
+                    
+                    def version_compare(v1, v2):
+                        """简单的版本比较，返回-1, 0, 1"""
+                        parts1 = [int(x) for x in v1.split('.')]
+                        parts2 = [int(x) for x in v2.split('.')]
+                        max_len = max(len(parts1), len(parts2))
+                        parts1.extend([0] * (max_len - len(parts1)))
+                        parts2.extend([0] * (max_len - len(parts2)))
+                        
+                        for i in range(max_len):
+                            if parts1[i] < parts2[i]:
+                                return -1
+                            elif parts1[i] > parts2[i]:
+                                return 1
+                        return 0
+                    
+                    # 版本约束检查
+                    if version_constraint == '=':
+                        # 对于精确匹配，检查是否以期望版本开头（支持部分版本）
+                        if not version_starts_with(installed_version, expected_version):
+                            return False, f"❌ 版本不匹配 (期望: {expected_version}, 实际: {installed_version})"
+                    elif version_constraint == '>=':
+                        if version_compare(installed_version, expected_version) < 0:
+                            return False, f"❌ 版本过低 (期望: >={expected_version}, 实际: {installed_version})"
+                    elif version_constraint == '<=':
+                        if version_compare(installed_version, expected_version) > 0:
+                            return False, f"❌ 版本过高 (期望: <={expected_version}, 实际: {installed_version})"
+                    elif version_constraint == '>':
+                        if version_compare(installed_version, expected_version) <= 0:
+                            return False, f"❌ 版本过低 (期望: >{expected_version}, 实际: {installed_version})"
+                    elif version_constraint == '<':
+                        if version_compare(installed_version, expected_version) >= 0:
+                            return False, f"❌ 版本过高 (期望: <{expected_version}, 实际: {installed_version})"
                 
                 return True, f"✅ 已安装 (conda, {installed_version})"
             else:
@@ -189,6 +215,38 @@ def check_pip_package(package_name: str) -> Tuple[bool, str]:
             else:
                 return False, "❌ 未安装"
 
+def check_r_version(expected_version: str = "") -> Tuple[bool, str]:
+    """检查R版本"""
+    r_script = """
+    cat(R.version.string)
+    """
+    cmd = ["Rscript", "-e", r_script]
+    returncode, stdout, stderr = run_command(cmd)
+    
+    if returncode == 0:
+        version_line = stdout.strip()
+        # 提取版本号，格式如 "R version 4.4.0 (2024-10-15)"
+        version_match = re.search(r'R version (\d+\.\d+\.\d+)', version_line)
+        if version_match:
+            current_version = version_match.group(1)
+            
+            if expected_version:
+                # 检查版本是否满足要求
+                def version_starts_with(installed, expected):
+                    """检查安装版本是否以期望版本开头"""
+                    return installed.startswith(expected + '.') or installed == expected
+                
+                if version_starts_with(current_version, expected_version):
+                    return True, f"✅ R版本 {current_version} (满足要求 >= {expected_version})"
+                else:
+                    return False, f"❌ R版本 {current_version} (不满足要求 >= {expected_version})"
+            else:
+                return True, f"✅ R版本 {current_version}"
+        else:
+            return True, f"✅ R已安装 ({version_line})"
+    else:
+        return False, "❌ R未安装或无法运行"
+
 def check_r_package(package_name: str) -> Tuple[bool, str]:
     """检查R包是否已安装"""
     r_script = f"""
@@ -273,8 +331,10 @@ def parse_r_packages_yml(file_path: str) -> List[str]:
         if 'dependencies' in data:
             for dep in data['dependencies']:
                 if isinstance(dep, str) and dep.startswith('r-'):
-                    # 移除r-前缀
-                    packages.append(dep[2:])
+                    # 排除r-base和r-essentials，这些是conda包，不是R包
+                    if not dep.startswith('r-base>='):
+                        # 移除r-前缀
+                        packages.append(dep[2:])
                     
     except Exception as e:
         print(f"⚠️ 解析 {file_path} 失败: {e}")
@@ -392,6 +452,41 @@ def check_r_packages() -> Dict[str, Tuple[bool, str]]:
     print(f"\n🔍 检查R包")
     print("=" * 80)
     
+    results = {}
+    
+    # 首先检查R版本
+    print("🔍 检查R版本:")
+    yml_file = "r_packages.yml"
+    if os.path.exists(yml_file):
+        try:
+            with open(yml_file, 'r') as f:
+                data = yaml.safe_load(f)
+            
+            if 'dependencies' in data:
+                for dep in data['dependencies']:
+                    if isinstance(dep, str) and dep.startswith('r-base>='):
+                        # 提取版本要求
+                        expected_version = dep.split('>=')[1]
+                        exists, status = check_r_version(expected_version)
+                        results["r:version"] = (exists, status)
+                        print(f"   R版本 >= {expected_version}: {status}")
+                        break
+                else:
+                    # 如果没有找到版本要求，只检查R是否安装
+                    exists, status = check_r_version()
+                    results["r:version"] = (exists, status)
+                    print(f"   R版本: {status}")
+        except Exception as e:
+            print(f"⚠️ 解析R版本要求失败: {e}")
+            exists, status = check_r_version()
+            results["r:version"] = (exists, status)
+            print(f"   R版本: {status}")
+    else:
+        exists, status = check_r_version()
+        results["r:version"] = (exists, status)
+        print(f"   R版本: {status}")
+    
+    # 然后检查R包
     yml_file = "r_packages.yml"
     rscript_file = "install_r_packages.R"
     pkgs = set()
@@ -399,15 +494,16 @@ def check_r_packages() -> Dict[str, Tuple[bool, str]]:
         pkgs.update(parse_r_packages_yml(yml_file))
     if os.path.exists(rscript_file):
         pkgs.update(parse_r_packages_from_rscript(rscript_file))
-    if not pkgs:
+    
+    if pkgs:
+        print(f"\n📦 检查 {len(pkgs)} 个R包:")
+        for pkg in sorted(pkgs):
+            exists, status = check_r_package(pkg)
+            results[f"r:{pkg}"] = (exists, status)
+            print(f"   {pkg}: {status}")
+    else:
         print("❌ 未找到R包配置")
-        return {}
-    results = {}
-    print(f"📦 检查 {len(pkgs)} 个R包:")
-    for pkg in sorted(pkgs):
-        exists, status = check_r_package(pkg)
-        results[f"r:{pkg}"] = (exists, status)
-        print(f"   {pkg}: {status}")
+    
     return results
 
 def check_cli_tools() -> Dict[str, Tuple[bool, str]]:
@@ -429,8 +525,11 @@ def check_cli_tools() -> Dict[str, Tuple[bool, str]]:
             name = tool['name']
             binary_path = tool['binary_path']
             
-            # 检查工具是否可用
-            exists, status = check_cli_tool(name.lower(), binary_path)
+            # 从binary_path中提取二进制文件名
+            binary_name = os.path.basename(binary_path)
+            
+            # 检查工具是否可用 - 使用二进制文件名而不是工具名称
+            exists, status = check_cli_tool(binary_name, binary_path)
             results[f"cli:{name}"] = (exists, status)
             print(f"   {name}: {status}")
     
@@ -601,7 +700,7 @@ def generate_summary_report(all_results: Dict[str, Dict[str, Tuple[bool, str]]])
 def check_env_desc():
     print(f"\n🔍 检查env_desc.py中的所有数据、模块和工具")
     print("=" * 80)
-    env_desc_path = os.path.join(os.path.dirname(__file__), "..", "env_desc.py")
+    env_desc_path = os.path.join(os.path.dirname(__file__), "../biomni/env_desc.py")
     env_desc_path = os.path.abspath(env_desc_path)
     if not os.path.exists(env_desc_path):
         print(f"❌ 未找到env_desc.py: {env_desc_path}")
