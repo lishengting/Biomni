@@ -158,7 +158,8 @@ services:
       - "0.0.0.0:9999:8888"  # Jupyter notebook (避免端口冲突)
       - "0.0.0.0:9861:7860"  # Gradio
     volumes:
-      - ../:/opt/biomni
+      - ../biomni:/opt/biomni/biomni
+      - ../pyproject.toml:/opt/biomni/pyproject.toml
       - ../biomni_data:/opt/biomni/data
       - ./scripts:/opt/biomni/scripts
       - ./biomni_results:/opt/biomni/results
@@ -203,7 +204,8 @@ services:
       - "0.0.0.0:9990:8888"  # Jupyter notebook (避免端口冲突)
       - "0.0.0.0:9862:7860"  # Gradio
     volumes:
-      - ../:/opt/biomni
+      - ../biomni:/opt/biomni/biomni
+      - ../pyproject.toml:/opt/biomni/pyproject.toml
       - ../biomni_data:/opt/biomni/data
       - ./scripts:/opt/biomni/scripts
       - ./notebooks:/opt/biomni/notebooks
