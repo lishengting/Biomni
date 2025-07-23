@@ -76,25 +76,14 @@ def check_conda_package(package_name: str) -> Tuple[bool, str]:
                 break
     
     # 使用基础包名检查是否安装
-    cmd = ["conda", "list", base_name, "--json"]
+    cmd = ["conda", "list", base_name, "-f", "--json"]
     returncode, stdout, stderr = run_command(cmd)
     
     if returncode == 0:
         try:
             data = json.loads(stdout)
             if data:  # 如果返回了包信息
-                # 找到精确匹配的包名（避免匹配到包含该名称的其他包）
-                target_package = None
-                for pkg in data:
-                    if pkg.get('name') == base_name:
-                        target_package = pkg
-                        break
-                
-                if target_package:
-                    installed_version = target_package.get('version', '未知版本')
-                else:
-                    # 如果没有找到精确匹配，使用第一个（向后兼容）
-                    installed_version = data[0].get('version', '未知版本') if data else '未知版本'
+                installed_version = data[0].get('version', '未知版本') if data else '未知版本'
                 
                 # 如果有版本约束，检查版本是否匹配
                 if expected_version and version_constraint:
