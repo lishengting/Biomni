@@ -448,7 +448,7 @@ def check_bio_env_packages() -> Dict[str, Tuple[bool, str]]:
         for pkg in packages['conda']:
             exists, status = check_conda_package(pkg)
             results[f"conda:{pkg}"] = (exists, status)
-            print(f"   {pkg}: {status}")
+            print(format_status_output(pkg, status))
     
     # 检查pip包
     if packages['pip']:
@@ -456,7 +456,7 @@ def check_bio_env_packages() -> Dict[str, Tuple[bool, str]]:
         for pkg in packages['pip']:
             exists, status = check_pip_package(pkg)
             results[f"pip:{pkg}"] = (exists, status)
-            print(f"   {pkg}: {status}")
+            print(format_status_output(pkg, status))
     
     return results
 
@@ -482,22 +482,22 @@ def check_r_packages() -> Dict[str, Tuple[bool, str]]:
                         expected_version = dep.split('>=')[1]
                         exists, status = check_r_version(expected_version)
                         results["r:version"] = (exists, status)
-                        print(f"   R版本 >= {expected_version}: {status}")
+                        print(format_status_output(f"R版本 >= {expected_version}", status))
                         break
                 else:
                     # 如果没有找到版本要求，只检查R是否安装
                     exists, status = check_r_version()
                     results["r:version"] = (exists, status)
-                    print(f"   R版本: {status}")
+                    print(format_status_output("R版本", status))
         except Exception as e:
             print(f"⚠️ 解析R版本要求失败: {e}")
             exists, status = check_r_version()
             results["r:version"] = (exists, status)
-            print(f"   R版本: {status}")
+            print(format_status_output("R版本", status))
     else:
         exists, status = check_r_version()
         results["r:version"] = (exists, status)
-        print(f"   R版本: {status}")
+        print(format_status_output("R版本", status))
     
     # 然后检查R包
     yml_file = "r_packages.yml"
@@ -563,7 +563,7 @@ def check_install_scripts() -> Dict[str, Tuple[bool, str]]:
     for script, description in scripts.items():
         exists, status = check_file_exists(script)
         results[f"script:{script}"] = (exists, status)
-        print(f"   {script} ({description}): {status}")
+        print(format_status_output(f"{script} ({description})", status))
     
     return results
 
@@ -756,19 +756,19 @@ def check_env_desc():
         for pkg in sorted(py_pkgs):
             exists, status = check_pip_package(pkg)
             results[f"py:{pkg}"] = (exists, status)
-            print(f"   {pkg}: {status}")
+            print(format_status_output(pkg, status))
         # 检查R包
         print(f"📦 检查R包: {len(r_pkgs)} 个")
         for pkg in sorted(r_pkgs):
             exists, status = check_r_package(pkg)
             results[f"r:{pkg}"] = (exists, status)
-            print(f"   {pkg}: {status}")
+            print(format_status_output(pkg, status))
         # 检查CLI工具
         print(f"🔧 检查CLI工具: {len(cli_tools)} 个")
         for tool in sorted(cli_tools):
             exists, status = check_cli_tool(tool, tool)
             results[f"cli:{tool}"] = (exists, status)
-            print(f"   {tool}: {status}")
+            print(format_status_output(tool, status))
     return results
 
 def main():
