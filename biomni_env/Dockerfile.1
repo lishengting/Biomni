@@ -93,7 +93,7 @@ ENV BIOMNI_TOOLS_DIR="/opt/biomni_tools"
 RUN /bin/bash install_cli_tools.sh --auto 2>&1 | tee install_cli_tools.log || echo "Some CLI tools may have failed, continuing... (see install_cli_tools.log)"
 
 USER root
-RUN apt-get install -y --no-install-recommends less && \
+RUN apt-get update && apt-get install -y --no-install-recommends less && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 USER biomni
