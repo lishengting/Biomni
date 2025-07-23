@@ -143,15 +143,17 @@ install_tool() {
         chmod +x "$TOOLS_DIR/bin/configureHomer.pl"
 
         # Create a HOMER installation directory
-        mkdir -p "$TOOLS_DIR/$tool_dir_name/homer"
+        mkdir -p "$TOOLS_DIR/$tool_dir_name"
 
         # Run the configuration script
         echo -e "${YELLOW}Running HOMER configuration script...${NC}"
-        echo -e "${YELLOW}This will install HOMER to $TOOLS_DIR/$tool_dir_name/homer${NC}"
+        echo -e "${YELLOW}This will install HOMER to $TOOLS_DIR/$tool_dir_name${NC}"
 
         # Install HOMER with batch mode ("-b" flag for basic installation)
-        # Use -local to specify the absolute installation directory
-        "$TOOLS_DIR/bin/configureHomer.pl" -install -local "$TOOLS_DIR/$tool_dir_name/homer" -b
+        # First copy configureHomer.pl to the target directory, then run it there
+        mv "$TOOLS_DIR/bin/configureHomer.pl" "$TOOLS_DIR/$tool_dir_name/"
+        cd "$TOOLS_DIR/$tool_dir_name"
+        ./configureHomer.pl -install -b
 
         if [ $? -ne 0 ]; then
             echo -e "${RED}Failed to install HOMER.${NC}"

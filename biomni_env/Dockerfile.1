@@ -89,11 +89,13 @@ RUN /opt/miniconda3/envs/biomni_e1/bin/Rscript install_r_packages.R 2>&1 | tee i
 
 COPY --chown=biomni:biomni install_cli_tools.sh cli_tools_config.json ./
 # 安装CLI工具
+ENV BIOMNI_TOOLS_DIR="/opt/biomni_tools"
 RUN /bin/bash install_cli_tools.sh --auto 2>&1 | tee install_cli_tools.log || echo "Some CLI tools may have failed, continuing... (see install_cli_tools.log)"
 
 USER root
-RUN rm -rf /opt/biomni_tools && \
-    ln -s /opt/biomni/biomni_tools /opt/biomni_tools
+RUN apt-get install -y --no-install-recommends less && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 USER biomni
 
 # 自动激活conda环境
