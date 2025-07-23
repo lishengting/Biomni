@@ -58,6 +58,19 @@ def run_command(cmd: List[str], capture_output: bool = True) -> Tuple[int, str, 
     except Exception as e:
         return -1, "", str(e)
 
+def format_status_output(name: str, status: str) -> str:
+    """格式化状态输出，将图标放在最前面"""
+    if "✅" in status:
+        icon = "✅"
+        details = status.replace("✅", "").strip()
+        return f"   {icon} {name}: {details}"
+    elif "❌" in status:
+        icon = "❌"
+        details = status.replace("❌", "").strip()
+        return f"   {icon} {name}: {details}"
+    else:
+        return f"   {name}: {status}"
+
 def check_conda_package(package_name: str) -> Tuple[bool, str]:
     """检查conda包是否已安装"""
     # 处理版本号 - 支持 =, >=, <=, >, < 等版本约束
@@ -404,7 +417,7 @@ def check_environment_packages() -> Dict[str, Dict[str, Tuple[bool, str]]]:
         for pkg in packages['conda']:
             exists, status = check_conda_package(pkg)
             results[f"conda:{pkg}"] = (exists, status)
-            print(f"   {pkg}: {status}")
+            print(format_status_output(pkg, status))
     
     # 检查pip包
     if packages['pip']:
@@ -412,7 +425,7 @@ def check_environment_packages() -> Dict[str, Dict[str, Tuple[bool, str]]]:
         for pkg in packages['pip']:
             exists, status = check_pip_package(pkg)
             results[f"pip:{pkg}"] = (exists, status)
-            print(f"   {pkg}: {status}")
+            print(format_status_output(pkg, status))
     
     return results
 
@@ -500,7 +513,7 @@ def check_r_packages() -> Dict[str, Tuple[bool, str]]:
         for pkg in sorted(pkgs):
             exists, status = check_r_package(pkg)
             results[f"r:{pkg}"] = (exists, status)
-            print(f"   {pkg}: {status}")
+            print(format_status_output(pkg, status))
     else:
         print("❌ 未找到R包配置")
     
@@ -531,7 +544,7 @@ def check_cli_tools() -> Dict[str, Tuple[bool, str]]:
             # 检查工具是否可用 - 使用二进制文件名而不是工具名称
             exists, status = check_cli_tool(binary_name, binary_path)
             results[f"cli:{name}"] = (exists, status)
-            print(f"   {name}: {status}")
+            print(format_status_output(name, status))
     
     return results
 
@@ -726,7 +739,7 @@ def check_env_desc():
             file_path = os.path.join(data_lake_path, fname)
             exists, status = check_file_exists(file_path)
             results[f"data:{fname}"] = (exists, status)
-            print(f"   {fname}: {status}")
+            print(format_status_output(fname, status))
     # 检查Python包、R包、CLI工具
     if hasattr(env_desc, "library_content_dict"):
         py_pkgs, r_pkgs, cli_tools = set(), set(), set()
