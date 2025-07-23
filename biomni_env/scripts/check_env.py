@@ -716,8 +716,15 @@ def check_env_desc():
     # 检查数据文件
     if hasattr(env_desc, "data_lake_dict"):
         print(f"📁 检查 data_lake_dict 数据文件: {len(env_desc.data_lake_dict)} 个")
+        # 获取数据路径
+        data_path = os.getenv("BIOMNI_DATA_PATH", "./data")
+        biomni_data_path = os.path.join(data_path, "biomni_data")
+        data_lake_path = os.path.join(biomni_data_path, "data_lake")
+        
         for fname in env_desc.data_lake_dict:
-            exists, status = check_file_exists(fname)
+            # 使用正确的路径检查文件
+            file_path = os.path.join(data_lake_path, fname)
+            exists, status = check_file_exists(file_path)
             results[f"data:{fname}"] = (exists, status)
             print(f"   {fname}: {status}")
     # 检查Python包、R包、CLI工具

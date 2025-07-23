@@ -262,6 +262,7 @@ RUN chmod +x install_cli_tools.sh
 
 # 设置环境变量
 ENV HOMER="/opt/biomni_tools/homer"
+ENV BIOMNI_DATA_PATH="/opt/biomni/data"
 
 # 创建自动激活虚拟环境的bash配置文件
 RUN echo 'source /opt/biomni/venv/bin/activate' >> /home/biomni/.bashrc && \
