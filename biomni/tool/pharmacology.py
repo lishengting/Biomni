@@ -282,11 +282,12 @@ def predict_admet_properties(smiles_list, ADMET_model_type="MPNN"):
     ]
 
     for task in tasks:
-        # 转换为小写以匹配可用的模型名称
-        model_name = task.lower() + "_" + ADMET_model_type.lower() + "_model"
-        model_ADMETs[task + "_" + ADMET_model_type + "_model"] = CompoundPred.model_pretrained(
-            model=model_name
-        )
+        try:
+            model_ADMETs[task + "_" + ADMET_model_type + "_model"] = CompoundPred.model_pretrained(
+                model=task + "_" + ADMET_model_type + "_model"
+            )
+        except Exception as e:
+            return f"Error downloading model {task}_{ADMET_model_type}_model: {str(e)}. Please check network connection or try again later."
 
     # Helper function for ADMET prediction
     def ADMET_pred(drug, task, unit):
