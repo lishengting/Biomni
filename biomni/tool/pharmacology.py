@@ -284,7 +284,7 @@ def predict_admet_properties(smiles_list, ADMET_model_type="MPNN"):
     for task in tasks:
         try:
             model_ADMETs[task + "_" + ADMET_model_type + "_model"] = CompoundPred.model_pretrained(
-                model=task + "_" + ADMET_model_type + "_model"
+                model=task.lower() + "_" + ADMET_model_type.lower() + "_model"
             )
         except Exception as e:
             return f"Error downloading model {task}_{ADMET_model_type}_model: {str(e)}. Please check network connection or try again later."
