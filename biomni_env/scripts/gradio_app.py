@@ -759,7 +759,7 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft(), css="""
             # LLM Configuration
             llm_model = gr.Textbox(
                 label="Model Name",
-                value="QWQ-32B",
+                value="qwen3-coder-plus",
                 placeholder="e.g., gpt-4o, claude-3-5-sonnet-20241022, llama3:8b",
                 info="The model name to use"
             )
@@ -773,14 +773,14 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft(), css="""
             
             base_url = gr.Textbox(
                 label="Base URL (Optional)",
-                value="http://10.49.60.23:8684/v1",
+                value="https://dashscope.aliyuncs.com/compatible-mode/v1",
                 placeholder="e.g., https://api.openai.com/v1 or http://localhost:8000/v1",
                 info="Custom API endpoint URL. Leave empty for default."
             )
             
             api_key = gr.Textbox(
                 label="API Key (Optional)",
-                value="token-abc123",
+                value="sk-879bc788fbeb4d97bfb041e4360fdde5",
                 placeholder="Enter your API key",
                 type="password",
                 info="API key for the service. Can also be set via environment variables."
