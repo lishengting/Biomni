@@ -19,39 +19,31 @@ def check_available_models():
         
         print("✅ 成功导入DeepPurpose.CompoundPred")
         
-        # 尝试获取可用模型列表
-        try:
-            # 查看CompoundPred的属性和方法
-            print("📋 CompoundPred的属性和方法:")
-            for attr in dir(CompoundPred):
-                if not attr.startswith('_'):
-                    print(f"  - {attr}")
+        # 查看URLs属性，这应该包含可用的模型
+        print("📋 可用的预训练模型:")
+        if hasattr(CompoundPred, 'URLs'):
+            urls = CompoundPred.URLs
+            print(f"URLs类型: {type(urls)}")
+            if isinstance(urls, dict):
+                for model_name in urls.keys():
+                    print(f"  - {model_name}")
+            else:
+                print(f"URLs内容: {urls}")
+        else:
+            print("❌ 没有找到URLs属性")
             
-            # 尝试一些常见的模型名称
-            common_models = [
-                "DAVIS",
-                "KIBA", 
-                "BindingDB",
-                "DrugBank",
-                "ChEMBL",
-                "Tox21",
-                "SIDER",
-                "ClinTox",
-                "BBBP",
-                "HIV"
-            ]
-            
-            print("\n🧪 测试常见模型名称:")
-            for model_name in common_models:
-                try:
-                    print(f"  测试: {model_name}")
-                    model = CompoundPred.model_pretrained(model=model_name)
-                    print(f"  ✅ {model_name} 可用!")
-                except Exception as e:
-                    print(f"  ❌ {model_name}: {str(e)[:50]}...")
-                    
-        except Exception as e:
-            print(f"❌ 获取模型列表失败: {e}")
+        # 查看name2filename属性
+        print("\n📋 name2filename映射:")
+        if hasattr(CompoundPred, 'name2filename'):
+            name2filename = CompoundPred.name2filename
+            print(f"name2filename类型: {type(name2filename)}")
+            if isinstance(name2filename, dict):
+                for model_name in name2filename.keys():
+                    print(f"  - {model_name}")
+            else:
+                print(f"name2filename内容: {name2filename}")
+        else:
+            print("❌ 没有找到name2filename属性")
             
     except ImportError as e:
         print(f"❌ 导入失败: {e}")
