@@ -282,8 +282,10 @@ def predict_admet_properties(smiles_list, ADMET_model_type="MPNN"):
     ]
 
     for task in tasks:
+        # 转换为小写以匹配可用的模型名称
+        model_name = task.lower() + "_" + ADMET_model_type.lower() + "_model"
         model_ADMETs[task + "_" + ADMET_model_type + "_model"] = CompoundPred.model_pretrained(
-            model=task + "_" + ADMET_model_type + "_model"
+            model=model_name
         )
 
     # Helper function for ADMET prediction
