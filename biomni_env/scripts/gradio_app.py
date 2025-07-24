@@ -273,7 +273,25 @@ def ask_biomni_stream(question: str, session_id: str = ""):
     """Ask a question to the Biomni agent with streaming output."""
     global agent, agent_error, current_task, stop_flag
     
+    # 记录开始时间
+    start_time = time.time()
     print(f"[LOG] 提问，session_id: {session_id}, question: {question[:50]}...")  # 添加日志
+    
+    # 计算运行时间的辅助函数
+    def get_runtime_display():
+        """计算并格式化运行时间"""
+        elapsed_time = time.time() - start_time
+        if elapsed_time < 60:
+            return f"{elapsed_time:.1f}秒"
+        elif elapsed_time < 3600:
+            minutes = int(elapsed_time // 60)
+            seconds = elapsed_time % 60
+            return f"{minutes}分{seconds:.1f}秒"
+        else:
+            hours = int(elapsed_time // 3600)
+            minutes = int((elapsed_time % 3600) // 60)
+            seconds = elapsed_time % 60
+            return f"{hours}小时{minutes}分{seconds:.1f}秒"
     
     # 检查是否有有效的会话ID
     if not session_id or session_id == "":
@@ -361,8 +379,9 @@ def ask_biomni_stream(question: str, session_id: str = ""):
                         parsed_content = parse_advanced_content(step_content)
                         stop_message += f"{step_header}\n{parsed_content}\n\n"
                 
-                # 追加停止信息
-                stop_message += f"\n\n<div style='margin: 20px 0; padding: 15px; background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; border-radius: 8px; text-align: center;'><h3 style='margin: 0;'>⏹️ Execution Stopped</h3><p style='margin: 5px 0 0 0;'>Task execution has been stopped by user.</p></div>"
+                # 追加停止信息和运行时间
+                runtime_display = get_runtime_display()
+                stop_message += f"\n\n<div style='margin: 20px 0; padding: 15px; background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; border-radius: 8px; text-align: center;'><h3 style='margin: 0;'>⏹️ Execution Stopped</h3><p style='margin: 5px 0 0 0;'>Task execution has been stopped by user.</p><p style='margin: 5px 0 0 0;'>运行时间: {runtime_display}</p></div>"
                 
                 yield stop_message, execution_log
                 session_task.join(timeout=1)  # Give it a moment to finish
@@ -409,7 +428,9 @@ def ask_biomni_stream(question: str, session_id: str = ""):
         # Handle results
         if 'error' in result_container:
             execution_log = "\n".join([entry["formatted"] for entry in session_agent.get_execution_logs()])
-            yield f"❌ **Error:** {result_container['error']}", execution_log
+            runtime_display = get_runtime_display()
+            error_message = f"❌ **Error:** {result_container['error']}\n\n<div style='margin: 20px 0; padding: 15px; background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; border-radius: 8px; text-align: center;'><h3 style='margin: 0;'>❌ 执行出错</h3><p style='margin: 5px 0 0 0;'>运行时间: {runtime_display}</p></div>"
+            yield error_message, execution_log
             return
         
         if 'result' in result_container:
@@ -435,13 +456,21 @@ def ask_biomni_stream(question: str, session_id: str = ""):
             if not intermediate_outputs:
                 intermediate_text += "No intermediate results available."
             
+            # 添加总运行时间
+            runtime_display = get_runtime_display()
+            intermediate_text += f"\n\n<div style='margin: 20px 0; padding: 15px; background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border-radius: 8px; text-align: center;'><h3 style='margin: 0;'>✅ 执行完成</h3><p style='margin: 5px 0 0 0;'>总运行时间: {runtime_display}</p></div>"
+            
             yield intermediate_text, execution_log
         else:
-            yield "❌ No result received.", "\n".join([entry["formatted"] for entry in session_agent.get_execution_logs()])
+            runtime_display = get_runtime_display()
+            no_result_message = f"❌ No result received.\n\n<div style='margin: 20px 0; padding: 15px; background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%); color: white; border-radius: 8px; text-align: center;'><h3 style='margin: 0;'>⚠️ 无结果</h3><p style='margin: 5px 0 0 0;'>运行时间: {runtime_display}</p></div>"
+            yield no_result_message, "\n".join([entry["formatted"] for entry in session_agent.get_execution_logs()])
             
     except Exception as e:
         execution_log = "\n".join([entry["formatted"] for entry in session_agent.get_execution_logs()]) if session_agent else ""
-        yield f"❌ Error processing question: {str(e)}", execution_log
+        runtime_display = get_runtime_display()
+        error_message = f"❌ Error processing question: {str(e)}\n\n<div style='margin: 20px 0; padding: 15px; background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; border-radius: 8px; text-align: center;'><h3 style='margin: 0;'>❌ 处理出错</h3><p style='margin: 5px 0 0 0;'>运行时间: {runtime_display}</p></div>"
+        yield error_message, execution_log
 
 def ask_biomni(question: str):
     """Non-streaming version for backward compatibility."""
