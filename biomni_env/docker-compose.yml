@@ -175,7 +175,6 @@ services:
       - JUPYTER_ENABLE_LAB=yes
       - JUPYTER_ALLOW_REMOTE_ACCESS=true
       - PYTHONPATH=/opt/biomni
-      - PATH=/opt/miniconda3/envs/biomni_e1/bin:/opt/biomni_tools/bin:$PATH
     command: >
       bash -c "
         echo '激活conda环境...' &&
