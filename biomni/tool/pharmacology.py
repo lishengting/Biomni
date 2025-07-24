@@ -385,7 +385,10 @@ def predict_binding_affinity_protein_1d_sequence(smiles_list, amino_acid_sequenc
         return f"Error: Invalid affinity model type '{affinity_model_type}'. Available options are: {', '.join(available_affinity_model_types)}."
 
     # Load the pre-trained affinity model
-    model_DTI = DTI.model_pretrained(model=affinity_model_type.replace("-", "_") + "_BindingDB")
+    try:
+        model_DTI = DTI.model_pretrained(model=affinity_model_type.replace("-", "_") + "_BindingDB")
+    except Exception as e:
+        return f"Error downloading model {affinity_model_type.replace('-', '_')}_BindingDB: {str(e)}. Please check network connection or try again later."
 
     # Initialize research log string
     research_log = "Research Log for Binding Affinity Predictions:\n"
