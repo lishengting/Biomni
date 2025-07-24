@@ -112,10 +112,7 @@ RUN cd /opt/biomni_tools && \
     echo y | ./install.sh
 
 # 设置ADFRsuite环境变量
-USER root
 ENV PATH="/opt/biomni_tools/ADFRsuite_x86_64Linux_1.0/bin:$PATH"
-USER biomni
-
 ENV ADFRSUITE_HOME="/opt/biomni_tools/ADFRsuite_x86_64Linux_1.0"
 
 ENV BIOMNI_DATA_PATH="/opt/biomni/data"

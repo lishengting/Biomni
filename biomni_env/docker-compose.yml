@@ -279,6 +279,7 @@ volumes:
   data:
   notebooks:
   results:
+  downloads:
   biomni_cache:
     driver: local
 
