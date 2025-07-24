@@ -228,6 +228,27 @@ def check_pip_package(package_name: str) -> Tuple[bool, str]:
             else:
                 return False, "❌ 未安装"
 
+def check_package_any(package_name: str) -> Tuple[bool, str]:
+    """检查包是否已安装（pip或conda）"""
+    # 处理版本号
+    base_name = package_name
+    expected_version = None
+    if '==' in package_name:
+        base_name, expected_version = package_name.split('==', 1)
+    
+    # 首先尝试pip
+    pip_result = check_pip_package(package_name)
+    if pip_result[0]:  # 如果pip找到了
+        return pip_result
+    
+    # 然后尝试conda
+    conda_result = check_conda_package(package_name)
+    if conda_result[0]:  # 如果conda找到了
+        return conda_result
+    
+    # 如果都没找到，返回pip的结果（通常有更详细的错误信息）
+    return pip_result
+
 def check_r_version(expected_version: str = "") -> Tuple[bool, str]:
     """检查R版本"""
     r_script = """
@@ -754,7 +775,7 @@ def check_env_desc():
         # 检查Python包
         print(f"🐍 检查Python包: {len(py_pkgs)} 个")
         for pkg in sorted(py_pkgs):
-            exists, status = check_pip_package(pkg)
+            exists, status = check_package_any(pkg)
             results[f"py:{pkg}"] = (exists, status)
             print(format_status_output(pkg, status))
         # 检查R包
