@@ -16,6 +16,7 @@ services:
       - ../biomni_data:/opt/biomni/data
       - ./scripts:/opt/biomni/scripts
       - ./notebooks:/opt/biomni/notebooks
+      - ./downloads:/opt/biomni/downloads
     environment:
       - JUPYTER_ENABLE_LAB=yes
       - JUPYTER_ALLOW_REMOTE_ACCESS=true
@@ -51,6 +52,7 @@ services:
       - ./scripts:/opt/biomni/scripts
       - ./notebooks:/opt/biomni/notebooks
       - ./results:/opt/biomni/results
+      - ./downloads:/opt/biomni/downloads
     environment:
       - JUPYTER_ENABLE_LAB=yes
       - JUPYTER_ALLOW_REMOTE_ACCESS=true
@@ -87,6 +89,7 @@ services:
       - ../biomni_data:/opt/biomni/data
       - ./scripts:/opt/biomni/scripts
       - ./notebooks:/opt/biomni/notebooks
+      - ./downloads:/opt/biomni/downloads
     environment:
       - JUPYTER_ENABLE_LAB=yes
       - JUPYTER_ALLOW_REMOTE_ACCESS=true
@@ -117,11 +120,13 @@ services:
       - "0.0.0.0:9998:8888"  # Jupyter notebook (避免端口冲突)
       - "0.0.0.0:9860:7860"  # Gradio
     volumes:
-      - ../:/opt/biomni
+      - ../biomni:/opt/biomni/biomni
+      - ../pyproject.toml:/opt/biomni/pyproject.toml
       - ../biomni_data:/opt/biomni/data
       - ./scripts:/opt/biomni/scripts
       - biomni_cache:/home/biomni/.cache
       - ./notebooks:/opt/biomni/notebooks
+      - ./downloads:/opt/biomni/downloads
     environment:
       - JUPYTER_ENABLE_LAB=yes
       - JUPYTER_ALLOW_REMOTE_ACCESS=true
@@ -165,6 +170,7 @@ services:
       - ./biomni_results:/opt/biomni/results
       - biomni_cache:/home/biomni/.cache
       - ./notebooks:/opt/biomni/notebooks
+      - ./downloads:/opt/biomni/downloads
     environment:
       - JUPYTER_ENABLE_LAB=yes
       - JUPYTER_ALLOW_REMOTE_ACCESS=true
