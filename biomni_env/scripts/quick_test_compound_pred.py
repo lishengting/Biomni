@@ -15,7 +15,7 @@ def quick_test():
         print("🔬 快速测试CompoundPred.model_pretrained...")
         
         # 导入
-        from biomni.tool.pharmacology import CompoundPred
+        from DeepPurpose import CompoundPred, utils
         print("✅ 导入成功")
         
         # 测试一个模型

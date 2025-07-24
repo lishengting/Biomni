@@ -15,7 +15,7 @@ def test_compound_pred():
         print("🔬 开始测试CompoundPred.model_pretrained...")
         
         # 导入CompoundPred
-        from biomni.tool.pharmacology import CompoundPred
+        from DeepPurpose import CompoundPred, utils
         
         print("✅ 成功导入CompoundPred")
         
@@ -59,7 +59,7 @@ def test_compound_pred():
 def test_multiple_models():
     """测试多个ADMET模型"""
     try:
-        from biomni.tool.pharmacology import CompoundPred
+        from DeepPurpose import CompoundPred, utils
         
         # 定义要测试的任务和模型类型
         tasks = ["absorption", "distribution", "metabolism", "excretion", "toxicity"]
