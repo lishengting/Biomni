@@ -99,6 +99,22 @@ RUN apt-get update && apt-get install -y --no-install-recommends less && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 USER biomni
 
+# 安装额外的conda包
+RUN /opt/miniconda3/bin/conda install -n biomni_e1 -c conda-forge vina openbabel --yes
+
+# 安装额外的pip包
+RUN pip install deeppurpose descriptastorus flowkit hyperopt pyscreener tiledb
+
+# 安装ADFRsuite
+RUN cd /opt/biomni_tools && \
+    tar -xzf downloads/ADFRsuite_x86_64Linux_1.0.tar.gz && \
+    cd ADFRsuite_x86_64Linux_1.0 && \
+    echo y | ./install.sh
+
+# 设置ADFRsuite环境变量
+ENV PATH="/opt/biomni_tools/ADFRsuite_x86_64Linux_1.0/bin:$PATH"
+ENV ADFRSUITE_HOME="/opt/biomni_tools/ADFRsuite_x86_64Linux_1.0"
+
 ENV BIOMNI_DATA_PATH="/opt/biomni/data"
 
 # 自动激活conda环境
