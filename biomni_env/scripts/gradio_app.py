@@ -6,6 +6,8 @@ import time
 import re
 import json
 from typing import Optional
+import shutil
+from pathlib import Path
 
 # Session management for multiple users
 import uuid
@@ -59,6 +61,137 @@ class SessionManager:
 
 # 全局会话管理器
 session_manager = SessionManager()
+
+# 会话结果目录管理
+def get_session_results_dir(session_id: str) -> str:
+    """获取会话的结果保存目录路径"""
+    if not session_id:
+        return "./results"
+    
+    # 创建基于日期和会话ID的目录
+    date_str = datetime.now().strftime("%Y%m%d")
+    session_dir = f"./results/{date_str}_{session_id}"
+    
+    # 确保目录存在
+    Path(session_dir).mkdir(parents=True, exist_ok=True)
+    return session_dir
+
+def setup_session_workspace(session_id: str, data_path: str) -> tuple:
+    """设置会话工作空间，包括创建目录和链接数据"""
+    session_dir = get_session_results_dir(session_id)
+    original_dir = os.getcwd()
+    
+    try:
+        # 创建会话目录
+        Path(session_dir).mkdir(parents=True, exist_ok=True)
+        
+        # 切换工作目录
+        os.chdir(session_dir)
+        print(f"[LOG] 工作目录已更改为: {os.getcwd()}")
+        
+        # 链接数据目录
+        target_data_path = Path(data_path).resolve()
+        local_data_path = Path("./data")
+        
+        if target_data_path.exists() and not local_data_path.exists():
+            try:
+                # 创建符号链接（Unix/Linux）或目录连接（Windows）
+                if hasattr(os, 'symlink'):
+                    os.symlink(str(target_data_path), str(local_data_path))
+                    print(f"[LOG] 已创建数据目录符号链接: {local_data_path} -> {target_data_path}")
+                else:
+                    # Windows下使用目录连接
+                    import subprocess
+                    subprocess.run(['mklink', '/J', str(local_data_path), str(target_data_path)], shell=True)
+            except Exception as e:
+                # 如果符号链接失败，则复制数据
+                print(f"[LOG] 符号链接创建失败，尝试复制数据: {e}")
+                shutil.copytree(str(target_data_path), str(local_data_path), dirs_exist_ok=True)
+                print(f"[LOG] 已复制数据目录到: {local_data_path}")
+        
+        return session_dir, original_dir
+        
+    except Exception as e:
+        print(f"[LOG] 设置会话工作空间失败: {e}")
+        return session_dir, original_dir
+
+def cleanup_session_workspace(original_dir: str):
+    """清理并恢复原始工作目录"""
+    try:
+        os.chdir(original_dir)
+        print(f"[LOG] 工作目录已恢复为: {os.getcwd()}")
+    except Exception as e:
+        print(f"[LOG] 恢复工作目录失败: {e}")
+
+def extract_saved_files_from_log(log_content: str) -> list:
+    """从日志内容中提取保存的文件路径"""
+    # 匹配 "saved to 'filename'" 或 "saved to \"filename\"" 模式
+    patterns = [
+        r"saved to ['\"](.+?)['\"]",
+        r"saved to ([^'\"\s]+\.\w+)",
+        r"figure saved as ['\"](.+?)['\"]",
+        r"chart saved as ['\"](.+?)['\"]",
+        r"file saved as ['\"](.+?)['\"]",
+        r"output saved to ['\"](.+?)['\"]"
+    ]
+    
+    saved_files = []
+    for pattern in patterns:
+        matches = re.findall(pattern, log_content, re.IGNORECASE)
+        saved_files.extend(matches)
+    
+    # 去重并过滤存在的文件
+    unique_files = []
+    seen = set()
+    for file_path in saved_files:
+        if file_path not in seen:
+            seen.add(file_path)
+            # 检查文件是否存在
+            full_path = os.path.abspath(file_path)
+            if os.path.exists(full_path):
+                unique_files.append(full_path)
+    
+    return unique_files
+
+def generate_file_links_html(saved_files: list, session_dir: str) -> str:
+    """生成保存文件的HTML下载链接"""
+    if not saved_files:
+        return ""
+    
+    html_parts = []
+    html_parts.append("<div style='margin: 20px 0; padding: 15px; background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); color: white; border-radius: 8px;'><h3 style='margin: 0 0 10px 0;'>📁 Generated Files</h3></div>")
+    
+    for file_path in saved_files:
+        file_name = os.path.basename(file_path)
+        file_size = os.path.getsize(file_path)
+        
+        # 检查是否为图片
+        image_extensions = {'.png', '.jpg', '.jpeg', '.gif', '.bmp', '.svg', '.tiff', '.webp'}
+        file_ext = os.path.splitext(file_path)[1].lower()
+        
+        if file_ext in image_extensions:
+            # 图片直接展示
+            html_parts.append(f"""
+            <div style='margin: 15px 0; padding: 10px; border: 1px solid #ddd; border-radius: 5px;'>
+                <h4>📸 {file_name}</h4>
+                <img src="file={file_path}" style="max-width: 100%; height: auto; border: 1px solid #ccc; border-radius: 4px;" alt="{file_name}">
+                <br><br>
+                <a href="file={file_path}" download="{file_name}" style="background: #28a745; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px;">⬇️ Download {file_name}</a>
+                <span style='color: #666; margin-left: 10px;'>({file_size:,} bytes)</span>
+            </div>
+            """)
+        else:
+            # 其他文件提供下载链接
+            html_parts.append(f"""
+            <div style='margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 5px;'>
+                <strong>📄 {file_name}</strong>
+                <br>
+                <a href="file={file_path}" download="{file_name}" style="background: #007bff; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px;">⬇️ Download {file_name}</a>
+                <span style='color: #666; margin-left: 10px;'>({file_size:,} bytes)</span>
+            </div>
+            """)
+    
+    return "".join(html_parts)
 
 # 兼容性变量（用于向后兼容）
 agent = None
@@ -209,9 +342,20 @@ def create_agent(llm_model: str, source: str, base_url: Optional[str], api_key: 
     try:
         from biomni.agent import A1
         
+        # 检查是否在会话工作空间中，如果是则使用相对路径
+        session_data_path = "./data"
+        if Path(session_data_path).exists():
+            # 如果在会话工作空间中，使用本地的./data
+            effective_data_path = session_data_path
+            print(f"[LOG] 使用会话工作空间数据目录: {effective_data_path}")
+        else:
+            # 否则使用原始数据路径
+            effective_data_path = data_path
+            print(f"[LOG] 使用原始数据路径: {effective_data_path}")
+        
         # Prepare agent parameters
         agent_params = {
-            "path": data_path,
+            "path": effective_data_path,
             "llm": llm_model,
             "verbose": verbose,
         }
@@ -331,6 +475,8 @@ def ask_biomni_stream(question: str, session_id: str = ""):
         yield "❌ Please enter a question.", ""
         return
     
+    # 设置会话工作空间
+    session_dir, original_dir = setup_session_workspace(session_id, data_path)
     session_manager.update_session(session_id, stop_flag=False)
     
     try:
@@ -369,6 +515,10 @@ def ask_biomni_stream(question: str, session_id: str = ""):
                 # 获取当前的中间输出
                 intermediate_outputs = session_agent.get_intermediate_outputs()
                 
+                # 从执行日志中提取保存的文件
+                saved_files = extract_saved_files_from_log(execution_log)
+                files_html = generate_file_links_html(saved_files, session_dir)
+                
                 # 构建停止消息，保留现有内容
                 stop_message = ""
                 if intermediate_outputs:
@@ -379,9 +529,16 @@ def ask_biomni_stream(question: str, session_id: str = ""):
                         parsed_content = parse_advanced_content(step_content)
                         stop_message += f"{step_header}\n{parsed_content}\n\n"
                 
+                # 添加生成的文件链接
+                if files_html:
+                    stop_message += files_html
+                
                 # 追加停止信息和运行时间
                 runtime_display = get_runtime_display()
                 stop_message += f"\n\n<div style='margin: 20px 0; padding: 15px; background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; border-radius: 8px; text-align: center;'><h3 style='margin: 0;'>⏹️ Execution Stopped</h3><p style='margin: 5px 0 0 0;'>Task execution has been stopped by user.</p><p style='margin: 5px 0 0 0;'>运行时间: {runtime_display}</p></div>"
+                
+                # 清理会话工作空间
+                cleanup_session_workspace(original_dir)
                 
                 yield stop_message, execution_log
                 session_task.join(timeout=1)  # Give it a moment to finish
@@ -393,16 +550,12 @@ def ask_biomni_stream(question: str, session_id: str = ""):
             
             # Get intermediate outputs
             intermediate_outputs = session_agent.get_intermediate_outputs()
-            current_step = session_agent.get_current_step()
             
             # Check if we have new steps or intermediate results
             if len(logs) > last_step_count or len(intermediate_outputs) > last_intermediate_count:
                 last_step_count = len(logs)
                 last_intermediate_count = len(intermediate_outputs)
                 
-                # Format progress message
-                latest_logs = logs[-min(3, len(logs)):]  # Show last 3 log entries
-                progress = f"🔄 **Running...** (Step {current_step})\n\n**Recent Activity:**\n" + "\n".join([log["formatted"] for log in latest_logs])
                 
                 # Format intermediate results with advanced parsing
                 intermediate_text = ""
@@ -425,19 +578,33 @@ def ask_biomni_stream(question: str, session_id: str = ""):
         # Wait for task to complete
         session_task.join()
         
+        # 清理会话工作空间
+        cleanup_session_workspace(original_dir)
+        
         # Handle results
         if 'error' in result_container:
             execution_log = "\n".join([entry["formatted"] for entry in session_agent.get_execution_logs()])
+            
+            # 从执行日志中提取保存的文件
+            saved_files = extract_saved_files_from_log(execution_log)
+            files_html = generate_file_links_html(saved_files, session_dir)
+            
             runtime_display = get_runtime_display()
-            error_message = f"❌ **Error:** {result_container['error']}\n\n<div style='margin: 20px 0; padding: 15px; background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; border-radius: 8px; text-align: center;'><h3 style='margin: 0;'>❌ 执行出错</h3><p style='margin: 5px 0 0 0;'>运行时间: {runtime_display}</p></div>"
+            error_message = f"❌ **Error:** {result_container['error']}\n\n"
+            if files_html:
+                error_message += files_html
+            error_message += f"\n\n<div style='margin: 20px 0; padding: 15px; background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; border-radius: 8px; text-align: center;'><h3 style='margin: 0;'>❌ 执行出错</h3><p style='margin: 5px 0 0 0;'>运行时间: {runtime_display}</p></div>"
             yield error_message, execution_log
             return
         
         if 'result' in result_container:
-            result = result_container['result']
             
             # Format the full execution log
             execution_log = "\n".join([entry["formatted"] for entry in session_agent.get_execution_logs()])
+            
+            # 从执行日志中提取保存的文件
+            saved_files = extract_saved_files_from_log(execution_log)
+            files_html = generate_file_links_html(saved_files, session_dir)
             
             # Format the final output with advanced parsing
             intermediate_text = ""
@@ -456,6 +623,10 @@ def ask_biomni_stream(question: str, session_id: str = ""):
             if not intermediate_outputs:
                 intermediate_text += "No intermediate results available."
             
+            # 添加生成的文件链接
+            if files_html:
+                intermediate_text += files_html
+            
             # 添加总运行时间
             runtime_display = get_runtime_display()
             intermediate_text += f"\n\n<div style='margin: 20px 0; padding: 15px; background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border-radius: 8px; text-align: center;'><h3 style='margin: 0;'>✅ 执行完成</h3><p style='margin: 5px 0 0 0;'>总运行时间: {runtime_display}</p></div>"
@@ -467,9 +638,26 @@ def ask_biomni_stream(question: str, session_id: str = ""):
             yield no_result_message, "\n".join([entry["formatted"] for entry in session_agent.get_execution_logs()])
             
     except Exception as e:
+        # 确保在异常时也清理工作空间
+        if 'original_dir' in locals():
+            cleanup_session_workspace(original_dir)
+            
         execution_log = "\n".join([entry["formatted"] for entry in session_agent.get_execution_logs()]) if session_agent else ""
+        
+        # 从执行日志中提取保存的文件（如果有）
+        saved_files = []
+        files_html = ""
+        if execution_log:
+            saved_files = extract_saved_files_from_log(execution_log)
+            if saved_files:
+                session_dir = get_session_results_dir(session_id)
+                files_html = generate_file_links_html(saved_files, session_dir)
+        
         runtime_display = get_runtime_display()
-        error_message = f"❌ Error processing question: {str(e)}\n\n<div style='margin: 20px 0; padding: 15px; background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; border-radius: 8px; text-align: center;'><h3 style='margin: 0;'>❌ 处理出错</h3><p style='margin: 5px 0 0 0;'>运行时间: {runtime_display}</p></div>"
+        error_message = f"❌ Error processing question: {str(e)}\n\n"
+        if files_html:
+            error_message += files_html
+        error_message += f"\n\n<div style='margin: 20px 0; padding: 15px; background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; border-radius: 8px; text-align: center;'><h3 style='margin: 0;'>❌ 处理出错</h3><p style='margin: 5px 0 0 0;'>运行时间: {runtime_display}</p></div>"
         yield error_message, execution_log
 
 def ask_biomni(question: str):
@@ -595,7 +783,6 @@ def cleanup_old_sessions():
         sorted_sessions = sorted(session_manager.sessions.items(), 
                                key=lambda x: x[1]['last_activity'], 
                                reverse=True)
-        sessions_to_keep = sorted_sessions[:5]
         sessions_to_remove = sorted_sessions[5:]
         
         for session_id, _ in sessions_to_remove:
