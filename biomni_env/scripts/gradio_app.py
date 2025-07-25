@@ -82,6 +82,12 @@ def setup_session_workspace(session_id: str, data_path: str) -> tuple:
     original_dir = os.getcwd()
     
     try:
+        # 先解析数据路径（在切换目录之前）
+        target_data_path = Path(data_path).resolve()
+        if not target_data_path.is_absolute():
+            target_data_path = Path(original_dir) / data_path
+            target_data_path = target_data_path.resolve()
+        
         # 创建会话目录
         Path(session_dir).mkdir(parents=True, exist_ok=True)
         
@@ -90,10 +96,10 @@ def setup_session_workspace(session_id: str, data_path: str) -> tuple:
         print(f"[LOG] 工作目录已更改为: {os.getcwd()}")
         
         # 链接数据目录
-        target_data_path = Path(data_path).resolve()
         local_data_path = Path("./data")
         
         print(f"[LOG] 开始设置数据目录链接...")
+        print(f"[LOG] 原始工作目录: {original_dir}")
         print(f"[LOG] 目标数据路径: {target_data_path}")
         print(f"[LOG] 本地数据路径: {local_data_path}")
         print(f"[LOG] 目标路径是否存在: {target_data_path.exists()}")
