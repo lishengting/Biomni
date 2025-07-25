@@ -118,9 +118,9 @@ def setup_session_workspace(session_id: str, data_path: str) -> tuple:
                     print(f"[LOG] 已创建数据目录连接: {local_data_path} -> {target_data_path}")
             except Exception as e:
                 # 如果符号链接失败，则复制数据
-                print(f"[LOG] 符号链接创建失败，尝试复制数据: {e}")
-                shutil.copytree(str(target_data_path), str(local_data_path), dirs_exist_ok=True)
-                print(f"[LOG] 已复制数据目录到: {local_data_path}")
+                print(f"[LOG] 符号链接创建失败: {e}")
+                # shutil.copytree(str(target_data_path), str(local_data_path), dirs_exist_ok=True)
+                # print(f"[LOG] 已复制数据目录到: {local_data_path}")
         elif local_data_path.exists():
             print(f"[LOG] 本地数据路径已存在，跳过链接创建")
         else:

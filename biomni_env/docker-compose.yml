@@ -13,7 +13,7 @@ services:
     volumes:
       - ../biomni:/opt/biomni/biomni
       - ../pyproject.toml:/opt/biomni/pyproject.toml
-      - ../biomni_data:/opt/biomni/data
+      - ../biomni_data:/opt/biomni/data:ro
       - ./scripts:/opt/biomni/scripts
       - ./notebooks:/opt/biomni/notebooks
       - ./downloads:/opt/biomni/downloads
@@ -48,7 +48,7 @@ services:
     volumes:
       - ../biomni:/opt/biomni/biomni
       - ../pyproject.toml:/opt/biomni/pyproject.toml
-      - ../biomni_data:/opt/biomni/data
+      - ../biomni_data:/opt/biomni/data:ro
       - ./scripts:/opt/biomni/scripts
       - ./notebooks:/opt/biomni/notebooks
       - ./results:/opt/biomni/results
@@ -86,7 +86,7 @@ services:
     volumes:
       - ../biomni:/opt/biomni/biomni
       - ../pyproject.toml:/opt/biomni/pyproject.toml
-      - ../biomni_data:/opt/biomni/data
+      - ../biomni_data:/opt/biomni/data:ro
       - ./scripts:/opt/biomni/scripts
       - ./notebooks:/opt/biomni/notebooks
       - ./downloads:/opt/biomni/downloads
@@ -122,7 +122,7 @@ services:
     volumes:
       - ../biomni:/opt/biomni/biomni
       - ../pyproject.toml:/opt/biomni/pyproject.toml
-      - ../biomni_data:/opt/biomni/data
+      - ../biomni_data:/opt/biomni/data:ro
       - ./scripts:/opt/biomni/scripts
       - biomni_cache:/home/biomni/.cache
       - ./notebooks:/opt/biomni/notebooks
@@ -165,7 +165,7 @@ services:
     volumes:
       - ../biomni:/opt/biomni/biomni
       - ../pyproject.toml:/opt/biomni/pyproject.toml
-      - ../biomni_data:/opt/biomni/data
+      - ../biomni_data:/opt/biomni/data:ro
       - ./scripts:/opt/biomni/scripts
       - ./biomni_results:/opt/biomni/results
       - biomni_cache:/home/biomni/.cache
@@ -211,7 +211,7 @@ services:
     volumes:
       - ../biomni:/opt/biomni/biomni
       - ../pyproject.toml:/opt/biomni/pyproject.toml
-      - ../biomni_data:/opt/biomni/data
+      - ../biomni_data:/opt/biomni/data:ro
       - ./scripts:/opt/biomni/scripts
       - ./notebooks:/opt/biomni/notebooks
       - biomni_cache:/home/biomni/.cache
@@ -250,7 +250,7 @@ services:
   #   container_name: biomni-setup.1
   #   volumes:
   #     - ../:/opt/biomni
-  #     - ../biomni_data:/opt/biomni/data
+  #     - ../biomni_data:/opt/biomni/data:ro
   #     - ./biomni_results:/opt/biomni/results
   #     - biomni_cache:/home/biomni/.cache
   #   environment:
