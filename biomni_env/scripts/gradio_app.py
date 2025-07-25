@@ -212,7 +212,7 @@ def generate_file_links_html(saved_files: list, session_dir: str) -> str:
                 print(f"[LOG] 成功编码图片: {file_name} (MIME类型: {mime_type})")
                 html_parts.append(f"""
                 <div style='margin: 15px 0; padding: 10px; border: 1px solid #ddd; border-radius: 5px;'>
-                    <h4>📸 {file_name}</h4>
+                    <h4 style='color: #333 !important;'>📸 {file_name}</h4>
                     <img src="data:{mime_type};base64,{img_base64}" style="max-width: 100%; height: auto; border: 1px solid #ccc; border-radius: 4px;" alt="{file_name}">
                     <br><br>
                     <a href="data:{mime_type};base64,{img_base64}" download="{file_name}" style="background: #28a745; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px;">⬇️ Download {file_name}</a>
@@ -224,7 +224,7 @@ def generate_file_links_html(saved_files: list, session_dir: str) -> str:
                 # 如果base64编码失败，使用简单的文件链接
                 html_parts.append(f"""
                 <div style='margin: 15px 0; padding: 10px; border: 1px solid #ddd; border-radius: 5px;'>
-                    <h4>📸 {file_name}</h4>
+                    <h4 style='color: #333 !important;'>📸 {file_name}</h4>
                     <p style='color: #666;'>图片文件: {file_name}</p>
                     <a href="file://{file_path}" download="{file_name}" style="background: #28a745; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px;">⬇️ Download {file_name}</a>
                     <span style='color: #666; margin-left: 10px;'>({file_size:,} bytes)</span>
@@ -278,8 +278,8 @@ def generate_file_links_html(saved_files: list, session_dir: str) -> str:
                 print(f"[LOG] 成功读取文本文件: {file_name} ({'截断' if truncated else '完整'})")
                 html_parts.append(f"""
                 <div style='margin: 15px 0; padding: 10px; border: 2px solid {border_color}; border-radius: 5px; background: {bg_color};'>
-                    <h4>{icon} {file_name} <span style='color: #666; font-size: 0.8em;'>({title})</span></h4>
-                    <div style='max-height: 400px; overflow-y: auto; background: white; padding: 15px; border-radius: 4px; border: 1px solid #ddd; font-family: monospace; font-size: 13px; line-height: 1.4; white-space: pre-wrap;'>{display_content}</div>
+                    <h4 style='color: #333 !important;'>{icon} {file_name} <span style='color: #666; font-size: 0.8em;'>({title})</span></h4>
+                    <div style='max-height: 400px; overflow-y: auto; background: white; padding: 15px; border-radius: 4px; border: 1px solid #ddd; font-family: monospace; font-size: 13px; line-height: 1.4; white-space: pre-wrap; color: #333 !important;'>{display_content}</div>
                     <br>
                     <a href="data:text/plain;charset=utf-8;base64,{__import__('base64').b64encode(content.encode('utf-8')).decode('utf-8')}" download="{file_name}" style="background: #28a745; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px;">⬇️ Download {file_name}</a>
                     <span style='color: #666; margin-left: 10px;'>({file_size:,} bytes)</span>
@@ -300,8 +300,8 @@ def generate_file_links_html(saved_files: list, session_dir: str) -> str:
                     print(f"[LOG] 使用GBK编码成功读取: {file_name}")
                     html_parts.append(f"""
                     <div style='margin: 15px 0; padding: 10px; border: 2px solid #6c757d; border-radius: 5px; background: #f8f9fa;'>
-                        <h4>📄 {file_name} <span style='color: #666; font-size: 0.8em;'>(文本文件 - GBK编码)</span></h4>
-                        <div style='max-height: 400px; overflow-y: auto; background: white; padding: 15px; border-radius: 4px; border: 1px solid #ddd; font-family: monospace; font-size: 13px; line-height: 1.4; white-space: pre-wrap;'>{display_content}</div>
+                        <h4 style='color: #333 !important;'>📄 {file_name} <span style='color: #666; font-size: 0.8em;'>(文本文件 - GBK编码)</span></h4>
+                        <div style='max-height: 400px; overflow-y: auto; background: white; padding: 15px; border-radius: 4px; border: 1px solid #ddd; font-family: monospace; font-size: 13px; line-height: 1.4; white-space: pre-wrap; color: #333 !important;'>{display_content}</div>
                         <br>
                         <a href="data:text/plain;charset=gbk;base64,{__import__('base64').b64encode(content.encode('gbk')).decode('utf-8')}" download="{file_name}" style="background: #28a745; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px;">⬇️ Download {file_name}</a>
                         <span style='color: #666; margin-left: 10px;'>({file_size:,} bytes)</span>
@@ -312,7 +312,7 @@ def generate_file_links_html(saved_files: list, session_dir: str) -> str:
                     # 作为二进制文件处理
                     html_parts.append(f"""
                     <div style='margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 5px;'>
-                        <strong>📄 {file_name} <span style='color: #666; font-size: 0.8em;'>(二进制文件)</span></strong>
+                        <strong style='color: #333 !important;'>📄 {file_name} <span style='color: #666; font-size: 0.8em;'>(二进制文件)</span></strong>
                         <br>
                         <p style='color: #666; margin: 5px 0;'>无法以文本格式显示，请下载查看</p>
                         <a href="file://{file_path}" download="{file_name}" style="background: #007bff; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px;">⬇️ Download {file_name}</a>
@@ -324,7 +324,7 @@ def generate_file_links_html(saved_files: list, session_dir: str) -> str:
                 # 作为普通文件处理
                 html_parts.append(f"""
                 <div style='margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 5px;'>
-                    <strong>📄 {file_name}</strong>
+                    <strong style='color: #333 !important;'>📄 {file_name}</strong>
                     <br>
                     <p style='color: #666; margin: 5px 0;'>文件读取失败，请下载查看</p>
                     <a href="file://{file_path}" download="{file_name}" style="background: #007bff; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px;">⬇️ Download {file_name}</a>
@@ -344,7 +344,7 @@ def generate_file_links_html(saved_files: list, session_dir: str) -> str:
                 print(f"[LOG] 成功编码PDF文件: {file_name}")
                 html_parts.append(f"""
                 <div style='margin: 15px 0; padding: 10px; border: 2px solid #dc3545; border-radius: 5px; background: #fff5f5;'>
-                    <h4>📕 {file_name} <span style='color: #666; font-size: 0.8em;'>(PDF文档)</span></h4>
+                    <h4 style='color: #333 !important;'>📕 {file_name} <span style='color: #666; font-size: 0.8em;'>(PDF文档)</span></h4>
                     <div style='border: 1px solid #ddd; border-radius: 4px; overflow: hidden;'>
                         <iframe src="data:application/pdf;base64,{pdf_base64}" width="100%" height="500px" style="border: none;">
                             <p>您的浏览器不支持PDF预览。请点击下载按钮下载文件。</p>
@@ -359,7 +359,7 @@ def generate_file_links_html(saved_files: list, session_dir: str) -> str:
                 print(f"[LOG] PDF文件处理失败: {file_name}, 错误: {e}")
                 html_parts.append(f"""
                 <div style='margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 5px;'>
-                    <strong>📕 {file_name} <span style='color: #666; font-size: 0.8em;'>(PDF文档)</span></strong>
+                    <strong style='color: #333 !important;'>📕 {file_name} <span style='color: #666; font-size: 0.8em;'>(PDF文档)</span></strong>
                     <br>
                     <p style='color: #666; margin: 5px 0;'>PDF预览失败，请下载查看</p>
                     <a href="file://{file_path}" download="{file_name}" style="background: #dc3545; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px;">⬇️ Download {file_name}</a>
@@ -401,7 +401,7 @@ def generate_file_links_html(saved_files: list, session_dir: str) -> str:
             
             html_parts.append(f"""
             <div style='margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 5px; border-left: 4px solid {color};'>
-                <strong>{icon} {file_name} <span style='color: #666; font-size: 0.8em;'>({file_type})</span></strong>
+                <strong style='color: #333 !important;'>{icon} {file_name} <span style='color: #666; font-size: 0.8em;'>({file_type})</span></strong>
                 <br>
                 <a href="file://{file_path}" download="{file_name}" style="background: {color}; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px; margin-top: 5px; display: inline-block;">⬇️ Download {file_name}</a>
                 <span style='color: #666; margin-left: 10px;'>({file_size:,} bytes)</span>
@@ -1157,13 +1157,8 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft(), css="""
         padding-left: 20px;
     }
     
-    /* 强制所有带背景色的div使用白色文字 */
+    /* 默认文字颜色 */
     .intermediate-results div {
-        color: white !important;
-    }
-    
-    /* 确保普通内容区域保持黑色文字 */
-    .intermediate-results div:not([style*="background"]) {
         color: #333 !important;
     }
     
@@ -1175,23 +1170,30 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft(), css="""
     .intermediate-results div[style*="background-color: #6f42c1"],
     .intermediate-results div[style*="background-color: red"],
     .intermediate-results div[style*="background-color: #ff0000"],
-    .intermediate-results div[style*="background-color: #dc3545"],
-    .intermediate-results div[style*="background-color: #6f42c1"],
     .intermediate-results div[style*="background-color: #007bff"] {
         color: white !important;
         font-weight: bold !important;
     }
     
-    /* 强制所有span和文本元素在有色背景上使用白色 */
-    .intermediate-results div[style*="background"] * {
-        color: white !important;
+    /* 文件显示区域保持黑色文字 */
+    .intermediate-results div[style*="border: 2px solid"],
+    .intermediate-results div[style*="border: 1px solid"],
+    .intermediate-results div[style*="background: #f8f9fa"],
+    .intermediate-results div[style*="background: #fff5f5"],
+    .intermediate-results div[style*="background: #f0f8ff"],
+    .intermediate-results div[style*="background: #fff8dc"],
+    .intermediate-results div[style*="background: #f0fff0"] {
+        color: #333 !important;
     }
     
-    /* 特别针对执行状态文字 */
-    .intermediate-results div:contains("Execution Stopped"),
-    .intermediate-results div:contains("Execution Steps"),
-    .intermediate-results div:contains("Detailed Steps") {
-        color: white !important;
+    .intermediate-results div[style*="border: 2px solid"] *,
+    .intermediate-results div[style*="border: 1px solid"] *,
+    .intermediate-results div[style*="background: #f8f9fa"] *,
+    .intermediate-results div[style*="background: #fff5f5"] *,
+    .intermediate-results div[style*="background: #f0f8ff"] *,
+    .intermediate-results div[style*="background: #fff8dc"] *,
+    .intermediate-results div[style*="background: #f0fff0"] * {
+        color: inherit !important;
     }
 """) as demo:
     gr.Markdown("# 🧬 Biomni AI Agent Demo")
