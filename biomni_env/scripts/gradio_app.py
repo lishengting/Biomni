@@ -143,6 +143,7 @@ def cleanup_session_workspace(original_dir: str):
 def scan_session_files(session_dir: str) -> list:
     """扫描会话目录中所有新生成的文件"""
     if not session_dir or not os.path.exists(session_dir):
+        print(f"[LOG] 会话目录不存在或为空: {session_dir}")
         return []
     
     session_path = Path(session_dir)
@@ -150,6 +151,9 @@ def scan_session_files(session_dir: str) -> list:
     
     # 扫描会话目录中的所有文件（排除特定目录）
     exclude_dirs = {'data', '.git', '__pycache__', '.ipynb_checkpoints'}
+    
+    print(f"[LOG] 开始扫描会话目录: {session_dir}")
+    print(f"[LOG] 当前工作目录: {os.getcwd()}")
     
     try:
         for file_path in session_path.rglob('*'):
@@ -163,17 +167,21 @@ def scan_session_files(session_dir: str) -> list:
                 # 获取相对路径用于显示
                 relative_path = file_path.relative_to(session_path)
                 generated_files.append(str(file_path))
+                print(f"[LOG] 发现文件: {file_path} (相对路径: {relative_path})")
                 
     except Exception as e:
         print(f"[LOG] 扫描文件时出错: {e}")
     
+    print(f"[LOG] 扫描完成，共发现 {len(generated_files)} 个文件")
     return generated_files
 
 def generate_file_links_html(saved_files: list, session_dir: str) -> str:
     """生成保存文件的HTML下载链接"""
     if not saved_files:
+        print(f"[LOG] 没有文件需要生成HTML链接")
         return ""
     
+    print(f"[LOG] 开始生成文件HTML链接，共 {len(saved_files)} 个文件")
     html_parts = []
     html_parts.append("<div style='margin: 20px 0; padding: 15px; background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); color: white; border-radius: 8px;'><h3 style='margin: 0 0 10px 0;'>📁 Generated Files</h3></div>")
     
@@ -181,32 +189,56 @@ def generate_file_links_html(saved_files: list, session_dir: str) -> str:
         file_name = os.path.basename(file_path)
         file_size = os.path.getsize(file_path)
         
+        print(f"[LOG] 处理文件: {file_name} ({file_size:,} bytes)")
+        
         # 检查是否为图片
         image_extensions = {'.png', '.jpg', '.jpeg', '.gif', '.bmp', '.svg', '.tiff', '.webp'}
         file_ext = os.path.splitext(file_path)[1].lower()
         
         if file_ext in image_extensions:
-            # 图片直接展示
-            html_parts.append(f"""
-            <div style='margin: 15px 0; padding: 10px; border: 1px solid #ddd; border-radius: 5px;'>
-                <h4>📸 {file_name}</h4>
-                <img src="file={file_path}" style="max-width: 100%; height: auto; border: 1px solid #ccc; border-radius: 4px;" alt="{file_name}">
-                <br><br>
-                <a href="file={file_path}" download="{file_name}" style="background: #28a745; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px;">⬇️ Download {file_name}</a>
-                <span style='color: #666; margin-left: 10px;'>({file_size:,} bytes)</span>
-            </div>
-            """)
+            print(f"[LOG] 检测到图片文件: {file_name} (扩展名: {file_ext})")
+            # 图片直接展示 - 使用base64编码
+            try:
+                import base64
+                with open(file_path, 'rb') as f:
+                    img_data = f.read()
+                    img_base64 = base64.b64encode(img_data).decode('utf-8')
+                    mime_type = 'image/png' if file_ext == '.png' else 'image/jpeg' if file_ext in ['.jpg', '.jpeg'] else 'image/gif' if file_ext == '.gif' else 'image/svg+xml' if file_ext == '.svg' else 'image/bmp' if file_ext == '.bmp' else 'image/tiff' if file_ext == '.tiff' else 'image/webp'
+                
+                print(f"[LOG] 成功编码图片: {file_name} (MIME类型: {mime_type})")
+                html_parts.append(f"""
+                <div style='margin: 15px 0; padding: 10px; border: 1px solid #ddd; border-radius: 5px;'>
+                    <h4>📸 {file_name}</h4>
+                    <img src="data:{mime_type};base64,{img_base64}" style="max-width: 100%; height: auto; border: 1px solid #ccc; border-radius: 4px;" alt="{file_name}">
+                    <br><br>
+                    <a href="data:{mime_type};base64,{img_base64}" download="{file_name}" style="background: #28a745; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px;">⬇️ Download {file_name}</a>
+                    <span style='color: #666; margin-left: 10px;'>({file_size:,} bytes)</span>
+                </div>
+                """)
+            except Exception as e:
+                print(f"[LOG] 图片编码失败: {file_name}, 错误: {e}")
+                # 如果base64编码失败，使用简单的文件链接
+                html_parts.append(f"""
+                <div style='margin: 15px 0; padding: 10px; border: 1px solid #ddd; border-radius: 5px;'>
+                    <h4>📸 {file_name}</h4>
+                    <p style='color: #666;'>图片文件: {file_name}</p>
+                    <a href="file://{file_path}" download="{file_name}" style="background: #28a745; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px;">⬇️ Download {file_name}</a>
+                    <span style='color: #666; margin-left: 10px;'>({file_size:,} bytes)</span>
+                </div>
+                """)
         else:
+            print(f"[LOG] 处理普通文件: {file_name} (扩展名: {file_ext})")
             # 其他文件提供下载链接
             html_parts.append(f"""
             <div style='margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 5px;'>
                 <strong>📄 {file_name}</strong>
                 <br>
-                <a href="file={file_path}" download="{file_name}" style="background: #007bff; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px;">⬇️ Download {file_name}</a>
+                <a href="file://{file_path}" download="{file_name}" style="background: #007bff; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px;">⬇️ Download {file_name}</a>
                 <span style='color: #666; margin-left: 10px;'>({file_size:,} bytes)</span>
             </div>
             """)
     
+    print(f"[LOG] HTML生成完成，共 {len(html_parts)-1} 个文件链接")
     return "".join(html_parts)
 
 # 兼容性变量（用于向后兼容）
