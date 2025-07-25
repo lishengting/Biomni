@@ -413,7 +413,7 @@ def stop_execution(session_id: str = ""):
     
     return "⏹️ No active session found.", "No session to stop."
 
-def ask_biomni_stream(question: str, session_id: str = ""):
+def ask_biomni_stream(question: str, session_id: str = "", data_path: str = "./data"):
     """Ask a question to the Biomni agent with streaming output."""
     global agent, agent_error, current_task, stop_flag
     
@@ -476,7 +476,10 @@ def ask_biomni_stream(question: str, session_id: str = ""):
         return
     
     # 设置会话工作空间
+    print(f"[LOG] 开始设置会话工作空间，session_id: {session_id}, data_path: {data_path}")
     session_dir, original_dir = setup_session_workspace(session_id, data_path)
+    print(f"[LOG] 会话工作空间设置完成，session_dir: {session_dir}, original_dir: {original_dir}")
+    print(f"[LOG] 当前工作目录: {os.getcwd()}")
     session_manager.update_session(session_id, stop_flag=False)
     
     try:
@@ -660,9 +663,9 @@ def ask_biomni_stream(question: str, session_id: str = ""):
         error_message += f"\n\n<div style='margin: 20px 0; padding: 15px; background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; border-radius: 8px; text-align: center;'><h3 style='margin: 0;'>❌ 处理出错</h3><p style='margin: 5px 0 0 0;'>运行时间: {runtime_display}</p></div>"
         yield error_message, execution_log
 
-def ask_biomni(question: str):
+def ask_biomni(question: str, data_path: str = "./data"):
     """Non-streaming version for backward compatibility."""
-    for result in ask_biomni_stream(question):
+    for result in ask_biomni_stream(question, data_path=data_path):
         final_result = result
     return final_result
 
@@ -1165,7 +1168,7 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft(), css="""
         return result[0], result[1], result[2], data_list
     
     # 开始执行时启用Stop按钮，禁用Ask按钮
-    def start_execution(question, session_id):
+    def start_execution(question, session_id, data_path):
         return gr.Button(interactive=False), gr.Button(interactive=True)
     
     # 停止执行时禁用Stop按钮，启用Ask按钮
@@ -1197,11 +1200,11 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft(), css="""
     # Streaming ask function
     ask_btn.click(
         fn=start_execution,
-        inputs=[question, session_id_state],
+        inputs=[question, session_id_state, data_path],
         outputs=[ask_btn, stop_btn]
     ).then(
         fn=ask_biomni_stream,
-        inputs=[question, session_id_state],
+        inputs=[question, session_id_state, data_path],
         outputs=[intermediate_results, execution_log]
     ).then(
         fn=stop_execution_state,
@@ -1211,7 +1214,7 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft(), css="""
     # Also allow Enter key to submit question
     question.submit(
         fn=ask_biomni_stream,
-        inputs=[question, session_id_state],
+        inputs=[question, session_id_state, data_path],
         outputs=[intermediate_results, execution_log]
     )
     
