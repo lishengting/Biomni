@@ -93,6 +93,12 @@ def setup_session_workspace(session_id: str, data_path: str) -> tuple:
         target_data_path = Path(data_path).resolve()
         local_data_path = Path("./data")
         
+        print(f"[LOG] 开始设置数据目录链接...")
+        print(f"[LOG] 目标数据路径: {target_data_path}")
+        print(f"[LOG] 本地数据路径: {local_data_path}")
+        print(f"[LOG] 目标路径是否存在: {target_data_path.exists()}")
+        print(f"[LOG] 本地路径是否存在: {local_data_path.exists()}")
+        
         if target_data_path.exists() and not local_data_path.exists():
             try:
                 # 创建符号链接（Unix/Linux）或目录连接（Windows）
@@ -103,11 +109,16 @@ def setup_session_workspace(session_id: str, data_path: str) -> tuple:
                     # Windows下使用目录连接
                     import subprocess
                     subprocess.run(['mklink', '/J', str(local_data_path), str(target_data_path)], shell=True)
+                    print(f"[LOG] 已创建数据目录连接: {local_data_path} -> {target_data_path}")
             except Exception as e:
                 # 如果符号链接失败，则复制数据
                 print(f"[LOG] 符号链接创建失败，尝试复制数据: {e}")
                 shutil.copytree(str(target_data_path), str(local_data_path), dirs_exist_ok=True)
                 print(f"[LOG] 已复制数据目录到: {local_data_path}")
+        elif local_data_path.exists():
+            print(f"[LOG] 本地数据路径已存在，跳过链接创建")
+        else:
+            print(f"[LOG] 目标数据路径不存在: {target_data_path}")
         
         return session_dir, original_dir
         
@@ -480,6 +491,18 @@ def ask_biomni_stream(question: str, session_id: str = "", data_path: str = "./d
     session_dir, original_dir = setup_session_workspace(session_id, data_path)
     print(f"[LOG] 会话工作空间设置完成，session_dir: {session_dir}, original_dir: {original_dir}")
     print(f"[LOG] 当前工作目录: {os.getcwd()}")
+    
+    # 验证数据目录链接
+    if os.path.exists("./data"):
+        print(f"[LOG] ✅ 数据目录链接成功: ./data -> {os.path.realpath('./data')}")
+        try:
+            data_contents = os.listdir('./data')
+            print(f"[LOG] 数据目录内容: {len(data_contents)} 个项目，前10个: {data_contents[:10]}...")
+        except Exception as e:
+            print(f"[LOG] 读取数据目录内容失败: {e}")
+    else:
+        print(f"[LOG] ❌ 数据目录 ./data 不存在，链接可能失败")
+    
     session_manager.update_session(session_id, stop_flag=False)
     
     try:
