@@ -1438,7 +1438,7 @@ window.downloadPDFBlobFromFile = downloadPDFBlobFromFile;
                     file_upload = gr.File(
                         label="Data Files",
                         file_count="multiple",
-                        file_types=[".csv", ".tsv", ".txt", ".json", ".xlsx", ".xls", ".parquet", ".h5", ".h5ad", ".fa", ".fq", ".fasta", ".fastq", ".bam", ".vcf", ".gff", ".pdf"],
+                        # file_types=[".csv", ".tsv", ".txt", ".json", ".xlsx", ".xls", ".parquet", ".h5", ".h5ad", ".fa", ".fq", ".fasta", ".fastq", ".bam", ".vcf", ".gff", ".pdf"],
                         height=70
                     )
                     # Description inputs for each file
