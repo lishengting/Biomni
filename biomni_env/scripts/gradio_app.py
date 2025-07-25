@@ -140,35 +140,34 @@ def cleanup_session_workspace(original_dir: str):
     except Exception as e:
         print(f"[LOG] 恢复工作目录失败: {e}")
 
-def extract_saved_files_from_log(log_content: str) -> list:
-    """从日志内容中提取保存的文件路径"""
-    # 匹配 "saved to 'filename'" 或 "saved to \"filename\"" 模式
-    patterns = [
-        r"saved to ['\"](.+?)['\"]",
-        r"saved to ([^'\"\s]+\.\w+)",
-        r"figure saved as ['\"](.+?)['\"]",
-        r"chart saved as ['\"](.+?)['\"]",
-        r"file saved as ['\"](.+?)['\"]",
-        r"output saved to ['\"](.+?)['\"]"
-    ]
+def scan_session_files(session_dir: str) -> list:
+    """扫描会话目录中所有新生成的文件"""
+    if not session_dir or not os.path.exists(session_dir):
+        return []
     
-    saved_files = []
-    for pattern in patterns:
-        matches = re.findall(pattern, log_content, re.IGNORECASE)
-        saved_files.extend(matches)
+    session_path = Path(session_dir)
+    generated_files = []
     
-    # 去重并过滤存在的文件
-    unique_files = []
-    seen = set()
-    for file_path in saved_files:
-        if file_path not in seen:
-            seen.add(file_path)
-            # 检查文件是否存在
-            full_path = os.path.abspath(file_path)
-            if os.path.exists(full_path):
-                unique_files.append(full_path)
+    # 扫描会话目录中的所有文件（排除特定目录）
+    exclude_dirs = {'data', '.git', '__pycache__', '.ipynb_checkpoints'}
     
-    return unique_files
+    try:
+        for file_path in session_path.rglob('*'):
+            if file_path.is_file():
+                # 排除数据目录和隐藏文件
+                if any(exclude in str(file_path).split(os.sep) for exclude in exclude_dirs):
+                    continue
+                if file_path.name.startswith('.'):
+                    continue
+                
+                # 获取相对路径用于显示
+                relative_path = file_path.relative_to(session_path)
+                generated_files.append(str(file_path))
+                
+    except Exception as e:
+        print(f"[LOG] 扫描文件时出错: {e}")
+    
+    return generated_files
 
 def generate_file_links_html(saved_files: list, session_dir: str) -> str:
     """生成保存文件的HTML下载链接"""
@@ -547,8 +546,8 @@ def ask_biomni_stream(question: str, session_id: str = "", data_path: str = "./d
                 # 获取当前的中间输出
                 intermediate_outputs = session_agent.get_intermediate_outputs()
                 
-                # 从执行日志中提取保存的文件
-                saved_files = extract_saved_files_from_log(execution_log)
+                # 扫描会话目录中的所有新生成文件
+                saved_files = scan_session_files(session_dir)
                 files_html = generate_file_links_html(saved_files, session_dir)
                 
                 # 构建停止消息，保留现有内容
@@ -617,8 +616,8 @@ def ask_biomni_stream(question: str, session_id: str = "", data_path: str = "./d
         if 'error' in result_container:
             execution_log = "\n".join([entry["formatted"] for entry in session_agent.get_execution_logs()])
             
-            # 从执行日志中提取保存的文件
-            saved_files = extract_saved_files_from_log(execution_log)
+            # 扫描会话目录中的所有新生成文件
+            saved_files = scan_session_files(session_dir)
             files_html = generate_file_links_html(saved_files, session_dir)
             
             runtime_display = get_runtime_display()
@@ -634,8 +633,8 @@ def ask_biomni_stream(question: str, session_id: str = "", data_path: str = "./d
             # Format the full execution log
             execution_log = "\n".join([entry["formatted"] for entry in session_agent.get_execution_logs()])
             
-            # 从执行日志中提取保存的文件
-            saved_files = extract_saved_files_from_log(execution_log)
+            # 扫描会话目录中的所有新生成文件
+            saved_files = scan_session_files(session_dir)
             files_html = generate_file_links_html(saved_files, session_dir)
             
             # Format the final output with advanced parsing
@@ -676,13 +675,12 @@ def ask_biomni_stream(question: str, session_id: str = "", data_path: str = "./d
             
         execution_log = "\n".join([entry["formatted"] for entry in session_agent.get_execution_logs()]) if session_agent else ""
         
-        # 从执行日志中提取保存的文件（如果有）
+        # 扫描会话目录中的所有新生成文件（如果有）
         saved_files = []
         files_html = ""
-        if execution_log:
-            saved_files = extract_saved_files_from_log(execution_log)
+        if session_dir:
+            saved_files = scan_session_files(session_dir)
             if saved_files:
-                session_dir = get_session_results_dir(session_id)
                 files_html = generate_file_links_html(saved_files, session_dir)
         
         runtime_display = get_runtime_display()
