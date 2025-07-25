@@ -191,9 +191,13 @@ def generate_file_links_html(saved_files: list, session_dir: str) -> str:
         
         print(f"[LOG] 处理文件: {file_name} ({file_size:,} bytes)")
         
-        # 检查是否为图片
-        image_extensions = {'.png', '.jpg', '.jpeg', '.gif', '.bmp', '.svg', '.tiff', '.webp'}
+        # 检查文件类型并决定展示方式
         file_ext = os.path.splitext(file_path)[1].lower()
+        
+        # 定义不同类型的文件扩展名
+        image_extensions = {'.png', '.jpg', '.jpeg', '.gif', '.bmp', '.svg', '.tiff', '.webp'}
+        text_extensions = {'.txt', '.log', '.md', '.py', '.js', '.html', '.css', '.json', '.xml', '.yaml', '.yml', '.csv', '.tsv'}
+        code_extensions = {'.py', '.js', '.html', '.css', '.json', '.xml', '.yaml', '.yml', '.sql', '.r', '.sh', '.bat'}
         
         if file_ext in image_extensions:
             print(f"[LOG] 检测到图片文件: {file_name} (扩展名: {file_ext})")
@@ -226,14 +230,180 @@ def generate_file_links_html(saved_files: list, session_dir: str) -> str:
                     <span style='color: #666; margin-left: 10px;'>({file_size:,} bytes)</span>
                 </div>
                 """)
+                
+        elif file_ext in text_extensions:
+            print(f"[LOG] 检测到文本文件: {file_name} (扩展名: {file_ext})")
+            # 文本文件直接展示内容
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                    # 限制显示长度，避免页面过长
+                    if len(content) > 5000:
+                        display_content = content[:5000] + "\n\n... (内容过长，已截断，请下载完整文件查看)"
+                        truncated = True
+                    else:
+                        display_content = content
+                        truncated = False
+                    
+                    # 转义HTML特殊字符
+                    display_content = display_content.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+                    
+                    # 根据文件类型选择图标和样式
+                    if file_ext in code_extensions:
+                        icon = "💻"
+                        title = "代码文件"
+                        bg_color = "#f8f9fa"
+                        border_color = "#007acc"
+                    elif file_ext in ['.md']:
+                        icon = "📝"
+                        title = "Markdown文件"
+                        bg_color = "#f0f8ff"
+                        border_color = "#4169e1"
+                    elif file_ext in ['.json']:
+                        icon = "🔧"
+                        title = "JSON文件"
+                        bg_color = "#fff8dc"
+                        border_color = "#ffa500"
+                    elif file_ext in ['.csv', '.tsv']:
+                        icon = "📊"
+                        title = "数据文件"
+                        bg_color = "#f0fff0"
+                        border_color = "#32cd32"
+                    else:
+                        icon = "📄"
+                        title = "文本文件"
+                        bg_color = "#f8f9fa"
+                        border_color = "#6c757d"
+                
+                print(f"[LOG] 成功读取文本文件: {file_name} ({'截断' if truncated else '完整'})")
+                html_parts.append(f"""
+                <div style='margin: 15px 0; padding: 10px; border: 2px solid {border_color}; border-radius: 5px; background: {bg_color};'>
+                    <h4>{icon} {file_name} <span style='color: #666; font-size: 0.8em;'>({title})</span></h4>
+                    <div style='max-height: 400px; overflow-y: auto; background: white; padding: 15px; border-radius: 4px; border: 1px solid #ddd; font-family: monospace; font-size: 13px; line-height: 1.4; white-space: pre-wrap;'>{display_content}</div>
+                    <br>
+                    <a href="data:text/plain;charset=utf-8;base64,{__import__('base64').b64encode(content.encode('utf-8')).decode('utf-8')}" download="{file_name}" style="background: #28a745; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px;">⬇️ Download {file_name}</a>
+                    <span style='color: #666; margin-left: 10px;'>({file_size:,} bytes)</span>
+                </div>
+                """)
+            except UnicodeDecodeError:
+                print(f"[LOG] 文本文件编码错误: {file_name}, 尝试其他编码")
+                # 尝试其他编码
+                try:
+                    with open(file_path, 'r', encoding='gbk') as f:
+                        content = f.read()
+                        if len(content) > 5000:
+                            display_content = content[:5000] + "\n\n... (内容过长，已截断，请下载完整文件查看)"
+                        else:
+                            display_content = content
+                        display_content = display_content.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+                        
+                    print(f"[LOG] 使用GBK编码成功读取: {file_name}")
+                    html_parts.append(f"""
+                    <div style='margin: 15px 0; padding: 10px; border: 2px solid #6c757d; border-radius: 5px; background: #f8f9fa;'>
+                        <h4>📄 {file_name} <span style='color: #666; font-size: 0.8em;'>(文本文件 - GBK编码)</span></h4>
+                        <div style='max-height: 400px; overflow-y: auto; background: white; padding: 15px; border-radius: 4px; border: 1px solid #ddd; font-family: monospace; font-size: 13px; line-height: 1.4; white-space: pre-wrap;'>{display_content}</div>
+                        <br>
+                        <a href="data:text/plain;charset=gbk;base64,{__import__('base64').b64encode(content.encode('gbk')).decode('utf-8')}" download="{file_name}" style="background: #28a745; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px;">⬇️ Download {file_name}</a>
+                        <span style='color: #666; margin-left: 10px;'>({file_size:,} bytes)</span>
+                    </div>
+                    """)
+                except Exception as e:
+                    print(f"[LOG] 文本文件读取失败: {file_name}, 错误: {e}")
+                    # 作为二进制文件处理
+                    html_parts.append(f"""
+                    <div style='margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 5px;'>
+                        <strong>📄 {file_name} <span style='color: #666; font-size: 0.8em;'>(二进制文件)</span></strong>
+                        <br>
+                        <p style='color: #666; margin: 5px 0;'>无法以文本格式显示，请下载查看</p>
+                        <a href="file://{file_path}" download="{file_name}" style="background: #007bff; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px;">⬇️ Download {file_name}</a>
+                        <span style='color: #666; margin-left: 10px;'>({file_size:,} bytes)</span>
+                    </div>
+                    """)
+            except Exception as e:
+                print(f"[LOG] 文本文件处理失败: {file_name}, 错误: {e}")
+                # 作为普通文件处理
+                html_parts.append(f"""
+                <div style='margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 5px;'>
+                    <strong>📄 {file_name}</strong>
+                    <br>
+                    <p style='color: #666; margin: 5px 0;'>文件读取失败，请下载查看</p>
+                    <a href="file://{file_path}" download="{file_name}" style="background: #007bff; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px;">⬇️ Download {file_name}</a>
+                    <span style='color: #666; margin-left: 10px;'>({file_size:,} bytes)</span>
+                </div>
+                """)
+                
+        elif file_ext == '.pdf':
+            print(f"[LOG] 检测到PDF文件: {file_name}")
+            # PDF文件使用iframe展示
+            try:
+                import base64
+                with open(file_path, 'rb') as f:
+                    pdf_data = f.read()
+                    pdf_base64 = base64.b64encode(pdf_data).decode('utf-8')
+                
+                print(f"[LOG] 成功编码PDF文件: {file_name}")
+                html_parts.append(f"""
+                <div style='margin: 15px 0; padding: 10px; border: 2px solid #dc3545; border-radius: 5px; background: #fff5f5;'>
+                    <h4>📕 {file_name} <span style='color: #666; font-size: 0.8em;'>(PDF文档)</span></h4>
+                    <div style='border: 1px solid #ddd; border-radius: 4px; overflow: hidden;'>
+                        <iframe src="data:application/pdf;base64,{pdf_base64}" width="100%" height="500px" style="border: none;">
+                            <p>您的浏览器不支持PDF预览。请点击下载按钮下载文件。</p>
+                        </iframe>
+                    </div>
+                    <br>
+                    <a href="data:application/pdf;base64,{pdf_base64}" download="{file_name}" style="background: #dc3545; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px;">⬇️ Download {file_name}</a>
+                    <span style='color: #666; margin-left: 10px;'>({file_size:,} bytes)</span>
+                </div>
+                """)
+            except Exception as e:
+                print(f"[LOG] PDF文件处理失败: {file_name}, 错误: {e}")
+                html_parts.append(f"""
+                <div style='margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 5px;'>
+                    <strong>📕 {file_name} <span style='color: #666; font-size: 0.8em;'>(PDF文档)</span></strong>
+                    <br>
+                    <p style='color: #666; margin: 5px 0;'>PDF预览失败，请下载查看</p>
+                    <a href="file://{file_path}" download="{file_name}" style="background: #dc3545; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px;">⬇️ Download {file_name}</a>
+                    <span style='color: #666; margin-left: 10px;'>({file_size:,} bytes)</span>
+                </div>
+                """)
+                
         else:
             print(f"[LOG] 处理普通文件: {file_name} (扩展名: {file_ext})")
-            # 其他文件提供下载链接
+            # 其他文件类型，根据扩展名显示不同图标
+            if file_ext in ['.xlsx', '.xls']:
+                icon = "📊"
+                file_type = "Excel文件"
+                color = "#28a745"
+            elif file_ext in ['.docx', '.doc']:
+                icon = "📝"
+                file_type = "Word文档"
+                color = "#007bff"
+            elif file_ext in ['.pptx', '.ppt']:
+                icon = "📋"
+                file_type = "PowerPoint文件"
+                color = "#fd7e14"
+            elif file_ext in ['.zip', '.rar', '.7z', '.tar', '.gz']:
+                icon = "🗜️"
+                file_type = "压缩文件"
+                color = "#6f42c1"
+            elif file_ext in ['.mp4', '.avi', '.mov', '.mkv']:
+                icon = "🎬"
+                file_type = "视频文件"
+                color = "#e83e8c"
+            elif file_ext in ['.mp3', '.wav', '.flac', '.aac']:
+                icon = "🎵"
+                file_type = "音频文件"
+                color = "#20c997"
+            else:
+                icon = "📄"
+                file_type = "未知类型"
+                color = "#6c757d"
+            
             html_parts.append(f"""
-            <div style='margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 5px;'>
-                <strong>📄 {file_name}</strong>
+            <div style='margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 5px; border-left: 4px solid {color};'>
+                <strong>{icon} {file_name} <span style='color: #666; font-size: 0.8em;'>({file_type})</span></strong>
                 <br>
-                <a href="file://{file_path}" download="{file_name}" style="background: #007bff; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px;">⬇️ Download {file_name}</a>
+                <a href="file://{file_path}" download="{file_name}" style="background: {color}; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px; margin-top: 5px; display: inline-block;">⬇️ Download {file_name}</a>
                 <span style='color: #666; margin-left: 10px;'>({file_size:,} bytes)</span>
             </div>
             """)
