@@ -1388,6 +1388,9 @@ window.downloadPDFBlobFromFile = downloadPDFBlobFromFile;
                 lines=3
             )
             
+            # Session ID state - 用于在组件间传递会话ID
+            session_id_state = gr.State("")
+            
             config_info = gr.Textbox(
                 label="Current Configuration",
                 interactive=False,
@@ -1478,7 +1481,7 @@ window.downloadPDFBlobFromFile = downloadPDFBlobFromFile;
     
     # Event handlers
     # 创建agent时分配新的会话ID
-    def create_agent_with_new_session(llm_model, source, base_url, api_key, data_path, verbose, session_id):
+    def create_agent_with_new_session(llm_model, source, base_url, api_key, data_path, verbose):
         """创建agent时分配新的会话ID"""
         # 总是生成新的会话ID
         new_session_id = get_timestamp_session_id()
@@ -1518,9 +1521,9 @@ window.downloadPDFBlobFromFile = downloadPDFBlobFromFile;
         except Exception as e:
             return f"❌ Error listing data: {str(e)}"
     
-    def create_agent_and_update_data(llm_model, source, base_url, api_key, data_path, verbose, session_id):
+    def create_agent_and_update_data(llm_model, source, base_url, api_key, data_path, verbose):
         """Create agent and update data list."""
-        result = create_agent_with_new_session(llm_model, source, base_url, api_key, data_path, verbose, session_id)
+        result = create_agent_with_new_session(llm_model, source, base_url, api_key, data_path, verbose)
         data_list = get_current_data_list(result[2])  # result[2] is the new session_id
         return result[0], result[1], result[2], data_list
     
@@ -1534,7 +1537,7 @@ window.downloadPDFBlobFromFile = downloadPDFBlobFromFile;
     
     create_btn.click(
         fn=create_agent_and_update_data,
-        inputs=[llm_model, source, base_url, api_key, data_path, verbose, session_id_state],
+        inputs=[llm_model, source, base_url, api_key, data_path, verbose],
         outputs=[status_text, config_info, session_id_state, data_list_display]
     )
     
