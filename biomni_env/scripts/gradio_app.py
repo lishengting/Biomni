@@ -334,7 +334,7 @@ def generate_file_links_html(saved_files: list, session_dir: str) -> str:
                 
         elif file_ext == '.pdf':
             print(f"[LOG] 检测到PDF文件: {file_name}")
-            # PDF文件使用iframe展示
+            # PDF文件使用iframe展示和Blob下载
             try:
                 import base64
                 with open(file_path, 'rb') as f:
@@ -351,7 +351,10 @@ def generate_file_links_html(saved_files: list, session_dir: str) -> str:
                         </iframe>
                     </div>
                     <br>
-                    <a href="data:application/pdf;base64,{pdf_base64}" download="{file_name}" style="background: #dc3545; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px;">⬇️ Download {file_name}</a>
+                    <button onclick="downloadPDFBlob('{pdf_base64}', '{file_name}')" 
+                            style="background: #dc3545; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px; border: none; cursor: pointer;">
+                        ⬇️ Download {file_name}
+                    </button>
                     <span style='color: #666; margin-left: 10px;'>({file_size:,} bytes)</span>
                 </div>
                 """)
@@ -362,7 +365,10 @@ def generate_file_links_html(saved_files: list, session_dir: str) -> str:
                     <strong style='color: #333 !important;'>📕 {file_name} <span style='color: #666; font-size: 0.8em;'>(PDF文档)</span></strong>
                     <br>
                     <p style='color: #666; margin: 5px 0;'>PDF预览失败，请下载查看</p>
-                    <a href="file://{file_path}" download="{file_name}" style="background: #dc3545; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px;">⬇️ Download {file_name}</a>
+                    <button onclick="downloadPDFBlobFromFile('{file_path}', '{file_name}')" 
+                            style="background: #dc3545; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px; border: none; cursor: pointer;">
+                        ⬇️ Download {file_name}
+                    </button>
                     <span style='color: #666; margin-left: 10px;'>({file_size:,} bytes)</span>
                 </div>
                 """)
@@ -1033,7 +1039,113 @@ def print_session_status():
     print(f"[LOG] ===================")
 
 # Create the Gradio interface
-with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft(), css="""
+with gr.Blocks(title="🧬 Biomni AI Agent Demo", theme=gr.themes.Soft(), head="""
+<script>
+// 将base64转换为Blob的函数
+function base64ToBlob(base64, type = "application/pdf") {
+    const binStr = atob(base64);
+    const len = binStr.length;
+    const arr = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+        arr[i] = binStr.charCodeAt(i);
+    }
+    return new Blob([arr], { type: type });
+}
+
+// 使用Blob下载PDF的函数
+function downloadPDFBlob(base64Data, filename) {
+    try {
+        const blob = base64ToBlob(base64Data, 'application/pdf');
+        const url = URL.createObjectURL(blob);
+        
+        // 创建临时下载链接
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.style.display = 'none';
+        
+        // 添加到文档并触发点击
+        document.body.appendChild(a);
+        a.click();
+        
+        // 清理
+        setTimeout(() => {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }, 100);
+        
+        console.log('PDF downloaded via Blob:', filename);
+    } catch (error) {
+        console.error('Blob下载失败:', error);
+        // 降级到原始方法
+        fallbackDownload(base64Data, filename);
+    }
+}
+
+// 从文件路径下载PDF的函数
+function downloadPDFBlobFromFile(filePath, filename) {
+    try {
+        console.log('尝试下载文件:', filePath);
+        // 由于安全限制，直接从文件系统读取可能不可行
+        // 使用fetch获取文件内容，然后创建Blob
+        fetch(filePath)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.blob();
+            })
+            .then(blob => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                a.style.display = 'none';
+                document.body.appendChild(a);
+                a.click();
+                
+                setTimeout(() => {
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                }, 100);
+            })
+            .catch(error => {
+                console.error('文件下载失败:', error);
+                fallbackDownloadFromFile(filePath, filename);
+            });
+    } catch (error) {
+        console.error('Blob下载失败:', error);
+        fallbackDownloadFromFile(filePath, filename);
+    }
+}
+
+// 降级下载方法
+function fallbackDownload(base64Data, filename) {
+    const link = document.createElement('a');
+    link.href = 'data:application/pdf;base64,' + base64Data;
+    link.download = filename;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+function fallbackDownloadFromFile(filePath, filename) {
+    console.log('使用降级方法下载:', filePath);
+    const link = document.createElement('a');
+    link.href = 'file://' + filePath;
+    link.download = filename;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// 确保函数在全局作用域可用
+window.downloadPDFBlob = downloadPDFBlob;
+window.downloadPDFBlobFromFile = downloadPDFBlobFromFile;
+</script>
+""", css=""""
     .intermediate-results {
         max-height: 800px;
         overflow-y: auto;
@@ -1195,12 +1307,26 @@ with gr.Blocks(title="Biomni AI Agent Demo", theme=gr.themes.Soft(), css="""
     .intermediate-results div[style*="background: #f0fff0"] * {
         color: inherit !important;
     }
+    
+    /* 添加下载按钮样式 */
+    .pdf-download-btn {
+        background: #dc3545;
+        color: white;
+        padding: 8px 15px;
+        text-decoration: none;
+        border-radius: 4px;
+        font-size: 14px;
+        border: none;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+    
+    .pdf-download-btn:hover {
+        background: #c82333;
+    }
 """) as demo:
     gr.Markdown("# 🧬 Biomni AI Agent Demo")
     gr.Markdown("Configure your LLM settings and ask Biomni to run biomedical tasks!")
-    
-    # 隐藏的会话ID组件 - 初始为空
-    session_id_state = gr.State(value="")
     
     with gr.Row():
         with gr.Column(scale=1):
