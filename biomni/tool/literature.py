@@ -166,13 +166,27 @@ def query_arxiv(query: str, max_papers: int = 10) -> str:
     """
     import arxiv
 
+    logger.debug(f"[进入] query_arxiv, query={query}, max_papers={max_papers}")
     try:
         client = arxiv.Client()
         search = arxiv.Search(query=query, max_results=max_papers, sort_by=arxiv.SortCriterion.Relevance)
         results = "\n\n".join([f"Title: {paper.title}\nSummary: {paper.summary}" for paper in client.results(search)])
-        return results if results else "No papers found on arXiv."
+        if results:
+            logger.debug(f"[成功] query_arxiv, 返回结果数: {len(results.split('Title:'))-1}")
+            return results
+        else:
+            logger.debug("[失败] query_arxiv, 未找到论文")
+            return "No papers found on arXiv."
     except Exception as e:
+        logger.error(f"[异常] query_arxiv: {e}")
         return f"Error querying arXiv: {e}"
+#     try:
+#         client = arxiv.Client()  # [已注释，原因：增加详细日志]
+#         search = arxiv.Search(query=query, max_results=max_papers, sort_by=arxiv.SortCriterion.Relevance)
+#         results = "\n\n".join([f"Title: {paper.title}\nSummary: {paper.summary}" for paper in client.results(search)])
+#         return results if results else "No papers found on arXiv."
+#     except Exception as e:
+#         return f"Error querying arXiv: {e}"  # [已注释，原因：增加详细日志]
 
 
 def query_scholar(query: str) -> str:
@@ -189,15 +203,28 @@ def query_scholar(query: str) -> str:
     """
     from scholarly import scholarly
 
+    logger.debug(f"[进入] query_scholar, query={query}")
     try:
         search_query = scholarly.search_pubs(query)
         result = next(search_query, None)
         if result:
+            logger.debug(f"[成功] query_scholar, 返回结果: {result['bib'].get('title', '')}")
             return f"Title: {result['bib']['title']}\nYear: {result['bib']['pub_year']}\nVenue: {result['bib']['venue']}\nAbstract: {result['bib']['abstract']}"
         else:
+            logger.debug("[失败] query_scholar, 未找到结果")
             return "No results found on Google Scholar."
     except Exception as e:
+        logger.error(f"[异常] query_scholar: {e}")
         return f"Error querying Google Scholar: {e}"
+#     try:
+#         search_query = scholarly.search_pubs(query)  # [已注释，原因：增加详细日志]
+#         result = next(search_query, None)
+#         if result:
+#             return f"Title: {result['bib']['title']}\nYear: {result['bib']['pub_year']}\nVenue: {result['bib']['venue']}\nAbstract: {result['bib']['abstract']}"
+#         else:
+#             return "No results found on Google Scholar."
+#     except Exception as e:
+#         return f"Error querying Google Scholar: {e}"  # [已注释，原因：增加详细日志]
 
 
 def query_pubmed(query: str, max_papers: int = 10, max_retries: int = 3) -> str:
@@ -216,6 +243,7 @@ def query_pubmed(query: str, max_papers: int = 10, max_retries: int = 3) -> str:
     """
     from pymed import PubMed
 
+    logger.debug(f"[进入] query_pubmed, query={query}, max_papers={max_papers}, max_retries={max_retries}")
     try:
         pubmed = PubMed(tool="MyTool", email="your-email@example.com")  # Update with a valid email address
 
@@ -226,20 +254,41 @@ def query_pubmed(query: str, max_papers: int = 10, max_retries: int = 3) -> str:
         retries = 0
         while not papers and retries < max_retries:
             retries += 1
-            # Simplify query with each retry by removing the last word
             simplified_query = " ".join(query.split()[:-retries]) if len(query.split()) > retries else query
-            time.sleep(1)  # Add delay between requests
+            time.sleep(1)
+            logger.debug(f"[重试] query_pubmed, simplified_query={simplified_query}, retries={retries}")
             papers = list(pubmed.query(simplified_query, max_results=max_papers))
 
         if papers:
+            logger.debug(f"[成功] query_pubmed, 返回结果数: {len(papers)}")
             results = "\n\n".join(
                 [f"Title: {paper.title}\nAbstract: {paper.abstract}\nJournal: {paper.journal}" for paper in papers]
             )
             return results
         else:
+            logger.debug("[失败] query_pubmed, 多次尝试后未找到论文")
             return "No papers found on PubMed after multiple query attempts."
     except Exception as e:
+        logger.error(f"[异常] query_pubmed: {e}")
         return f"Error querying PubMed: {e}"
+#     try:
+#         pubmed = PubMed(tool="MyTool", email="your-email@example.com")  # [已注释，原因：增加详细日志]
+#         papers = list(pubmed.query(query, max_results=max_papers))
+#         retries = 0
+#         while not papers and retries < max_retries:
+#             retries += 1
+#             simplified_query = " ".join(query.split()[:-retries]) if len(query.split()) > retries else query
+#             time.sleep(1)
+#             papers = list(pubmed.query(simplified_query, max_results=max_papers))
+#         if papers:
+#             results = "\n\n".join(
+#                 [f"Title: {paper.title}\nAbstract: {paper.abstract}\nJournal: {paper.journal}" for paper in papers]
+#             )
+#             return results
+#         else:
+#             return "No papers found on PubMed after multiple query attempts."
+#     except Exception as e:
+#         return f"Error querying PubMed: {e}"  # [已注释，原因：增加详细日志]
 
 
 def search_google(query: str, num_results: int = 3, language: str = "en") -> list[dict]:
@@ -256,6 +305,7 @@ def search_google(query: str, num_results: int = 3, language: str = "en") -> lis
 
     """
     try:
+        logger.debug(f"[进入] search_google, query={query}, num_results={num_results}, language={language}")
         results_string = ""
         search_query = f"{query}"
 
@@ -265,10 +315,21 @@ def search_google(query: str, num_results: int = 3, language: str = "en") -> lis
             description = res.description
 
             results_string += f"Title: {title}\nURL: {url}\nDescription: {description}\n\n"
-
+        logger.debug(f"[成功] search_google, 返回结果数: {results_string.count('Title:')}")
     except Exception as e:
-        print(f"Error performing search: {str(e)}")
+        logger.error(f"[异常] search_google: {str(e)}")
     return results_string
+#     try:
+#         results_string = ""  # [已注释，原因：增加详细日志]
+#         search_query = f"{query}"
+#         for res in search(search_query, num_results=num_results, lang=language, advanced=True):
+#             title = res.title
+#             url = res.url
+#             description = res.description
+#             results_string += f"Title: {title}\nURL: {url}\nDescription: {description}\n\n"
+#     except Exception as e:
+#         print(f"Error performing search: {str(e)}")  # [已注释，原因：增加详细日志]
+#     return results_string
 
 
 def extract_url_content(url: str) -> str:
