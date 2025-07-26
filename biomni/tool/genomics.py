@@ -13,7 +13,7 @@ from biomni.llm import get_llm
 logger = logging.getLogger(__name__)
 
 # Global debug flag
-DEBUG_MODE = False
+DEBUG_MODE = True
 
 def set_debug_mode(debug: bool):
     """Set global debug mode for logging."""
