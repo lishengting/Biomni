@@ -1465,6 +1465,11 @@ window.downloadPDFBlobFromFile = downloadPDFBlobFromFile;
                     placeholder="Detailed execution logs will appear here..."
                 )
             
+            
+            # 添加明显的间隔分隔线
+            gr.Markdown("---")
+            gr.Markdown("<div style='height: 20px;'></div>")  # 额外的垂直间距
+
             # Examples
             gr.Markdown("### 📝 Example Questions:")
             gr.Examples(
@@ -1476,10 +1481,6 @@ window.downloadPDFBlobFromFile = downloadPDFBlobFromFile;
                 ],
                 inputs=question
             )
-            
-            # 添加明显的间隔分隔线
-            gr.Markdown("---")
-            gr.Markdown("<div style='height: 20px;'></div>")  # 额外的垂直间距
     
 
     
