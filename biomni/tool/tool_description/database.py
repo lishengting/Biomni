@@ -19,7 +19,7 @@ description = [
                 "type": "str",
             },
             {
-                "default": "claude-3-5-haiku-20241022",
+                "default": None,  # "claude-3-5-haiku-20241022"
                 "description": "Anthropic model to use for natural language processing",
                 "name": "model",
                 "type": "str",
@@ -113,7 +113,7 @@ description = [
                 "type": "str",
             },
             {
-                "default": "claude-3-5-haiku-20241022",
+                "default": None,  # "claude-3-5-haiku-20241022"
                 "description": "Anthropic model to use",
                 "name": "model",
                 "type": "str",
@@ -151,7 +151,7 @@ description = [
                 "type": "str",
             },
             {
-                "default": "claude-3-5-haiku-20241022",
+                "default": None,  # "claude-3-5-haiku-20241022"
                 "description": "Anthropic model to use for natural language processing",
                 "name": "model",
                 "type": "str",
@@ -221,7 +221,7 @@ description = [
                 "type": "str",
             },
             {
-                "default": "claude-3-5-haiku-20241022",
+                "default": None,  # "claude-3-5-haiku-20241022"
                 "description": "Anthropic model to use",
                 "name": "model",
                 "type": "str",
@@ -261,7 +261,7 @@ description = [
                 "type": "str",
             },
             {
-                "default": "claude-3-5-haiku-20241022",
+                "default": None,  # "claude-3-5-haiku-20241022"
                 "description": "Anthropic model to use for natural language processing",
                 "name": "model",
                 "type": "str",
@@ -317,7 +317,7 @@ description = [
                 "type": "str",
             },
             {
-                "default": "claude-3-5-haiku-20241022",
+                "default": None,  # "claude-3-5-haiku-20241022"
                 "description": "Anthropic model to use for natural language processing",
                 "name": "model",
                 "type": "str",
@@ -355,7 +355,7 @@ description = [
                 "type": "str",
             },
             {
-                "default": "claude-3-5-haiku-20241022",
+                "default": None,  # "claude-3-5-haiku-20241022"
                 "description": "Anthropic model to use for natural language processing",
                 "name": "model",
                 "type": "str",
@@ -394,7 +394,7 @@ description = [
                 "type": "str",
             },
             {
-                "default": "claude-3-5-haiku-20241022",
+                "default": None,  # "claude-3-5-haiku-20241022"
                 "description": "Anthropic model to use for natural language processing",
                 "name": "model",
                 "type": "str",
@@ -433,7 +433,7 @@ description = [
                 "type": "str",
             },
             {
-                "default": "claude-3-5-haiku-20241022",
+                "default": None,  # "claude-3-5-haiku-20241022"
                 "description": "Anthropic model to use for natural language processing",
                 "name": "model",
                 "type": "str",
@@ -472,7 +472,7 @@ description = [
                 "type": "str",
             },
             {
-                "default": "claude-3-5-haiku-20241022",
+                "default": None,  # "claude-3-5-haiku-20241022"
                 "description": "Anthropic model to use for natural language processing",
                 "name": "model",
                 "type": "str",
@@ -510,7 +510,7 @@ description = [
                 "type": "str",
             },
             {
-                "default": "claude-3-5-haiku-20241022",
+                "default": None,  # "claude-3-5-haiku-20241022"
                 "description": "Anthropic model to use",
                 "name": "model",
                 "type": "str",
@@ -548,7 +548,7 @@ description = [
                 "type": "str",
             },
             {
-                "default": "claude-3-5-haiku-20241022",
+                "default": None,  # "claude-3-5-haiku-20241022"
                 "description": "Anthropic model to use for natural language processing",
                 "name": "model",
                 "type": "str",
@@ -592,7 +592,7 @@ description = [
                 "type": "str",
             },
             {
-                "default": "claude-3-5-haiku-20241022",
+                "default": None,  # "claude-3-5-haiku-20241022"
                 "description": "Anthropic model to use for natural language processing",
                 "name": "model",
                 "type": "str",
@@ -636,7 +636,7 @@ description = [
                 "type": "str",
             },
             {
-                "default": "claude-3-5-haiku-20241022",
+                "default": None,  # "claude-3-5-haiku-20241022"
                 "description": "Anthropic model to use for natural language processing",
                 "name": "model",
                 "type": "str",
@@ -674,7 +674,7 @@ description = [
                 "type": "str",
             },
             {
-                "default": "claude-3-5-haiku-20241022",
+                "default": None,  # "claude-3-5-haiku-20241022"
                 "description": "Anthropic model to use for natural language processing",
                 "name": "model",
                 "type": "str",
@@ -718,7 +718,7 @@ description = [
                 "type": "str",
             },
             {
-                "default": "claude-3-5-haiku-20241022",
+                "default": None,  # "claude-3-5-haiku-20241022"
                 "description": "Anthropic model to use for natural language processing",
                 "name": "model",
                 "type": "str",
@@ -762,7 +762,7 @@ description = [
                 "type": "str",
             },
             {
-                "default": "claude-3-5-haiku-20241022",
+                "default": None,  # "claude-3-5-haiku-20241022"
                 "description": "Anthropic model to use for natural language processing",
                 "name": "model",
                 "type": "str",
@@ -801,7 +801,7 @@ description = [
                 "type": "str",
             },
             {
-                "default": "claude-3-5-haiku-20241022",
+                "default": None,  # "claude-3-5-haiku-20241022"
                 "description": "Anthropic model to use for natural language processing",
                 "name": "model",
                 "type": "str",
@@ -839,7 +839,7 @@ description = [
                 "type": "str",
             },
             {
-                "default": "claude-3-5-haiku-20241022",
+                "default": None,  # "claude-3-5-haiku-20241022"
                 "description": "Anthropic model to use for natural language processing",
                 "name": "model",
                 "type": "str",
@@ -918,7 +918,7 @@ description = [
                 "type": "str",
             },
             {
-                "default": "claude-3-5-haiku-20241022",
+                "default": None,  # "claude-3-5-haiku-20241022"
                 "description": "Anthropic model to use for natural language processing",
                 "name": "model",
                 "type": "str",
@@ -957,7 +957,7 @@ description = [
                 "type": "str",
             },
             {
-                "default": "claude-3-5-haiku-20241022",
+                "default": None,  # "claude-3-5-haiku-20241022"
                 "description": "Anthropic model to use for natural language processing",
                 "name": "model",
                 "type": "str",
@@ -997,7 +997,7 @@ description = [
                 "type": "str",
             },
             {
-                "default": "claude-3-5-haiku-20241022",
+                "default": None,  # "claude-3-5-haiku-20241022"
                 "description": "Anthropic model to use for natural language processing",
                 "name": "model",
                 "type": "str",
@@ -1042,7 +1042,7 @@ description = [
                 "type": "str",
             },
             {
-                "default": "claude-3-5-haiku-20241022",
+                "default": None,  # "claude-3-5-haiku-20241022"
                 "description": "Anthropic model to use for natural language processing",
                 "name": "model",
                 "type": "str",
@@ -1147,7 +1147,7 @@ description = [
                 "type": "str",
             },
             {
-                "default": "claude-3-5-haiku-20241022",
+                "default": None,  # "claude-3-5-haiku-20241022"
                 "description": "Anthropic model to use for natural language processing",
                 "name": "model",
                 "type": "str",
@@ -1187,7 +1187,7 @@ description = [
                 "type": "str",
             },
             {
-                "default": "claude-3-5-haiku-20241022",
+                "default": None,  # "claude-3-5-haiku-20241022"
                 "description": "Anthropic model to use for natural language processing",
                 "name": "model",
                 "type": "str",
@@ -1225,7 +1225,7 @@ description = [
                 "type": "str",
             },
             {
-                "default": "claude-3-5-haiku-20241022",
+                "default": None,  # "claude-3-5-haiku-20241022"
                 "description": "Anthropic model to use for natural language processing",
                 "name": "model",
                 "type": "str",

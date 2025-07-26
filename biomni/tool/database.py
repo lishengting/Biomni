@@ -606,7 +606,7 @@ def query_uniprot(
     endpoint=None,
     api_key=None,
     base_url=None,
-    model="claude-3-5-haiku-20241022",
+    model=None,  # "claude-3-5-haiku-20241022"
     max_results=5,
 ):
     """Query the UniProt REST API using either natural language or a direct endpoint.
@@ -858,7 +858,7 @@ def query_interpro(
     prompt=None,
     endpoint=None,
     api_key=None,
-    model="claude-3-5-haiku-20241022",
+    model=None,  # "claude-3-5-haiku-20241022"
     max_results=3,
 ):
     """Query the InterPro REST API using natural language or a direct endpoint.
@@ -971,7 +971,7 @@ def query_pdb(
     prompt=None,
     query=None,
     api_key=None,
-    model="claude-3-5-haiku-20241022",
+    model=None,  # "claude-3-5-haiku-20241022"
     max_results=3,
 ):
     """Query the RCSB PDB database using natural language or a direct structured query.
@@ -1203,7 +1203,13 @@ def query_pdb_identifiers(identifiers, return_type="entry", download=False, attr
         return {"error": f"Error retrieving PDB details: {str(e)}"}
 
 
-def query_kegg(prompt, endpoint=None, api_key=None, model="claude-3-5-haiku-20241022", verbose=True):
+def query_kegg(
+    prompt, 
+    endpoint=None, 
+    api_key=None, 
+    model=None,  # "claude-3-5-haiku-20241022" 
+    verbose=True
+):
     """Take a natural language prompt and convert it to a structured KEGG API query.
 
     Parameters
@@ -1299,7 +1305,7 @@ def query_stringdb(
     prompt=None,
     endpoint=None,
     api_key=None,
-    model="claude-3-5-haiku-20241022",
+    model=None,  # "claude-3-5-haiku-20241022"
     download_image=False,
     output_dir=None,
     verbose=True,
@@ -1473,7 +1479,7 @@ def query_iucn(
     endpoint=None,
     token="",
     api_key=None,
-    model="claude-3-5-haiku-20241022",
+    model=None,  # "claude-3-5-haiku-20241022"
     verbose=True,
 ):
     """Query the IUCN Red List API using natural language or a direct endpoint.
@@ -1584,7 +1590,7 @@ def query_paleobiology(
     prompt=None,
     endpoint=None,
     api_key=None,
-    model="claude-3-5-haiku-20241022",
+    model=None,  # "claude-3-5-haiku-20241022"
     verbose=True,
 ):
     """Query the Paleobiology Database (PBDB) API using natural language or a direct endpoint.
@@ -1717,7 +1723,7 @@ def query_jaspar(
     prompt=None,
     endpoint=None,
     api_key=None,
-    model="claude-3-5-haiku-20241022",
+    model=None,  # "claude-3-5-haiku-20241022"
     verbose=True,
 ):
     """Query the JASPAR REST API using natural language or a direct endpoint.
@@ -1826,7 +1832,7 @@ def query_worms(
     prompt=None,
     endpoint=None,
     api_key=None,
-    model="claude-3-5-haiku-20241022",
+    model=None,  # "claude-3-5-haiku-20241022"
     verbose=True,
 ):
     """Query the World Register of Marine Species (WoRMS) REST API using natural language or a direct endpoint.
@@ -1928,7 +1934,7 @@ def query_cbioportal(
     prompt=None,
     endpoint=None,
     api_key=None,
-    model="claude-3-5-haiku-20241022",
+    model=None,  # "claude-3-5-haiku-20241022"
     verbose=True,
 ):
     """Query the cBioPortal REST API using natural language or a direct endpoint.
@@ -2035,7 +2041,7 @@ def query_clinvar(
     prompt=None,
     search_term=None,
     api_key=None,
-    model="claude-3-5-haiku-20241022",
+    model=None,  # "claude-3-5-haiku-20241022"
     max_results=3,
 ):
     """Take a natural language prompt and convert it to a structured ClinVar query.
@@ -2124,7 +2130,7 @@ def query_geo(
     prompt=None,
     search_term=None,
     api_key=None,
-    model="claude-3-5-haiku-20241022",
+    model=None,  # "claude-3-5-haiku-20241022"
     max_results=3,
 ):
     """Query the NCBI Gene Expression Omnibus (GEO) using natural language or a direct search term.
@@ -2229,7 +2235,7 @@ def query_dbsnp(
     prompt=None,
     search_term=None,
     api_key=None,
-    model="claude-3-5-haiku-20241022",
+    model=None,  # "claude-3-5-haiku-20241022"
     max_results=3,
 ):
     """Query the NCBI dbSNP database using natural language or a direct search term.
@@ -2324,7 +2330,7 @@ def query_ucsc(
     prompt=None,
     endpoint=None,
     api_key=None,
-    model="claude-3-5-haiku-20241022",
+    model=None,  # "claude-3-5-haiku-20241022"
     verbose=True,
 ):
     """Query the UCSC Genome Browser API using natural language or a direct endpoint.
@@ -2433,7 +2439,7 @@ def query_ensembl(
     prompt=None,
     endpoint=None,
     api_key=None,
-    model="claude-3-5-haiku-20241022",
+    model=None,  # "claude-3-5-haiku-20241022"
     verbose=True,
 ):
     """Query the Ensembl REST API using natural language or a direct endpoint.
@@ -2564,7 +2570,7 @@ def query_opentarget_genetics(
     query=None,
     variables=None,
     api_key=None,
-    model="claude-3-5-haiku-20241022",
+    model=None,  # "claude-3-5-haiku-20241022"
     verbose=True,
 ):
     """Query the OpenTargets Genetics API using natural language or a direct GraphQL query.
@@ -2669,7 +2675,7 @@ def query_opentarget(
     query=None,
     variables=None,
     api_key=None,
-    model="claude-3-5-haiku-20241022",
+    model=None,  # "claude-3-5-haiku-20241022"
     verbose=False,
 ):
     """Query the OpenTargets Platform API using natural language or a direct GraphQL query.
@@ -2774,7 +2780,7 @@ def query_gwas_catalog(
     prompt=None,
     endpoint=None,
     api_key=None,
-    model="claude-3-5-haiku-20241022",
+    model=None,  # "claude-3-5-haiku-20241022"
     max_results=3,
 ):
     """Query the GWAS Catalog API using natural language or a direct endpoint.
@@ -2882,7 +2888,7 @@ def query_gnomad(
     prompt=None,
     gene_symbol=None,
     api_key=None,
-    model="claude-3-5-haiku-20241022",
+    model=None,  # "claude-3-5-haiku-20241022"
     verbose=True,
 ):
     """Query gnomAD for variants in a gene using natural language or direct gene symbol.
@@ -3090,7 +3096,7 @@ def query_reactome(
     download=False,
     output_dir=None,
     api_key=None,
-    model="claude-3-5-haiku-20241022",
+    model=None,  # "claude-3-5-haiku-20241022"
     verbose=True,
 ):
     """Query the Reactome database using natural language or a direct endpoint.
@@ -3253,7 +3259,7 @@ def query_regulomedb(
     prompt=None,
     endpoint=None,
     api_key=None,
-    model="claude-3-5-haiku-20241022",
+    model=None,  # "claude-3-5-haiku-20241022"
     verbose=False,
 ):
     """Query the RegulomeDB database using natural language or direct variant/coordinate specification.
@@ -3348,7 +3354,7 @@ def query_pride(
     prompt=None,
     endpoint=None,
     api_key=None,
-    model="claude-3-5-haiku-20241022",
+    model=None,  # "claude-3-5-haiku-20241022"
     max_results=3,
 ):
     """Query the PRIDE (PRoteomics IDEntifications) database using natural language or a direct endpoint.
@@ -3454,7 +3460,7 @@ def query_gtopdb(
     prompt=None,
     endpoint=None,
     api_key=None,
-    model="claude-3-5-haiku-20241022",
+    model=None,  # "claude-3-5-haiku-20241022"
     verbose=True,
 ):
     """Query the Guide to PHARMACOLOGY database (GtoPdb) using natural language or a direct endpoint.
@@ -3728,7 +3734,7 @@ def query_remap(
     prompt=None,
     endpoint=None,
     api_key=None,
-    model="claude-3-5-haiku-20241022",
+    model=None,  # "claude-3-5-haiku-20241022"
     verbose=True,
 ):
     """Query the ReMap database for regulatory elements and transcription factor binding sites.
@@ -3835,7 +3841,7 @@ def query_mpd(
     prompt=None,
     endpoint=None,
     api_key=None,
-    model="claude-3-5-haiku-20241022",
+    model=None,  # "claude-3-5-haiku-20241022"
     verbose=True,
 ):
     """Query the Mouse Phenome Database (MPD) for mouse strain phenotype data.
@@ -3942,7 +3948,7 @@ def query_emdb(
     prompt=None,
     endpoint=None,
     api_key=None,
-    model="claude-3-5-haiku-20241022",
+    model=None,  # "claude-3-5-haiku-20241022"
     verbose=True,
 ):
     """Query the Electron Microscopy Data Bank (EMDB) for 3D macromolecular structures.
