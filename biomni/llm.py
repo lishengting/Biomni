@@ -38,7 +38,7 @@ def set_llm_logger_level(level: str = "INFO"):
         logger.setLevel(logging.INFO)
 
 # 从环境变量读取logger level设置
-llm_log_level = os.getenv("BIOMNI_LLM_LOG_LEVEL", "DEBUG")
+llm_log_level = os.getenv("BIOMNI_LLM_LOG_LEVEL", "INFO")
 set_llm_logger_level(llm_log_level)
 
 SourceType = Literal["OpenAI", "AzureOpenAI", "Anthropic", "Ollama", "Gemini", "Bedrock", "Custom"]
