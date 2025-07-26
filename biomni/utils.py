@@ -2,6 +2,7 @@ import ast
 import enum
 import importlib
 import json
+import logging
 import os
 import pickle
 import subprocess
@@ -13,6 +14,22 @@ from urllib.parse import urljoin
 
 import pandas as pd
 import requests
+
+# Configure logger
+logger = logging.getLogger(__name__)
+
+# Global debug flag
+DEBUG_MODE = True
+
+
+def set_debug_mode(debug: bool):
+    """Set the debug mode for logging network requests.
+    
+    Args:
+        debug (bool): True to enable debug logging, False to disable
+    """
+    global DEBUG_MODE
+    DEBUG_MODE = debug
 import tqdm  # Add tqdm for progress bar
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.messages.base import get_msg_title_repr
@@ -343,10 +360,28 @@ def execute_graphql_query(
 ) -> dict:
     """Executes a GraphQL query with variables and returns the data as a dictionary."""
     headers = {"Content-Type": "application/json"}
+    
+    # Log the request if debug mode is enabled
+    if DEBUG_MODE:
+        logger.debug(f"Executing GraphQL query at {api_address}")
+        logger.debug(f"Query: {query}")
+        logger.debug(f"Variables: {variables}")
+    
     response = requests.post(api_address, json={"query": query, "variables": variables}, headers=headers)
     if response.status_code == 200:
-        return response.json()
+        result = response.json()
+        
+        # Log the response if debug mode is enabled
+        if DEBUG_MODE:
+            logger.debug(f"GraphQL query successful. Response keys: {list(result.keys()) if isinstance(result, dict) else 'N/A'}")
+        
+        return result
     else:
+        # Log the error if debug mode is enabled
+        if DEBUG_MODE:
+            logger.error(f"GraphQL query failed with status code {response.status_code}")
+            logger.error(f"Response text: {response.text}")
+        
         print(response.text)
         response.raise_for_status()
 
@@ -607,13 +642,28 @@ def _get_gene_id_entrez(gene_symbol: str):
     e.g. 1017 (CDK2).
     """
     api_call = f"https://mygene.info/v3/query?species=human&q=symbol:{gene_symbol}"
+    
+    # Log the request if debug mode is enabled
+    if DEBUG_MODE:
+        logger.debug(f"Fetching Entrez ID for gene symbol: {gene_symbol}")
+        logger.debug(f"API call: {api_call}")
+    
     response = requests.get(api_call)
     response_json = response.json()
+    
+    # Log the response if debug mode is enabled
+    if DEBUG_MODE:
+        logger.debug(f"Entrez ID query response: {len(response_json['hits'])} hits")
 
     if len(response_json["hits"]) == 0:
+        if DEBUG_MODE:
+            logger.debug(f"No Entrez ID found for gene symbol: {gene_symbol}")
         return None
     else:
-        return response_json["hits"][0]["entrezgene"]
+        entrez_id = response_json["hits"][0]["entrezgene"]
+        if DEBUG_MODE:
+            logger.debug(f"Found Entrez ID for {gene_symbol}: {entrez_id}")
+        return entrez_id
 
 
 def _get_gene_id_ensembl(gene_symbol):
@@ -621,19 +671,35 @@ def _get_gene_id_ensembl(gene_symbol):
     e.g. ENSG00000123374.
     """
     api_call = f"https://mygene.info/v3/query?species=human&fields=ensembl&q=symbol:{gene_symbol}"
+    
+    # Log the request if debug mode is enabled
+    if DEBUG_MODE:
+        logger.debug(f"Fetching Ensembl ID for gene symbol: {gene_symbol}")
+        logger.debug(f"API call: {api_call}")
+    
     response = requests.get(api_call)
     response_json = response.json()
+    
+    # Log the response if debug mode is enabled
+    if DEBUG_MODE:
+        logger.debug(f"Ensembl ID query response: {len(response_json['hits'])} hits")
 
     if len(response_json["hits"]) == 0:
+        if DEBUG_MODE:
+            logger.debug(f"No Ensembl ID found for gene symbol: {gene_symbol}")
         return None
     else:
         ensembl = response_json["hits"][0]["ensembl"]
         if isinstance(ensembl, list):
-            return ensembl[0][
-                "gene"
-            ]  # Sometimes returns a list, for example RNH1 (first elem is on chr11, second is on scaffold_hschr11)
+            ensembl_id = ensembl[0]["gene"]
+            if DEBUG_MODE:
+                logger.debug(f"Found Ensembl ID (from list) for {gene_symbol}: {ensembl_id}")
+            return ensembl_id
         else:
-            return ensembl["gene"]
+            ensembl_id = ensembl["gene"]
+            if DEBUG_MODE:
+                logger.debug(f"Found Ensembl ID for {gene_symbol}: {ensembl_id}")
+            return ensembl_id
 
 
 def _get_gene_id_ensembl_with_version(gene_symbol):
@@ -642,12 +708,29 @@ def _get_gene_id_ensembl_with_version(gene_symbol):
     """
     api_base = "https://gtexportal.org/api/v2/reference/gene"
     params = {"geneId": gene_symbol}
-    response_json = requests.get(api_base, params=params).json()
+    
+    # Log the request if debug mode is enabled
+    if DEBUG_MODE:
+        logger.debug(f"Fetching Ensembl ID with version for gene symbol: {gene_symbol}")
+        logger.debug(f"API base: {api_base}")
+        logger.debug(f"Parameters: {params}")
+    
+    response = requests.get(api_base, params=params)
+    response_json = response.json()
+    
+    # Log the response if debug mode is enabled
+    if DEBUG_MODE:
+        logger.debug(f"Ensembl ID with version query response: {len(response_json['data'])} items")
 
     if len(response_json["data"]) == 0:
+        if DEBUG_MODE:
+            logger.debug(f"No Ensembl ID with version found for gene symbol: {gene_symbol}")
         return None
     else:
-        return response_json["data"][0]["gencodeId"]
+        ensembl_id = response_json["data"][0]["gencodeId"]
+        if DEBUG_MODE:
+            logger.debug(f"Found Ensembl ID with version for {gene_symbol}: {ensembl_id}")
+        return ensembl_id
 
 
 def save_pkl(f, filename):
@@ -884,10 +967,20 @@ def download_and_unzip(url: str, dest_dir: str) -> str:
     try:
         os.makedirs(dest_dir, exist_ok=True)
         print(f"Downloading from {url} ...")
+        
+        # Log the request if debug mode is enabled
+        if DEBUG_MODE:
+            logger.debug(f"Starting download from URL: {url}")
+            logger.debug(f"Destination directory: {dest_dir}")
+        
         with requests.get(url, stream=True) as r:
             r.raise_for_status()
             total_size = int(r.headers.get("content-length", 0))
             chunk_size = 8192
+            
+            if DEBUG_MODE:
+                logger.debug(f"Download started. Total size: {total_size} bytes")
+            
             with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as tmp_file:
                 with tqdm.tqdm(
                     total=total_size / (1024**3),
@@ -901,14 +994,30 @@ def download_and_unzip(url: str, dest_dir: str) -> str:
                             tmp_file.write(chunk)
                             pbar.update(len(chunk) / (1024**3))
                 tmp_zip_path = tmp_file.name
+        
         print(f"Downloaded to {tmp_zip_path}. Extracting...")
+        
+        if DEBUG_MODE:
+            logger.debug(f"Download completed. Temporary file: {tmp_zip_path}")
+            logger.debug("Starting extraction...")
+        
         with zipfile.ZipFile(tmp_zip_path, "r") as zip_ref:
             zip_ref.extractall(dest_dir)
         os.unlink(tmp_zip_path)
         print(f"Extraction complete to {dest_dir}")
+        
+        if DEBUG_MODE:
+            logger.debug(f"Extraction completed to {dest_dir}")
+        
         return dest_dir
     except Exception as e:
-        print(f"Error downloading or extracting zip: {e}")
+        error_msg = f"Error downloading or extracting zip: {e}"
+        print(error_msg)
+        
+        # Log the error if debug mode is enabled
+        if DEBUG_MODE:
+            logger.error(error_msg)
+        
         return f"Error: {e}"
 
 
@@ -929,14 +1038,28 @@ def check_and_download_s3_files(
 
     os.makedirs(local_data_lake_path, exist_ok=True)
     download_results = {}
+    
+    # Log the operation if debug mode is enabled
+    if DEBUG_MODE:
+        logger.debug(f"Checking and downloading S3 files from {s3_bucket_url}")
+        logger.debug(f"Local path: {local_data_lake_path}")
+        logger.debug(f"Folder: {folder}")
+        logger.debug(f"Expected files: {len(expected_files)} files")
 
     def download_with_progress(url: str, file_path: str, desc: str) -> bool:
         """Download file with progress bar."""
         try:
+            if DEBUG_MODE:
+                logger.debug(f"Starting download: {url}")
+                logger.debug(f"Destination: {file_path}")
+            
             response = requests.get(url, stream=True)
             response.raise_for_status()
 
             total_size = int(response.headers.get("content-length", 0))
+            
+            if DEBUG_MODE:
+                logger.debug(f"Download started. Total size: {total_size} bytes")
 
             with open(file_path, "wb") as f:
                 if total_size > 0:
@@ -949,9 +1072,19 @@ def check_and_download_s3_files(
                     for chunk in response.iter_content(chunk_size=8192):
                         if chunk:
                             f.write(chunk)
+            
+            if DEBUG_MODE:
+                logger.debug(f"Download completed successfully: {file_path}")
+            
             return True
         except Exception as e:
-            print(f"✗ Failed to download {desc}: {e}")
+            error_msg = f"✗ Failed to download {desc}: {e}"
+            print(error_msg)
+            
+            # Log the error if debug mode is enabled
+            if DEBUG_MODE:
+                logger.error(error_msg)
+            
             if os.path.exists(file_path):
                 try:
                     os.remove(file_path)
@@ -964,12 +1097,18 @@ def check_and_download_s3_files(
         if os.path.exists(file_path):
             try:
                 os.remove(file_path)
+                if DEBUG_MODE:
+                    logger.debug(f"Cleaned up temporary file: {file_path}")
             except OSError:
                 pass
 
     # Handle benchmark folder (download as zip)
     if folder == "benchmark":
         print(f"Downloading entire {folder} folder structure...")
+        
+        if DEBUG_MODE:
+            logger.debug(f"Downloading benchmark folder as zip file")
+        
         s3_zip_url = urljoin(s3_bucket_url + "/", folder + ".zip")
 
         with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as tmp_zip:
@@ -977,13 +1116,27 @@ def check_and_download_s3_files(
 
             if download_with_progress(s3_zip_url, tmp_zip_path, f"{folder}.zip"):
                 print(f"Extracting {folder}.zip...")
+                
+                if DEBUG_MODE:
+                    logger.debug(f"Extracting zip file: {tmp_zip_path}")
+                
                 try:
                     with zipfile.ZipFile(tmp_zip_path, "r") as zip_ref:
                         zip_ref.extractall(local_data_lake_path)
                     print(f"✓ Successfully downloaded and extracted {folder} folder")
+                    
+                    if DEBUG_MODE:
+                        logger.debug(f"Successfully extracted {folder} folder")
+                    
                     download_results = dict.fromkeys(expected_files, True)
                 except Exception as e:
-                    print(f"✗ Error extracting {folder}.zip: {e}")
+                    error_msg = f"✗ Error extracting {folder}.zip: {e}"
+                    print(error_msg)
+                    
+                    # Log the error if debug mode is enabled
+                    if DEBUG_MODE:
+                        logger.error(error_msg)
+                    
                     download_results = dict.fromkeys(expected_files, False)
                 finally:
                     cleanup_file(tmp_zip_path)
@@ -998,6 +1151,10 @@ def check_and_download_s3_files(
 
         if os.path.exists(local_file_path):
             download_results[filename] = True
+            
+            if DEBUG_MODE:
+                logger.debug(f"File already exists: {local_file_path}")
+            
             continue
 
         s3_file_url = urljoin(s3_bucket_url + "/" + folder + "/", filename)
@@ -1009,4 +1166,7 @@ def check_and_download_s3_files(
         else:
             download_results[filename] = False
 
+    if DEBUG_MODE:
+        logger.debug(f"S3 file download process completed. Results: {download_results}")
+    
     return download_results

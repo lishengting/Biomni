@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import pickle
 import time
@@ -10,6 +11,40 @@ from Bio.Seq import Seq
 
 from biomni.llm import get_llm
 from biomni.utils import parse_hpo_obo
+
+# Configure logger
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
+# Create console handler and set level to debug
+ch = logging.StreamHandler()
+ch.setLevel(logging.DEBUG)
+
+# Create formatter
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+# Add formatter to ch
+ch.setFormatter(formatter)
+
+# Add ch to logger
+logger.addHandler(ch)
+
+# Global debug flag
+DEBUG_MODE = True
+
+
+def set_debug_mode(debug: bool):
+    """Set the debug mode for logging network requests.
+    
+    Args:
+        debug (bool): True to enable debug logging, False to disable
+    """
+    global DEBUG_MODE
+    DEBUG_MODE = debug
+    if debug:
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.WARNING)
 
 
 # Global variable to store current agent's model configuration
@@ -199,6 +234,16 @@ def _query_rest_api(endpoint, method="GET", params=None, headers=None, json_data
     if description is None:
         description = f"{method} request to {endpoint}"
 
+    # Log the request if debug mode is enabled
+    if DEBUG_MODE:
+        logger.debug(f"Making {method} request to {endpoint}")
+        if params:
+            logger.debug(f"Parameters: {params}")
+        if json_data:
+            logger.debug(f"JSON data: {json_data}")
+        if headers:
+            logger.debug(f"Headers: {headers}")
+
     url_error = None
 
     try:
@@ -219,6 +264,11 @@ def _query_rest_api(endpoint, method="GET", params=None, headers=None, json_data
         except ValueError:
             # Return raw text if not JSON
             result = {"raw_text": response.text}
+
+        # Log the response if debug mode is enabled
+        if DEBUG_MODE:
+            logger.debug(f"Request successful. Status code: {response.status_code}")
+            logger.debug(f"Response: {result}")
 
         return {
             "success": True,
@@ -249,6 +299,14 @@ def _query_rest_api(endpoint, method="GET", params=None, headers=None, json_data
             except Exception:
                 response_text = e.response.text
 
+        # Log the error if debug mode is enabled
+        if DEBUG_MODE:
+            logger.error(f"API request failed: {error_msg}")
+            logger.error(f"Endpoint: {endpoint}")
+            logger.error(f"Method: {method}")
+            if response_text:
+                logger.error(f"Response text: {response_text}")
+
         return {
             "success": False,
             "error": f"API error: {error_msg}",
@@ -261,6 +319,12 @@ def _query_rest_api(endpoint, method="GET", params=None, headers=None, json_data
             "response_text": response_text,
         }
     except Exception as e:
+        # Log the error if debug mode is enabled
+        if DEBUG_MODE:
+            logger.error(f"Unexpected error in API request: {str(e)}")
+            logger.error(f"Endpoint: {endpoint}")
+            logger.error(f"Method: {method}")
+
         return {
             "success": False,
             "error": f"Error: {str(e)}",

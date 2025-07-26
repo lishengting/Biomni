@@ -1,3 +1,4 @@
+import logging
 import os
 import re
 import time
@@ -8,6 +9,22 @@ import PyPDF2
 import requests
 from bs4 import BeautifulSoup
 from googlesearch import search
+
+# Configure logger
+logger = logging.getLogger(__name__)
+
+# Global debug flag
+DEBUG_MODE = True
+
+
+def set_debug_mode(debug: bool):
+    """Set the debug mode for logging network requests.
+    
+    Args:
+        debug (bool): True to enable debug logging, False to disable
+    """
+    global DEBUG_MODE
+    DEBUG_MODE = debug
 
 
 def fetch_supplementary_info_from_doi(doi: str, output_dir: str = "supplementary_info"):
@@ -23,21 +40,39 @@ def fetch_supplementary_info_from_doi(doi: str, output_dir: str = "supplementary
     """
     research_log = []
     research_log.append(f"Starting process for DOI: {doi}")
+    
+    # Log the process if debug mode is enabled
+    if DEBUG_MODE:
+        logger.debug(f"Starting supplementary info fetch for DOI: {doi}")
 
     # CrossRef API to resolve DOI to a publisher page
     crossref_url = f"https://doi.org/{doi}"
     headers = {"User-Agent": "Mozilla/5.0"}
+    
+    if DEBUG_MODE:
+        logger.debug(f"Resolving DOI via CrossRef API: {crossref_url}")
+    
     response = requests.get(crossref_url, headers=headers)
 
     if response.status_code != 200:
         log_message = f"Failed to resolve DOI: {doi}. Status Code: {response.status_code}"
         research_log.append(log_message)
+        
+        if DEBUG_MODE:
+            logger.error(f"Failed to resolve DOI: {doi}. Status Code: {response.status_code}")
+        
         return {"log": research_log, "files": []}
 
     publisher_url = response.url
     research_log.append(f"Resolved DOI to publisher page: {publisher_url}")
+    
+    if DEBUG_MODE:
+        logger.debug(f"DOI resolved to publisher page: {publisher_url}")
 
     # Fetch publisher page
+    if DEBUG_MODE:
+        logger.debug(f"Fetching publisher page: {publisher_url}")
+    
     response = requests.get(publisher_url, headers=headers)
     if response.status_code != 200:
         log_message = f"Failed to access publisher page for DOI {doi}."
@@ -45,6 +80,9 @@ def fetch_supplementary_info_from_doi(doi: str, output_dir: str = "supplementary
         return {"log": research_log, "files": []}
 
     # Parse page content
+    if DEBUG_MODE:
+        logger.debug("Parsing publisher page content")
+    
     soup = BeautifulSoup(response.content, "html.parser")
     supplementary_links = []
 
@@ -56,33 +94,59 @@ def fetch_supplementary_info_from_doi(doi: str, output_dir: str = "supplementary
             full_url = urljoin(publisher_url, href)
             supplementary_links.append(full_url)
             research_log.append(f"Found supplementary material link: {full_url}")
+            
+            if DEBUG_MODE:
+                logger.debug(f"Found supplementary material link: {full_url}")
 
     if not supplementary_links:
         log_message = f"No supplementary materials found for DOI {doi}."
         research_log.append(log_message)
+        
+        if DEBUG_MODE:
+            logger.debug(f"No supplementary materials found for DOI {doi}")
+        
         return research_log
 
     # Create output directory
     os.makedirs(output_dir, exist_ok=True)
     research_log.append(f"Created output directory: {output_dir}")
+    
+    if DEBUG_MODE:
+        logger.debug(f"Created output directory: {output_dir}")
 
     # Download supplementary materials
     downloaded_files = []
     for link in supplementary_links:
         file_name = os.path.join(output_dir, link.split("/")[-1])
+        
+        if DEBUG_MODE:
+            logger.debug(f"Downloading file from: {link}")
+        
         file_response = requests.get(link, headers=headers)
         if file_response.status_code == 200:
             with open(file_name, "wb") as f:
                 f.write(file_response.content)
             downloaded_files.append(file_name)
             research_log.append(f"Downloaded file: {file_name}")
+            
+            if DEBUG_MODE:
+                logger.debug(f"Successfully downloaded file: {file_name}")
         else:
             research_log.append(f"Failed to download file from {link}")
+            
+            if DEBUG_MODE:
+                logger.error(f"Failed to download file from {link}. Status code: {file_response.status_code}")
 
     if downloaded_files:
         research_log.append(f"Successfully downloaded {len(downloaded_files)} file(s).")
+        
+        if DEBUG_MODE:
+            logger.debug(f"Successfully downloaded {len(downloaded_files)} file(s)")
     else:
         research_log.append(f"No files could be downloaded for DOI {doi}.")
+        
+        if DEBUG_MODE:
+            logger.debug(f"No files could be downloaded for DOI {doi}")
 
     return "\n".join(research_log)
 
