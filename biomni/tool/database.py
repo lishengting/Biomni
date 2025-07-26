@@ -155,6 +155,13 @@ def _query_llm_for_api(prompt, schema, system_template, model=None, api_key=None
             source = source or session_config.get("source")
 
         # Get the LLM instance using the existing get_llm function
+        if DEBUG_MODE:
+            logger.debug(f"Creating LLM instance for API generation")
+            logger.debug(f"Model: {model}")
+            logger.debug(f"Source: {source}")
+            logger.debug(f"Base URL: {base_url}")
+            logger.debug(f"Temperature: 0.1")
+            
         llm = get_llm(
             model=model,
             temperature=0.1,  # Lower temperature for more consistent API generation
@@ -178,7 +185,16 @@ def _query_llm_for_api(prompt, schema, system_template, model=None, api_key=None
             HumanMessage(content=prompt)
         ]
         
+        if DEBUG_MODE:
+            logger.debug(f"Invoking LLM with messages:")
+            logger.debug(f"System prompt: {system_prompt[:200]}...")
+            logger.debug(f"User prompt: {prompt[:200]}...")
+            logger.debug(f"Total messages: {len(messages)}")
+        
         response = llm.invoke(messages)
+        
+        if DEBUG_MODE:
+            logger.debug(f"LLM response received: {str(response.content)[:200]}...")
         
         # Extract text from response
         if hasattr(response, 'content'):

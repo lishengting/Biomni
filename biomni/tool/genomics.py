@@ -1,3 +1,4 @@
+import logging
 import os
 
 import gget
@@ -5,8 +6,19 @@ import gseapy
 import numpy as np
 import pandas as pd
 import scanpy as sc
+from langchain_core.prompts import PromptTemplate
 
 from biomni.llm import get_llm
+
+logger = logging.getLogger(__name__)
+
+# Global debug flag
+DEBUG_MODE = False
+
+def set_debug_mode(debug: bool):
+    """Set global debug mode for logging."""
+    global DEBUG_MODE
+    DEBUG_MODE = debug
 
 
 def annotate_celltype_scRNA(
@@ -89,6 +101,10 @@ No numbers before name or spaces before number.
 """
     # Some can be a mixture of multiple cell types.
 
+    if DEBUG_MODE:
+        logger.debug(f"Creating LLM instance for genomics annotation")
+        logger.debug(f"Model: {llm}")
+    
     llm = get_llm(llm)
     prompt = PromptTemplate(input_variables=["cluster_info"], template=prompt_template)
     chain = prompt | llm
@@ -103,6 +119,11 @@ No numbers before name or spaces before number.
         cluster_info = _cluster_info(str(_idx), markers[_idx], composition)
 
         while True:
+            if DEBUG_MODE:
+                logger.debug(f"Invoking LLM for cluster annotation")
+                logger.debug(f"Cluster: {_idx}")
+                logger.debug(f"Cluster info: {cluster_info}")
+            
             response = chain.invoke({"cluster_info": cluster_info})
 
             # Handle different response types

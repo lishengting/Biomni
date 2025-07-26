@@ -293,7 +293,17 @@ def function_to_api_schema(function_string, llm):
 
     for _ in range(7):
         try:
+            if DEBUG_MODE:
+                logger.debug(f"Invoking LLM for API schema generation")
+                logger.debug(f"Function string length: {len(function_string)} characters")
+                logger.debug(f"Prompt: {prompt.format(code=function_string)[:200]}...")
+            
             api = llm.invoke(prompt.format(code=function_string)).dict()["api_schema"]
+            
+            if DEBUG_MODE:
+                logger.debug(f"API schema generated successfully")
+                logger.debug(f"Schema: {str(api)[:200]}...")
+                
             return ast.literal_eval(api)  # -> prefer "default": None
             # return json.loads(api) # -> prefer "default": null
         except Exception as e:

@@ -1,4 +1,5 @@
 import os
+import logging
 from typing import Literal, Optional
 
 import openai
@@ -8,6 +9,8 @@ from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_ollama import ChatOllama
 from langchain_openai import AzureChatOpenAI, ChatOpenAI
+
+logger = logging.getLogger(__name__)
 
 SourceType = Literal["OpenAI", "AzureOpenAI", "Anthropic", "Ollama", "Gemini", "Bedrock", "Custom"]
 
@@ -32,6 +35,8 @@ def get_llm(
         base_url (str): The base URL for custom model serving (e.g., "http://localhost:8000/v1"), default is None
         api_key (str): The API key for the custom llm
     """
+    logger.debug(f"get_llm called with model={model}, source={source}, temperature={temperature}")
+    
     # Auto-detect source from model name if not specified
     if source is None:
         if model[:7] == "claude-":
@@ -52,6 +57,8 @@ def get_llm(
             source = "Bedrock"
         else:
             raise ValueError("Unable to determine model source. Please specify 'source' parameter.")
+
+    logger.debug(f"Determined source: {source}")
 
     # Create appropriate model based on source
     if source == "OpenAI":

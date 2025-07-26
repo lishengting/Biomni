@@ -153,6 +153,13 @@ class A1:
         from biomni.tool.database import set_current_agent_config
         set_current_agent_config(llm, source, base_url, api_key)
             
+        if self.verbose:
+            self._log("INIT", "🤖", f"Creating LLM instance")
+            self._log("INIT", "📄", f"Model: {llm}")
+            self._log("INIT", "🔧", f"Source: {source}")
+            self._log("INIT", "🌐", f"Base URL: {base_url}")
+            self._log("INIT", "🛑", f"Stop sequences: ['</execute>', '</solution>']")
+        
         self.llm = get_llm(llm, stop_sequences=["</execute>", "</solution>"], base_url=base_url, api_key=api_key, source=source)
         
         self._log("INIT", "✅", "LLM initialized successfully")
@@ -1065,7 +1072,16 @@ Each library is listed with its description to help you understand its functiona
                 return state
                 
             messages = [SystemMessage(content=self.system_prompt)] + state["messages"]
+            
+            if self.verbose:
+                self._log("GENERATE", "🤖", f"Invoking LLM with {len(messages)} messages")
+                self._log("GENERATE", "📄", f"System prompt: {self.system_prompt[:200]}...")
+                self._log("GENERATE", "💬", f"User messages: {len(state['messages'])} items")
+            
             response = self.llm.invoke(messages)
+            
+            if self.verbose:
+                self._log("GENERATE", "✅", f"LLM response received: {str(response.content)[:200]}...")
 
             # Parse the response
             msg = str(response.content)
@@ -1238,7 +1254,14 @@ Each library is listed with its description to help you understand its functiona
                 Think hard what are missing to solve the task.
                 No question asked, just feedbacks.
                 """
+                if self.verbose:
+                    self._log("CRITIC", "🤖", f"Invoking LLM for feedback with {len(messages) + 1} messages")
+                    self._log("CRITIC", "📝", f"Feedback prompt: {feedback_prompt[:200]}...")
+                
                 feedback = self.llm.invoke(messages + [HumanMessage(content=feedback_prompt)])
+                
+                if self.verbose:
+                    self._log("CRITIC", "✅", f"Feedback received: {str(feedback.content)[:200]}...")
 
                 # Add feedback as a new message
                 state["messages"].append(
