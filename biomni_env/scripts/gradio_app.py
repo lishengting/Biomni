@@ -1476,6 +1476,10 @@ window.downloadPDFBlobFromFile = downloadPDFBlobFromFile;
                 ],
                 inputs=question
             )
+            
+            # 添加明显的间隔分隔线
+            gr.Markdown("---")
+            gr.Markdown("<div style='height: 20px;'></div>")  # 额外的垂直间距
     
 
     
