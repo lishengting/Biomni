@@ -8,6 +8,7 @@ from typing import Any
 import requests
 from Bio.Blast import NCBIWWW, NCBIXML
 from Bio.Seq import Seq
+from langchain_core.messages import HumanMessage, SystemMessage
 
 from biomni.llm import get_llm
 from biomni.utils import parse_hpo_obo
@@ -130,6 +131,8 @@ def get_hpo_names(hpo_terms: list[str], data_lake_path: str) -> list[str]:
 def _query_llm_for_api(prompt, schema, system_template, model=None, api_key=None, base_url=None, source=None):
     """Helper function to query any LLM for generating API calls based on natural language prompts.
 
+    Supports multiple model providers including Claude, Gemini, GPT, and others via the unified get_llm interface.
+
     Parameters
     ----------
     prompt (str): Natural language query to process
@@ -149,7 +152,7 @@ def _query_llm_for_api(prompt, schema, system_template, model=None, api_key=None
         # Get current session configuration if parameters are not provided
         if model is None or api_key is None or base_url is None or source is None:
             session_config = get_current_session_config()
-            model = model or session_config.get("model", "gpt-4o")
+            model = model or session_config.get("model", "claude-3-5-haiku-20241022")
             api_key = api_key or session_config.get("api_key", "EMPTY")
             base_url = base_url or session_config.get("base_url")
             source = source or session_config.get("source")
@@ -178,11 +181,9 @@ def _query_llm_for_api(prompt, schema, system_template, model=None, api_key=None
             system_prompt = system_template
 
         # Use LangChain's standard interface
-        from langchain_core.messages import HumanMessage, SystemMessage
-        
         messages = [
             SystemMessage(content=system_prompt),
-            HumanMessage(content=prompt)
+            HumanMessage(content=prompt),
         ]
         
         if DEBUG_MODE:
@@ -201,7 +202,6 @@ def _query_llm_for_api(prompt, schema, system_template, model=None, api_key=None
             llm_text = response.content.strip()
         else:
             llm_text = str(response).strip()
-
         # Find JSON boundaries (in case LLM adds explanations)
         json_start = llm_text.find("{")
         json_end = llm_text.rfind("}") + 1
@@ -689,7 +689,7 @@ def query_uniprot(
         if not endpoint:
             return {
                 "error": "Failed to generate a valid endpoint from the prompt",
-                "claude_response": llm_result.get("raw_response", "No response"),
+                "llm_response": llm_result.get("raw_response", "No response"),
             }
     else:
         # Use provided endpoint directly
@@ -942,7 +942,7 @@ def query_interpro(
         if not endpoint:
             return {
                 "error": "Failed to generate a valid endpoint from the prompt",
-                "claude_response": llm_result.get("raw_response", "No response"),
+                "llm_response": llm_result.get("raw_response", "No response"),
             }
     else:
         # Process provided endpoint
@@ -1047,7 +1047,7 @@ def query_pdb(
         if not llm_result["success"]:
             return {
                 "error": llm_result["error"],
-                "claude_response": llm_result.get("raw_response", "No response"),
+                "llm_response": llm_result.get("raw_response", "No response"),
             }
 
         # Get the query from Claude's response
@@ -1282,7 +1282,7 @@ def query_kegg(
         if not endpoint:
             return {
                 "error": "Failed to generate a valid endpoint from the prompt",
-                "claude_response": llm_result.get("raw_response", "No response"),
+                "llm_response": llm_result.get("raw_response", "No response"),
             }
 
     if endpoint:
@@ -1389,7 +1389,7 @@ def query_stringdb(
         if not endpoint:
             return {
                 "error": "Failed to generate a valid endpoint from the prompt",
-                "claude_response": llm_result.get("raw_response", "No response"),
+                "llm_response": llm_result.get("raw_response", "No response"),
             }
     else:
         # Use direct endpoint
@@ -1562,7 +1562,7 @@ def query_iucn(
         if not endpoint:
             return {
                 "error": "Failed to generate a valid endpoint from the prompt",
-                "claude_response": llm_result.get("raw_response", "No response"),
+                "llm_response": llm_result.get("raw_response", "No response"),
             }
     else:
         # Process provided endpoint
@@ -1670,7 +1670,7 @@ def query_paleobiology(
         if not endpoint:
             return {
                 "error": "Failed to generate a valid endpoint from the prompt",
-                "claude_response": llm_result.get("raw_response", "No response"),
+                "llm_response": llm_result.get("raw_response", "No response"),
             }
     else:
         # Process provided endpoint
@@ -1801,7 +1801,7 @@ def query_jaspar(
         if not endpoint:
             return {
                 "error": "Failed to generate a valid endpoint from the prompt",
-                "claude_response": llm_result.get("raw_response", "No response"),
+                "llm_response": llm_result.get("raw_response", "No response"),
             }
     else:
         # Process provided endpoint
@@ -1911,7 +1911,7 @@ def query_worms(
         if not endpoint:
             return {
                 "error": "Failed to generate a valid endpoint from the prompt",
-                "claude_response": llm_result.get("raw_response", "No response"),
+                "llm_response": llm_result.get("raw_response", "No response"),
             }
     else:
         # Process provided endpoint
@@ -2014,7 +2014,7 @@ def query_cbioportal(
         if not endpoint:
             return {
                 "error": "Failed to generate a valid endpoint from the prompt",
-                "claude_response": llm_result.get("raw_response", "No response"),
+                "llm_response": llm_result.get("raw_response", "No response"),
             }
     else:
         # Process provided endpoint
@@ -2116,7 +2116,7 @@ def query_clinvar(
         if not search_term:
             return {
                 "error": "Failed to generate a valid search term from the prompt",
-                "claude_response": llm_result.get("raw_response", "No response"),
+                "llm_response": llm_result.get("raw_response", "No response"),
             }
 
     return _query_ncbi_database(
@@ -2218,7 +2218,7 @@ def query_geo(
         if not search_term:
             return {
                 "error": "Failed to generate a valid search term from the prompt",
-                "claude_response": llm_result.get("raw_response", "No response"),
+                "llm_response": llm_result.get("raw_response", "No response"),
             }
 
     # Execute the GEO query using the helper function
@@ -2313,7 +2313,7 @@ def query_dbsnp(
         if not search_term:
             return {
                 "error": "Failed to generate a valid search term from the prompt",
-                "claude_response": llm_result.get("raw_response", "No response"),
+                "llm_response": llm_result.get("raw_response", "No response"),
             }
 
     # Execute the dbSNP query using the helper function
@@ -2414,7 +2414,7 @@ def query_ucsc(
         if not endpoint:
             return {
                 "error": "Failed to generate a valid endpoint from the prompt",
-                "claude_response": llm_result.get("raw_response", "No response"),
+                "llm_response": llm_result.get("raw_response", "No response"),
             }
 
     else:
@@ -2463,9 +2463,6 @@ def query_ensembl(
     - Direct endpoint: query_ensembl(endpoint="lookup/symbol/homo_sapiens/BRCA2")
 
     """
-    print("IN QUERY ENSEMBL")
-    print("PROMPT: ", prompt)
-    print("ENDPOINT: ", endpoint)
     # Base URL for Ensembl API
     base_url = "https://rest.ensembl.org"
 
@@ -2527,7 +2524,7 @@ def query_ensembl(
         if not endpoint:
             return {
                 "error": "Failed to generate a valid endpoint from the prompt",
-                "claude_response": llm_result.get("raw_response", "No response"),
+                "llm_response": llm_result.get("raw_response", "No response"),
             }
     else:
         # Process provided endpoint
@@ -2650,7 +2647,7 @@ def query_opentarget_genetics(
         if not query:
             return {
                 "error": "Failed to generate a valid GraphQL query from the prompt",
-                "claude_response": llm_result.get("raw_response", "No response"),
+                "llm_response": llm_result.get("raw_response", "No response"),
             }
 
     # Execute the GraphQL query
@@ -2757,7 +2754,7 @@ def query_opentarget(
         if not query:
             return {
                 "error": "Failed to generate a valid GraphQL query from the prompt",
-                "claude_response": llm_result.get("raw_response", "No response"),
+                "llm_response": llm_result.get("raw_response", "No response"),
             }
 
     # Execute the GraphQL query
@@ -2772,6 +2769,211 @@ def query_opentarget(
     # Format the results if not verbose and successful
     if not verbose and "success" in api_result and api_result["success"] and "result" in api_result:
         api_result["result"] = _format_query_results(api_result["result"])
+
+    return api_result
+
+
+# Monarch Initiative integration
+def query_monarch(
+    prompt=None,
+    endpoint=None,
+    api_key=None,
+    model="claude-3-5-haiku-20241022",
+    max_results=2,
+    verbose=False,
+):
+    """Query the Monarch Initiative API using natural language or a direct endpoint.
+
+    Parameters
+    ----------
+    prompt (str, optional): Natural language query about genes, diseases, phenotypes, etc.
+    endpoint (str, optional): Direct Monarch API endpoint or full URL
+    api_key (str, optional): Anthropic API key. If None, will use ANTHROPIC_API_KEY env variable
+    model (str): Anthropic model to use for prompt-to-endpoint conversion
+    max_results (int): Maximum number of results to return (if supported by endpoint)
+    verbose (bool): Whether to return detailed results
+
+    Returns
+    -------
+    dict: Dictionary containing the query results or error information
+
+    Examples
+    --------
+    - Natural language: query_monarch("Find phenotypes associated with BRCA1")
+    - Direct endpoint: query_monarch(endpoint="https://api.monarchinitiative.org/v3/api/search?q=marfan&category=biolink:Disease&limit=10")
+    - Direct endpoint: query_monarch(endpoint="https://api.monarchinitiative.org/v3/api/entity/MONDO:0007947")
+    """
+    base_url = "https://api.monarchinitiative.org/v3/api"
+
+    if prompt is None and endpoint is None:
+        return {"error": "Either a prompt or an endpoint must be provided"}
+
+    # If using prompt, use Claude to generate the endpoint
+    if prompt:
+        schema_path = os.path.join(os.path.dirname(__file__), "schema_db", "monarch.pkl")
+        if os.path.exists(schema_path):
+            with open(schema_path, "rb") as f:
+                monarch_schema = pickle.load(f)
+        else:
+            monarch_schema = None
+
+        system_template = """
+        You are an expert in translating natural language requests into REST API calls for the Monarch Initiative Platform API.
+
+        Here is the API schema with available endpoints and parameters:
+        {schema}
+
+        Translate the user's natural language request into a valid REST API call for this API.
+        Return only a JSON object with three fields:
+        1. "endpoint": The specific endpoint name from the schema
+        2. "url": The complete URL with path parameters filled in
+        3. "params": A JSON object containing query parameters needed for the request
+
+        SPECIAL NOTES:
+        - Disease IDs typically use MONDO ontology (e.g., "MONDO:0007947" for Marfan syndrome)
+        - Gene IDs typically use HGNC (e.g., "HGNC:3603" for FBN1) or other standard identifiers
+        - Phenotype IDs use Human Phenotype Ontology (e.g., "HP:0002616" for aortic root dilatation)
+        - Association categories use biolink model terms (e.g., "biolink:DiseaseToPhenotypicFeatureAssociation")
+        - For example: to find phenotypes associated with BRCA1, use the following endpoint: /entity/HGNC:1100/biolink:GeneToPhenotypicFeatureAssociation
+        - For search queries, use the 'q' parameter with relevant keywords
+        - When looking for associations, use the association_table endpoint with entity ID and category
+        - For similarity searches, use semsim endpoints with comma-separated term lists
+        - Entity categories include: biolink:Disease, biolink:Gene, biolink:PhenotypicFeature, etc.
+        - Format parameter defaults to 'json' but can be 'tsv' for tabular data
+        - Use autocomplete endpoint for entity name suggestions before exact searches
+
+        COMMON PATTERNS:
+        - Search for entities: Use 'search' endpoint with 'q' and 'category' parameters
+        - Get entity details: Use 'get_entity' endpoint with specific ID
+        - Find associations: Use 'association_table' endpoint with ID and association category
+        - Compare phenotypes: Use 'semsim_compare' with lists of phenotype IDs
+        - Find similar diseases: Use 'semsim_search' with phenotype profile
+
+        Return ONLY the JSON object with no additional text or explanations.
+        """
+
+        llm_result = _query_llm_for_api(
+            prompt=prompt,
+            schema=monarch_schema,
+            system_template=system_template,
+            api_key=api_key,
+            model=model,
+        )
+        if not llm_result["success"]:
+            return llm_result
+        query_info = llm_result["data"]
+        endpoint = query_info.get("url", "")  # Changed from "full_url" to "url"
+        description = f"Monarch API query: {query_info.get('endpoint', 'unknown endpoint')}"
+        if not endpoint:
+            return {
+                "error": "Failed to generate a valid endpoint from the prompt",
+                "llm_response": llm_result.get("raw_response", "No response"),
+            }
+    else:
+        # Use provided endpoint directly
+        if endpoint.startswith("/"):
+            endpoint = f"{base_url}{endpoint}"
+        elif not endpoint.startswith("http"):
+            endpoint = f"{base_url}/{endpoint.lstrip('/')}"
+        description = "Direct query to Monarch API"
+
+    # Add max_results as a query parameter if not already present
+    if "?" in endpoint:
+        if "rows=" not in endpoint and "limit=" not in endpoint:
+            endpoint += f"&limit={max_results}"
+    else:
+        endpoint += f"?limit={max_results}"
+
+    api_result = _query_rest_api(endpoint=endpoint, method="GET", description=description)
+
+    if not verbose and "success" in api_result and api_result["success"] and "result" in api_result:
+        return _format_query_results(api_result["result"])
+
+    return api_result
+
+
+# OpenFDA integration
+def query_openfda(
+    prompt=None,
+    endpoint=None,
+    api_key=None,
+    model="claude-3-5-haiku-20241022",
+    max_results=100,
+    verbose=True,
+):
+    """Query the OpenFDA API using natural language or a direct endpoint.
+
+    Parameters
+    ----------
+    prompt (str, optional): Natural language query about drugs, adverse events, recalls, etc.
+    endpoint (str, optional): Direct OpenFDA API endpoint or full URL
+    api_key (str, optional): Anthropic API key. If None, will use ANTHROPIC_API_KEY env variable
+    model (str): Anthropic model to use for prompt-to-endpoint conversion
+    max_results (int): Maximum number of results to return (if supported by endpoint)
+    verbose (bool): Whether to return detailed results
+
+    Returns
+    -------
+    dict: Dictionary containing the query results or error information
+
+    Examples
+    --------
+    - Natural language: query_openfda("Find adverse events for Lipitor")
+    - Direct endpoint: query_openfda(endpoint="https://api.fda.gov/drug/event.json?search=patient.drug.medicinalproduct:lipitor")
+    """
+    base_url = "https://api.fda.gov"
+
+    if prompt is None and endpoint is None:
+        return {"error": "Either a prompt or an endpoint must be provided"}
+
+    # If using prompt, use Claude or Gemini to generate the endpoint
+    if prompt:
+        schema_path = os.path.join(os.path.dirname(__file__), "schema_db", "openfda.pkl")
+        if os.path.exists(schema_path):
+            with open(schema_path, "rb") as f:
+                openfda_schema = pickle.load(f)
+        else:
+            openfda_schema = None
+
+        system_template = """
+        You are a biomedical informatics expert specialized in using the OpenFDA API.\n\nBased on the user's natural language request, determine the appropriate OpenFDA API endpoint and parameters.\n\nOPENFDA API SCHEMA:\n{schema}\n\nYour response should be a JSON object with the following fields:\n1. \"full_url\": The complete URL to query (including the base URL \"https://api.fda.gov\" and any parameters)\n2. \"description\": A brief description of what the query is doing\n\nSPECIAL NOTES:\n- For drug event queries, use /drug/event.json?search=...\n- For drug label queries, use /drug/label.json?search=...\n- For recall queries, use /drug/enforcement.json?search=...\n- Use max_results to limit the number of returned items if supported (limit=)\n- Always URL-encode search terms\n- Return ONLY the JSON object with no additional text.\n        """
+        # Select LLM for prompt translation
+        llm_result = _query_llm_for_api(
+            prompt=prompt,
+            schema=openfda_schema,
+            system_template=system_template,
+            api_key=api_key,
+            model=model,
+        )
+        if not llm_result["success"]:
+            return llm_result
+        query_info = llm_result["data"]
+        endpoint = query_info.get("full_url", "")
+        description = query_info.get("description", "")
+        if not endpoint:
+            return {
+                "error": "Failed to generate a valid endpoint from the prompt",
+                "llm_response": llm_result.get("raw_response", "No response"),
+            }
+    else:
+        # Use provided endpoint directly
+        if endpoint.startswith("/"):
+            endpoint = f"{base_url}{endpoint}"
+        elif not endpoint.startswith("http"):
+            endpoint = f"{base_url}/{endpoint.lstrip('/')}"
+        description = "Direct query to OpenFDA API"
+
+    # Add max_results as a query parameter if not already present
+    if "?" in endpoint:
+        if "limit=" not in endpoint:
+            endpoint += f"&limit={max_results}"
+    else:
+        endpoint += f"?limit={max_results}"
+
+    api_result = _query_rest_api(endpoint=endpoint, method="GET", description=description)
+
+    if not verbose and "success" in api_result and api_result["success"] and "result" in api_result:
+        return _format_query_results(api_result["result"])
 
     return api_result
 
@@ -2863,7 +3065,7 @@ def query_gwas_catalog(
         if not endpoint:
             return {
                 "error": "Failed to generate a valid endpoint from the prompt",
-                "claude_response": llm_result.get("raw_response", "No response"),
+                "llm_response": llm_result.get("raw_response", "No response"),
             }
     else:
         if endpoint is None:
@@ -2967,7 +3169,7 @@ def query_gnomad(
         if not query_str:
             return {
                 "error": "Failed to extract a valid query from the prompt",
-                "claude_response": llm_result.get("raw_response", "No response"),
+                "llm_response": llm_result.get("raw_response", "No response"),
             }
     else:
         description = f"Query gnomAD for variants in {gene_symbol}"
@@ -3188,7 +3390,7 @@ def query_reactome(
         if not endpoint:
             return {
                 "error": "Failed to generate a valid endpoint from the prompt",
-                "claude_response": llm_result.get("raw_response", "No response"),
+                "llm_response": llm_result.get("raw_response", "No response"),
             }
     else:
         # Process provided endpoint
@@ -3332,7 +3534,7 @@ def query_regulomedb(
         if not endpoint:
             return {
                 "error": "Failed to extract a valid variant ID or coordinates from the prompt",
-                "claude_response": llm_result.get("raw_response", "No response"),
+                "llm_response": llm_result.get("raw_response", "No response"),
             }
     else:
         pass
@@ -3436,7 +3638,7 @@ def query_pride(
         if not endpoint:
             return {
                 "error": "Failed to generate a valid endpoint from the prompt",
-                "claude_response": llm_result.get("raw_response", "No response"),
+                "llm_response": llm_result.get("raw_response", "No response"),
             }
     else:
         # Process provided endpoint
@@ -3541,7 +3743,7 @@ def query_gtopdb(
         if not endpoint:
             return {
                 "error": "Failed to generate a valid endpoint from the prompt",
-                "claude_response": llm_result.get("raw_response", "No response"),
+                "llm_response": llm_result.get("raw_response", "No response"),
             }
     else:
         # Process provided endpoint
@@ -3814,7 +4016,7 @@ def query_remap(
         if not endpoint:
             return {
                 "error": "Failed to generate a valid endpoint from the prompt",
-                "claude_response": llm_result.get("raw_response", "No response"),
+                "llm_response": llm_result.get("raw_response", "No response"),
             }
     else:
         # Process provided endpoint
@@ -3921,7 +4123,7 @@ def query_mpd(
         if not endpoint:
             return {
                 "error": "Failed to generate a valid endpoint from the prompt",
-                "claude_response": llm_result.get("raw_response", "No response"),
+                "llm_response": llm_result.get("raw_response", "No response"),
             }
     else:
         # Process provided endpoint
@@ -4031,7 +4233,7 @@ def query_emdb(
         if not endpoint:
             return {
                 "error": "Failed to generate a valid endpoint from the prompt",
-                "claude_response": llm_result.get("raw_response", "No response"),
+                "llm_response": llm_result.get("raw_response", "No response"),
             }
     else:
         # Process provided endpoint

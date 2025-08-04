@@ -30,6 +30,7 @@ examples/*.fa
 scratch/
 packages/
 data
+dataset
 logs
 scripts/gradio
 data_lake
@@ -176,6 +177,7 @@ ENV/
 env.bak/
 venv.bak/
 .envrc
+uv.lock
 
 # Spyder project settings
 .spyderproject
@@ -218,4 +220,8 @@ data/ddinter_raw/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
+# VSCode
+/.vscode
+
+# Temporary files
 tmp/
