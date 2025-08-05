@@ -243,6 +243,7 @@ def generate_file_links_html(saved_files: list, session_dir: str) -> str:
                 print(f"[LOG] 图片编码失败: {file_name}, 错误: {e}")
                 # 如果base64编码失败，尝试读取文件并重新编码
                 try:
+                    import base64
                     with open(file_path, 'rb') as f:
                         img_data = f.read()
                         img_base64 = base64.b64encode(img_data).decode('utf-8')
@@ -347,6 +348,7 @@ def generate_file_links_html(saved_files: list, session_dir: str) -> str:
                     print(f"[LOG] 文本文件读取失败: {file_name}, 错误: {e}")
                     # 作为二进制文件处理
                     try:
+                        import base64
                         with open(file_path, 'rb') as f:
                             binary_data = f.read()
                             binary_base64 = base64.b64encode(binary_data).decode('utf-8')
@@ -375,6 +377,7 @@ def generate_file_links_html(saved_files: list, session_dir: str) -> str:
                 print(f"[LOG] 文本文件处理失败: {file_name}, 错误: {e}")
                 # 作为普通文件处理
                 try:
+                    import base64
                     with open(file_path, 'rb') as f:
                         file_data = f.read()
                         file_base64 = base64.b64encode(file_data).decode('utf-8')
@@ -430,6 +433,7 @@ def generate_file_links_html(saved_files: list, session_dir: str) -> str:
                 print(f"[LOG] PDF文件处理失败: {file_name}, 错误: {e}")
                 # 尝试重新读取PDF文件
                 try:
+                    import base64
                     with open(file_path, 'rb') as f:
                         pdf_data = f.read()
                         pdf_base64 = base64.b64encode(pdf_data).decode('utf-8')
@@ -492,6 +496,7 @@ def generate_file_links_html(saved_files: list, session_dir: str) -> str:
             
             # 读取文件内容并编码为base64
             try:
+                import base64
                 with open(file_path, 'rb') as f:
                     file_data = f.read()
                     file_base64 = base64.b64encode(file_data).decode('utf-8')
