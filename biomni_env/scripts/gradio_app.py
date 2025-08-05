@@ -786,10 +786,41 @@ def ask_biomni_stream(question: str, session_id: str = "", data_path: str = "./d
             seconds = elapsed_time % 60
             return f"{hours}小时{minutes}分{seconds:.1f}秒"
     
+    # 格式化token统计信息
+    def format_token_stats(agent):
+        """格式化token统计信息用于显示"""
+        try:
+            if not hasattr(agent, 'get_token_summary'):
+                return "Token统计功能不可用"
+            
+            token_summary = agent.get_token_summary()
+            
+            stats_html = f"""
+            <div style='margin: 20px 0; padding: 15px; background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); color: white; border-radius: 8px;'>
+                <h3 style='margin: 0 0 10px 0; color: white;'>🔢 Token 使用统计</h3>
+                <div style='display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 14px;'>
+                    <div><strong>总请求数:</strong> {token_summary.get('total_requests', 0):,}</div>
+                    <div><strong>会话问题数:</strong> {token_summary.get('questions_asked', 0):,}</div>
+                    <div><strong>累计输入tokens:</strong> {token_summary.get('total_prompt_tokens', 0):,}</div>
+                    <div><strong>累计输出tokens:</strong> {token_summary.get('total_completion_tokens', 0):,}</div>
+                    <div><strong>累计总tokens:</strong> {token_summary.get('total_tokens', 0):,}</div>
+                    <div><strong>会话时长:</strong> {token_summary.get('session_duration', 'N/A')}</div>
+                </div>
+                <div style='margin-top: 10px; font-size: 13px; border-top: 1px solid rgba(255,255,255,0.3); padding-top: 10px;'>
+                    <div><strong>平均每次输入:</strong> {token_summary.get('average_prompt_tokens', 0):.1f} tokens</div>
+                    <div><strong>平均每次输出:</strong> {token_summary.get('average_completion_tokens', 0):.1f} tokens</div>
+                    <div><strong>平均每次总计:</strong> {token_summary.get('average_total_tokens', 0):.1f} tokens</div>
+                </div>
+            </div>
+            """
+            return stats_html
+        except Exception as e:
+            return f"<div style='color: #dc3545;'>Token统计获取失败: {str(e)}</div>"
+    
     # 检查是否有有效的会话ID
     if not session_id or session_id == "":
         print(f"[LOG] 没有有效的session_id，提示用户先创建agent")  # 添加日志
-        yield f"❌ No session assigned. Please click '🚀 Create Agent' button first to create a session.", ""
+        yield f"❌ No session assigned. Please click '🚀 Create Agent' button first to create a session.", "", ""
         return
     
     print(f"[LOG] 使用传入的session_id: {session_id}")  # 添加日志
@@ -817,11 +848,11 @@ def ask_biomni_stream(question: str, session_id: str = "", data_path: str = "./d
     # 如果当前会话没有agent，提示用户先创建agent
     if session_agent is None:
         print(f"[LOG] 会话 {session_id} 没有agent，提示用户先创建")  # 添加日志
-        yield f"❌ Biomni agent not initialized for session {session_id}.\n\n请先点击'🚀 Create Agent'按钮创建agent，然后再提问。\n\n注意：每个会话都需要独立创建agent。", ""
+        yield f"❌ Biomni agent not initialized for session {session_id}.\n\n请先点击'🚀 Create Agent'按钮创建agent，然后再提问。\n\n注意：每个会话都需要独立创建agent。", "", ""
         return
     
     if not question.strip():
-        yield "❌ Please enter a question.", ""
+        yield "❌ Please enter a question.", "", ""
         return
     
     # 设置会话工作空间
@@ -846,6 +877,9 @@ def ask_biomni_stream(question: str, session_id: str = "", data_path: str = "./d
     try:
         # Clear previous execution logs
         session_agent.clear_execution_logs()
+        
+        # 记录执行前的token统计
+        initial_token_stats = format_token_stats(session_agent)
         
         # Start execution in a separate thread
         result_container = {}
@@ -883,6 +917,9 @@ def ask_biomni_stream(question: str, session_id: str = "", data_path: str = "./d
                 saved_files = scan_session_files(session_dir)
                 files_html = generate_file_links_html(saved_files, session_dir)
                 
+                # 获取最终token统计
+                final_token_stats = format_token_stats(session_agent)
+                
                 # 构建停止消息，保留现有内容
                 stop_message = ""
                 if intermediate_outputs:
@@ -897,6 +934,9 @@ def ask_biomni_stream(question: str, session_id: str = "", data_path: str = "./d
                 if files_html:
                     stop_message += files_html
                 
+                # 添加token统计信息
+                stop_message += final_token_stats
+                
                 # 追加停止信息和运行时间
                 runtime_display = get_runtime_display()
                 stop_message += f"\n\n<div style='margin: 20px 0; padding: 15px; background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; border-radius: 8px; text-align: center;'><h3 style='margin: 0;'>⏹️ Execution Stopped</h3><p style='margin: 5px 0 0 0;'>Task execution has been stopped by user.</p><p style='margin: 5px 0 0 0;'>运行时间: {runtime_display}</p></div>"
@@ -904,7 +944,7 @@ def ask_biomni_stream(question: str, session_id: str = "", data_path: str = "./d
                 # 清理会话工作空间
                 cleanup_session_workspace(original_dir)
                 
-                yield stop_message, execution_log
+                yield stop_message, execution_log, final_token_stats
                 session_task.join(timeout=1)  # Give it a moment to finish
                 return
             
@@ -914,6 +954,9 @@ def ask_biomni_stream(question: str, session_id: str = "", data_path: str = "./d
             
             # Get intermediate outputs
             intermediate_outputs = session_agent.get_intermediate_outputs()
+            
+            # Get current token stats
+            current_token_stats = format_token_stats(session_agent)
             
             # Check if we have new steps or intermediate results
             if len(logs) > last_step_count or len(intermediate_outputs) > last_intermediate_count:
@@ -935,7 +978,10 @@ def ask_biomni_stream(question: str, session_id: str = "", data_path: str = "./d
                 else:
                     intermediate_text = "⏳ Processing... Please wait for intermediate results."
                 
-                yield intermediate_text, execution_log
+                # 添加当前token统计
+                intermediate_text += current_token_stats
+                
+                yield intermediate_text, execution_log, current_token_stats
             
             time.sleep(0.5)  # Update every 0.5 seconds for better responsiveness
         
@@ -953,12 +999,16 @@ def ask_biomni_stream(question: str, session_id: str = "", data_path: str = "./d
             saved_files = scan_session_files(session_dir)
             files_html = generate_file_links_html(saved_files, session_dir)
             
+            # 获取最终token统计
+            final_token_stats = format_token_stats(session_agent)
+            
             runtime_display = get_runtime_display()
             error_message = f"❌ **Error:** {result_container['error']}\n\n"
             if files_html:
                 error_message += files_html
+            error_message += final_token_stats
             error_message += f"\n\n<div style='margin: 20px 0; padding: 15px; background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; border-radius: 8px; text-align: center;'><h3 style='margin: 0;'>❌ 执行出错</h3><p style='margin: 5px 0 0 0;'>运行时间: {runtime_display}</p></div>"
-            yield error_message, execution_log
+            yield error_message, execution_log, final_token_stats
             return
         
         if 'result' in result_container:
@@ -969,6 +1019,9 @@ def ask_biomni_stream(question: str, session_id: str = "", data_path: str = "./d
             # 扫描会话目录中的所有新生成文件
             saved_files = scan_session_files(session_dir)
             files_html = generate_file_links_html(saved_files, session_dir)
+            
+            # 获取最终token统计
+            final_token_stats = format_token_stats(session_agent)
             
             # Format the final output with advanced parsing
             intermediate_text = ""
@@ -990,16 +1043,20 @@ def ask_biomni_stream(question: str, session_id: str = "", data_path: str = "./d
             # 添加生成的文件链接
             if files_html:
                 intermediate_text += files_html
+                
+            # 添加最终token统计
+            intermediate_text += final_token_stats
             
             # 添加总运行时间
             runtime_display = get_runtime_display()
             intermediate_text += f"\n\n<div style='margin: 20px 0; padding: 15px; background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border-radius: 8px; text-align: center;'><h3 style='margin: 0;'>✅ 执行完成</h3><p style='margin: 5px 0 0 0;'>总运行时间: {runtime_display}</p></div>"
             
-            yield intermediate_text, execution_log
+            yield intermediate_text, execution_log, final_token_stats
         else:
             runtime_display = get_runtime_display()
-            no_result_message = f"❌ No result received.\n\n<div style='margin: 20px 0; padding: 15px; background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%); color: white; border-radius: 8px; text-align: center;'><h3 style='margin: 0;'>⚠️ 无结果</h3><p style='margin: 5px 0 0 0;'>运行时间: {runtime_display}</p></div>"
-            yield no_result_message, "\n".join([entry["formatted"] for entry in session_agent.get_execution_logs()])
+            final_token_stats = format_token_stats(session_agent)
+            no_result_message = f"❌ No result received.\n\n{final_token_stats}\n\n<div style='margin: 20px 0; padding: 15px; background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%); color: white; border-radius: 8px; text-align: center;'><h3 style='margin: 0;'>⚠️ 无结果</h3><p style='margin: 5px 0 0 0;'>运行时间: {runtime_display}</p></div>"
+            yield no_result_message, "\n".join([entry["formatted"] for entry in session_agent.get_execution_logs()]), final_token_stats
             
     except Exception as e:
         # 确保在异常时也清理工作空间
@@ -1016,12 +1073,16 @@ def ask_biomni_stream(question: str, session_id: str = "", data_path: str = "./d
             if saved_files:
                 files_html = generate_file_links_html(saved_files, session_dir)
         
+        # 获取错误时的token统计
+        error_token_stats = format_token_stats(session_agent) if session_agent else "<div style='color: #dc3545;'>Token统计不可用</div>"
+        
         runtime_display = get_runtime_display()
         error_message = f"❌ Error processing question: {str(e)}\n\n"
         if files_html:
             error_message += files_html
+        error_message += error_token_stats
         error_message += f"\n\n<div style='margin: 20px 0; padding: 15px; background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; border-radius: 8px; text-align: center;'><h3 style='margin: 0;'>❌ 处理出错</h3><p style='margin: 5px 0 0 0;'>运行时间: {runtime_display}</p></div>"
-        yield error_message, execution_log
+        yield error_message, execution_log, error_token_stats
 
 def ask_biomni(question: str, data_path: str = "./data"):
     """Non-streaming version for backward compatibility."""
@@ -1108,6 +1169,172 @@ def remove_custom_data(data_name: str, session_id: str = ""):
     except Exception as e:
         return f"❌ Error removing data: {str(e)}"
 
+
+def get_token_statistics(session_id: str = ""):
+    """获取详细的token统计信息"""
+    if not session_id or session_id == "":
+        return "❌ No session assigned. Please create an agent first.", ""
+    
+    session = session_manager.get_session(session_id)
+    if not session or not session['agent']:
+        return "❌ Agent not found. Please create an agent first.", ""
+    
+    try:
+        agent = session['agent']
+        if not hasattr(agent, 'get_token_summary'):
+            return "Token统计功能不可用", ""
+        
+        token_summary = agent.get_token_summary()
+        token_history = agent.get_token_history()
+        
+        # 生成主要统计信息
+        stats_html = f"""
+        <div style='margin: 20px 0; padding: 20px; background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); color: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);'>
+            <h2 style='margin: 0 0 15px 0; color: white; text-align: center;'>🔢 Token 使用统计总览</h2>
+            <div style='display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0;'>
+                <div style='background: rgba(255,255,255,0.2); padding: 15px; border-radius: 8px; text-align: center;'>
+                    <div style='font-size: 24px; font-weight: bold; margin-bottom: 5px;'>{token_summary.get('total_requests', 0):,}</div>
+                    <div style='font-size: 14px; opacity: 0.9;'>总请求数</div>
+                </div>
+                <div style='background: rgba(255,255,255,0.2); padding: 15px; border-radius: 8px; text-align: center;'>
+                    <div style='font-size: 24px; font-weight: bold; margin-bottom: 5px;'>{token_summary.get('questions_asked', 0):,}</div>
+                    <div style='font-size: 14px; opacity: 0.9;'>会话问题数</div>
+                </div>
+                <div style='background: rgba(255,255,255,0.2); padding: 15px; border-radius: 8px; text-align: center;'>
+                    <div style='font-size: 24px; font-weight: bold; margin-bottom: 5px;'>{token_summary.get('total_tokens', 0):,}</div>
+                    <div style='font-size: 14px; opacity: 0.9;'>累计总tokens</div>
+                </div>
+                <div style='background: rgba(255,255,255,0.2); padding: 15px; border-radius: 8px; text-align: center;'>
+                    <div style='font-size: 18px; font-weight: bold; margin-bottom: 5px;'>{token_summary.get('session_duration', 'N/A')}</div>
+                    <div style='font-size: 14px; opacity: 0.9;'>会话时长</div>
+                </div>
+            </div>
+            <div style='display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 15px; font-size: 14px; border-top: 1px solid rgba(255,255,255,0.3); padding-top: 15px;'>
+                <div><strong>累计输入:</strong> {token_summary.get('total_prompt_tokens', 0):,} tokens</div>
+                <div><strong>累计输出:</strong> {token_summary.get('total_completion_tokens', 0):,} tokens</div>
+                <div><strong>平均每次:</strong> {token_summary.get('average_total_tokens', 0):.1f} tokens</div>
+            </div>
+        </div>
+        """
+        
+        # 生成详细历史记录
+        history_html = ""
+        if token_history:
+            history_html = "<div style='margin: 10px 0;'>"
+            for i, record in enumerate(reversed(token_history[-10:])):  # 显示最近10条记录
+                record_html = f"""
+                <div style='margin: 10px 0; padding: 12px; background: #f8f9fa; border-left: 4px solid #007bff; border-radius: 4px;'>
+                    <div style='font-weight: bold; color: #007bff; margin-bottom: 5px;'>
+                        请求 #{record['request_id']} - {record['timestamp']}
+                    </div>
+                    <div style='display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; font-size: 13px; color: #666;'>
+                        <div>📝 输入: {record['prompt_tokens']:,} tokens</div>
+                        <div>💬 输出: {record['completion_tokens']:,} tokens</div>
+                        <div>📊 总计: {record['total_tokens']:,} tokens</div>
+                    </div>
+                    <div style='font-size: 12px; color: #888; margin-top: 5px;'>
+                        模型: {record.get('model', '未知')} | 响应长度: {record.get('response_length', 0):,} 字符
+                    </div>
+                </div>
+                """
+                history_html += record_html
+            history_html += "</div>"
+        else:
+            history_html = "<div style='text-align: center; color: #666; padding: 20px;'>暂无token使用历史记录</div>"
+        
+        return stats_html, history_html
+        
+    except Exception as e:
+        return f"❌ 获取token统计失败: {str(e)}", ""
+
+def reset_token_statistics(session_id: str = ""):
+    """重置token统计"""
+    if not session_id or session_id == "":
+        return "❌ No session assigned. Please create an agent first.", ""
+    
+    session = session_manager.get_session(session_id)
+    if not session or not session['agent']:
+        return "❌ Agent not found. Please create an agent first.", ""
+    
+    try:
+        agent = session['agent']
+        if hasattr(agent, 'reset_token_stats'):
+            agent.reset_token_stats()
+            return "✅ Token统计已重置", "<div style='text-align: center; color: #666; padding: 10px;'>Token统计已重置，暂无历史记录</div>"
+        else:
+            return "❌ Token统计重置功能不可用", ""
+    except Exception as e:
+        return f"❌ 重置token统计失败: {str(e)}", ""
+
+def export_token_data(session_id: str = ""):
+    """导出token使用数据"""
+    if not session_id or session_id == "":
+        return "❌ No session assigned. Please create an agent first.", None
+    
+    session = session_manager.get_session(session_id)
+    if not session or not session['agent']:
+        return "❌ Agent not found. Please create an agent first.", None
+    
+    try:
+        agent = session['agent']
+        if not hasattr(agent, 'get_token_summary'):
+            return "Token统计功能不可用", None
+        
+        token_summary = agent.get_token_summary()
+        token_history = agent.get_token_history()
+        
+        # 生成CSV格式的数据
+        import io
+        import csv
+        from datetime import datetime
+        
+        output = io.StringIO()
+        writer = csv.writer(output)
+        
+        # 写入表头
+        writer.writerow(['Request_ID', 'Timestamp', 'Prompt_Tokens', 'Completion_Tokens', 'Total_Tokens', 'Model', 'Response_Length'])
+        
+        # 写入历史数据
+        for record in token_history:
+            writer.writerow([
+                record['request_id'],
+                record['timestamp'],
+                record['prompt_tokens'],
+                record['completion_tokens'],
+                record['total_tokens'],
+                record.get('model', 'unknown'),
+                record.get('response_length', 0)
+            ])
+        
+        # 添加汇总信息
+        writer.writerow([])
+        writer.writerow(['=== Token Usage Summary ==='])
+        writer.writerow(['Total Requests', token_summary.get('total_requests', 0)])
+        writer.writerow(['Questions Asked', token_summary.get('questions_asked', 0)])
+        writer.writerow(['Total Prompt Tokens', token_summary.get('total_prompt_tokens', 0)])
+        writer.writerow(['Total Completion Tokens', token_summary.get('total_completion_tokens', 0)])
+        writer.writerow(['Total Tokens', token_summary.get('total_tokens', 0)])
+        writer.writerow(['Session Duration', token_summary.get('session_duration', 'N/A')])
+        writer.writerow(['Average Prompt Tokens', f"{token_summary.get('average_prompt_tokens', 0):.2f}"])
+        writer.writerow(['Average Completion Tokens', f"{token_summary.get('average_completion_tokens', 0):.2f}"])
+        writer.writerow(['Average Total Tokens', f"{token_summary.get('average_total_tokens', 0):.2f}"])
+        
+        csv_content = output.getvalue()
+        output.close()
+        
+        # 创建临时文件
+        import tempfile
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"token_usage_{session_id[:8]}_{timestamp}.csv"
+        
+        temp_file = tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False, encoding='utf-8')
+        temp_file.write(csv_content)
+        temp_file.close()
+        
+        return "✅ Token数据导出成功", temp_file.name
+        
+    except Exception as e:
+        return f"❌ 导出token数据失败: {str(e)}", None
 
 def reset_agent(session_id: str = ""):
     """Reset the agent."""
@@ -1769,6 +1996,24 @@ window.saveResultsToLocal = saveResultsToLocal;
                         scale=1
                     )
 
+            with gr.Tab("Token Statistics"):
+                token_stats = gr.HTML(
+                    label="Token Usage Statistics",
+                    value="<div style='text-align: center; color: #666; padding: 20px;'>Token statistics will appear here after agent initialization...</div>"
+                )
+                
+                # 添加token历史记录
+                with gr.Accordion("📊 详细Token历史", open=False):
+                    token_history = gr.HTML(
+                        label="Token History",
+                        value="<div style='text-align: center; color: #666; padding: 10px;'>No token history available yet...</div>"
+                    )
+                
+                # 添加token管理按钮
+                with gr.Row():
+                    reset_tokens_btn = gr.Button("🔄 Reset Token Stats", variant="secondary", scale=1)
+                    export_tokens_btn = gr.Button("📊 Export Token Data", variant="primary", scale=1)
+
             with gr.Tab("Execution Log"):
                 execution_log = gr.Textbox(
                     label="Detailed Execution Log",
@@ -1856,10 +2101,23 @@ window.saveResultsToLocal = saveResultsToLocal;
     def task_completion_state():
         return gr.Button(interactive=True), gr.Button(interactive=False), gr.Button(interactive=True)
     
+    # 更新token统计显示
+    def update_token_display(session_id):
+        """更新token统计显示"""
+        if session_id:
+            stats, history = get_token_statistics(session_id)
+            return stats, history
+        else:
+            return "<div style='text-align: center; color: #666; padding: 20px;'>请先创建Agent以显示Token统计</div>", ""
+    
     create_btn.click(
         fn=create_agent_and_update_data,
         inputs=[llm_model, source, base_url, api_key, data_path, verbose],
         outputs=[status_text, config_info, session_id_state, data_list_display]
+    ).then(
+        fn=update_token_display,
+        inputs=[session_id_state],
+        outputs=[token_stats, token_history]
     )
     
     reset_btn.click(
@@ -1889,10 +2147,14 @@ window.saveResultsToLocal = saveResultsToLocal;
     ).then(
         fn=ask_biomni_stream,
         inputs=[question, session_id_state, data_path],
-        outputs=[intermediate_results, execution_log]
+        outputs=[intermediate_results, execution_log, token_stats]
     ).then(
         fn=task_completion_state,
         outputs=[ask_btn, stop_btn, download_btn]
+    ).then(
+        fn=update_token_display,
+        inputs=[session_id_state],
+        outputs=[token_stats, token_history]
     )
     
     # Also allow Enter key to submit question
@@ -1906,10 +2168,14 @@ window.saveResultsToLocal = saveResultsToLocal;
     ).then(
         fn=ask_biomni_stream,
         inputs=[question, session_id_state, data_path],
-        outputs=[intermediate_results, execution_log]
+        outputs=[intermediate_results, execution_log, token_stats]
     ).then(
         fn=task_completion_state,
         outputs=[ask_btn, stop_btn, download_btn]
+    ).then(
+        fn=update_token_display,
+        inputs=[session_id_state],
+        outputs=[token_stats, token_history]
     )
     
     # 文件选择时启用上传按钮
@@ -1936,6 +2202,19 @@ window.saveResultsToLocal = saveResultsToLocal;
         fn=get_current_data_list,
         inputs=[session_id_state],
         outputs=[data_list_display]
+    )
+    
+    # Token management buttons
+    reset_tokens_btn.click(
+        fn=reset_token_statistics,
+        inputs=[session_id_state],
+        outputs=[token_stats, token_history]
+    )
+    
+    export_tokens_btn.click(
+        fn=export_token_data,
+        inputs=[session_id_state],
+        outputs=[link_status, file_link]
     )
     
 

@@ -30,6 +30,7 @@ from biomni.utils import (
     run_r_code,
     run_with_timeout,
     textify_api_dict,
+    NodeLogger,
 )
 
 if os.path.exists(".env"):
@@ -72,6 +73,15 @@ class A1:
         self.path = path
         self.execution_logs = []  # Store execution logs for retrieval
         self.stop_execution = False  # Flag to stop execution
+        
+        # 初始化token统计
+        self.token_logger = NodeLogger()
+        self.session_token_stats = {
+            "session_start": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "questions_asked": 0,
+            "total_session_tokens": 0,
+            "question_history": []
+        }
         
         self._log("INIT", "🚀", "Starting Biomni Agent initialization...")
         self._log("INIT", "📂", f"Data path: {path}")
@@ -172,6 +182,14 @@ class A1:
             llm, stop_sequences=["</execute>", "</solution>"], base_url=base_url, api_key=api_key, source=source
         )
         
+        # 将token logger添加到LLM的回调中
+        if hasattr(self.llm, 'callbacks'):
+            if self.llm.callbacks is None:
+                self.llm.callbacks = []
+            self.llm.callbacks.append(self.token_logger)
+        else:
+            self.llm.callbacks = [self.token_logger]
+        
         self._log("INIT", "✅", "LLM initialized successfully")
             
         self.module2api = module2api
@@ -196,6 +214,54 @@ class A1:
         
         self._log("INIT", "🎉", "Biomni Agent initialization completed!")
     
+    def get_token_summary(self):
+        """获取详细的token使用摘要"""
+        token_summary = self.token_logger.get_token_summary()
+        session_summary = {
+            **self.session_token_stats,
+            **token_summary,
+            "session_duration": str(datetime.now() - datetime.strptime(self.session_token_stats["session_start"], "%Y-%m-%d %H:%M:%S")).split('.')[0]
+        }
+        return session_summary
+    
+    def get_token_history(self):
+        """获取token使用历史"""
+        return self.token_logger.token_history
+    
+    def reset_token_stats(self):
+        """重置token统计"""
+        self.token_logger.reset_token_stats()
+        self.session_token_stats = {
+            "session_start": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "questions_asked": 0,
+            "total_session_tokens": 0,
+            "question_history": []
+        }
+        self._log("TOKEN", "🔄", "Token statistics reset")
+    
+    def _log_question_token_usage(self, question: str, token_usage_before: dict, token_usage_after: dict):
+        """记录每个问题的token使用情况"""
+        tokens_used = token_usage_after.get("total_tokens", 0) - token_usage_before.get("total_tokens", 0)
+        
+        question_record = {
+            "question_id": self.session_token_stats["questions_asked"] + 1,
+            "question": question[:100] + "..." if len(question) > 100 else question,
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3],
+            "tokens_before": token_usage_before,
+            "tokens_after": token_usage_after,
+            "tokens_used_for_question": tokens_used
+        }
+        
+        self.session_token_stats["question_history"].append(question_record)
+        self.session_token_stats["questions_asked"] += 1
+        self.session_token_stats["total_session_tokens"] = token_usage_after.get("total_tokens", 0)
+        
+        # 记录到执行日志
+        self._log("TOKEN", "📊", f"问题 #{question_record['question_id']}: 使用 {tokens_used:,} tokens")
+        self._log("TOKEN", "📝", f"问题内容: {question_record['question']}")
+        
+        return question_record
+
     def _log(self, category: str, icon: str, message: str):
         """Custom logging method with timestamps and category."""
         timestamp = datetime.now().strftime("%Y%m%d %H:%M:%S.%f")[:-3]  # Include milliseconds
@@ -1566,8 +1632,12 @@ Each library is listed with its description to help you understand its functiona
         # Record start time
         start_time = time.time()
         
+        # 记录问题开始前的token使用情况
+        token_usage_before = self.token_logger.get_token_summary()
+        
         self._log("EXEC", "🚀", "Starting task execution...")
         self._log("EXEC", "📝", f"User prompt: {prompt[:100]}{'...' if len(prompt) > 100 else ''}")
+        self._log("TOKEN", "📊", f"开始执行前 - 累计tokens: {token_usage_before.get('total_tokens', 0):,}")
             
         self.critic_count = 0
         self.user_task = prompt
@@ -1733,11 +1803,18 @@ Each library is listed with its description to help you understand its functiona
                 self._log("EXEC", "⏱️", f"Total execution time: {total_time:.2f} seconds")
                 final_message = f"Execution stopped by user at step {step_count}"
                 return self.log, final_message
+        
+        # 记录问题结束后的token使用情况
+        token_usage_after = self.token_logger.get_token_summary()
+        question_record = self._log_question_token_usage(prompt, token_usage_before, token_usage_after)
+        
         # Calculate and log total execution time
         end_time = time.time()
         total_time = end_time - start_time
         self._log("EXEC", "🎉", f"Task execution completed! Total steps: {step_count}")
         self._log("EXEC", "⏱️", f"Total execution time: {total_time:.2f} seconds")
+        self._log("TOKEN", "📊", f"问题完成后 - 累计tokens: {token_usage_after.get('total_tokens', 0):,}")
+        self._log("TOKEN", "🔥", f"本问题消耗tokens: {question_record['tokens_used_for_question']:,}")
 
         return self.log, message.content
     

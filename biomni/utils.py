@@ -774,12 +774,95 @@ class PromptLogger(BaseCallbackHandler):
 
 
 class NodeLogger(BaseCallbackHandler):
+    def __init__(self):
+        super().__init__()
+        self.total_prompt_tokens = 0
+        self.total_completion_tokens = 0
+        self.total_tokens = 0
+        self.request_count = 0
+        self.token_history = []  # Store detailed token usage history
+        
     def on_llm_end(self, response, **kwargs):  # response of type LLMResult
         for generations in response.generations:  # response.generations of type List[List[Generations]] becuase "each input could have multiple candidate generations"
             for generation in generations:
                 generated_text = generation.message.content
-                # token_usage = generation.message.response_metadata["token_usage"]
+                
+                # 获取token使用情况
+                token_usage = generation.message.response_metadata.get("token_usage", {})
+                
+                if token_usage:
+                    # 提取详细的token信息
+                    prompt_tokens = token_usage.get("prompt_tokens", 0)
+                    completion_tokens = token_usage.get("completion_tokens", 0)
+                    total_tokens = token_usage.get("total_tokens", prompt_tokens + completion_tokens)
+                    
+                    # 更新累计统计
+                    self.total_prompt_tokens += prompt_tokens
+                    self.total_completion_tokens += completion_tokens
+                    self.total_tokens += total_tokens
+                    self.request_count += 1
+                    
+                    # 记录详细的token使用历史
+                    token_record = {
+                        "request_id": self.request_count,
+                        "timestamp": __import__('datetime').datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3],
+                        "prompt_tokens": prompt_tokens,
+                        "completion_tokens": completion_tokens,
+                        "total_tokens": total_tokens,
+                        "model": token_usage.get("model", "unknown"),
+                        "response_length": len(generated_text)
+                    }
+                    self.token_history.append(token_record)
+                    
+                    # 输出详细的token使用信息
+                    color_print("=" * 60, color="blue")
+                    color_print(f"🔢 TOKEN 使用统计 - 请求 #{self.request_count}", color="blue")
+                    color_print(f"📝 输入 tokens: {prompt_tokens:,}", color="green")
+                    color_print(f"💬 输出 tokens: {completion_tokens:,}", color="green") 
+                    color_print(f"📊 本次总计: {total_tokens:,} tokens", color="green")
+                    color_print(f"🤖 模型: {token_usage.get('model', 'unknown')}", color="green")
+                    color_print(f"📏 响应长度: {len(generated_text):,} 字符", color="green")
+                    
+                    # 显示累计统计
+                    color_print("-" * 40, color="blue")
+                    color_print(f"📈 累计统计 (共 {self.request_count} 次请求):", color="blue")
+                    color_print(f"📝 累计输入 tokens: {self.total_prompt_tokens:,}", color="yellow")
+                    color_print(f"💬 累计输出 tokens: {self.total_completion_tokens:,}", color="yellow")
+                    color_print(f"📊 累计总计: {self.total_tokens:,} tokens", color="yellow")
+                    
+                    # 计算平均值
+                    if self.request_count > 0:
+                        avg_prompt = self.total_prompt_tokens / self.request_count
+                        avg_completion = self.total_completion_tokens / self.request_count
+                        avg_total = self.total_tokens / self.request_count
+                        color_print(f"📊 平均每次: 输入 {avg_prompt:.1f}, 输出 {avg_completion:.1f}, 总计 {avg_total:.1f} tokens", color="yellow")
+                    
+                    color_print("=" * 60, color="blue")
+                else:
+                    color_print("⚠️ 未获取到token使用信息", color="red")
+                
                 color_print(generated_text, color="yellow")
+    
+    def get_token_summary(self):
+        """获取token使用摘要"""
+        return {
+            "total_requests": self.request_count,
+            "total_prompt_tokens": self.total_prompt_tokens,
+            "total_completion_tokens": self.total_completion_tokens,
+            "total_tokens": self.total_tokens,
+            "average_prompt_tokens": self.total_prompt_tokens / max(1, self.request_count),
+            "average_completion_tokens": self.total_completion_tokens / max(1, self.request_count),
+            "average_total_tokens": self.total_tokens / max(1, self.request_count),
+            "token_history": self.token_history
+        }
+    
+    def reset_token_stats(self):
+        """重置token统计"""
+        self.total_prompt_tokens = 0
+        self.total_completion_tokens = 0
+        self.total_tokens = 0
+        self.request_count = 0
+        self.token_history = []
 
     def on_agent_action(self, action, **kwargs):
         color_print(action.log, color="pink")
