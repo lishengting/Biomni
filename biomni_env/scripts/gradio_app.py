@@ -80,7 +80,7 @@ def reset_save_download_state():
     save_download_state['last_save_hash'] = None
     save_download_state['last_saved_file'] = None
     print("[LOG] 重置保存/下载状态")
-    return gr.Button(interactive=True), gr.File(visible=False)  # 重新启用按钮并隐藏文件链接
+    return gr.Button(interactive=True), gr.File(visible=False), ""  # 重新启用按钮、隐藏文件链接、清空状态文本
 
 # 会话结果目录管理
 def get_session_results_dir(session_id: str) -> str:
@@ -1604,6 +1604,14 @@ window.saveResultsToLocal = saveResultsToLocal;
                 placeholder="Upload status will appear here..."
             )
             
+            # Link status display
+            link_status = gr.Textbox(
+                label="Link Status",
+                interactive=False,
+                lines=2,
+                placeholder="Link status will appear here..."
+            )
+            
 
             
         with gr.Column(scale=3):
@@ -1650,13 +1658,6 @@ window.saveResultsToLocal = saveResultsToLocal;
                 # 添加生成链接按钮和文件链接
                 with gr.Row():
                     download_btn = gr.Button("🔗 Generate Link", variant="primary", scale=1)
-                    save_status = gr.Textbox(
-                        label="Link Status",
-                        interactive=False,
-                        lines=2,
-                        placeholder="Link status will appear here...",
-                        scale=2
-                    )
                     file_link = gr.File(
                         label="Download Results",
                         visible=False,
@@ -1775,7 +1776,7 @@ window.saveResultsToLocal = saveResultsToLocal;
         outputs=[ask_btn, stop_btn]
     ).then(
         fn=reset_save_download_state,
-        outputs=[download_btn, file_link]
+        outputs=[download_btn, file_link, link_status]
     ).then(
         fn=ask_biomni_stream,
         inputs=[question, session_id_state, data_path],
@@ -1788,7 +1789,7 @@ window.saveResultsToLocal = saveResultsToLocal;
     # Also allow Enter key to submit question
     question.submit(
         fn=reset_save_download_state,
-        outputs=[download_btn, file_link]
+        outputs=[download_btn, file_link, link_status]
     ).then(
         fn=ask_biomni_stream,
         inputs=[question, session_id_state, data_path],
@@ -1951,7 +1952,7 @@ window.saveResultsToLocal = saveResultsToLocal;
     download_btn.click(
         fn=handle_generate_link,
         inputs=[intermediate_results, execution_log, session_id_state, question],
-        outputs=[save_status, file_link, download_btn]
+        outputs=[link_status, file_link, download_btn]
     )
 
 if __name__ == "__main__":
