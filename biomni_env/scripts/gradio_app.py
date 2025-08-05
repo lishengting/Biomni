@@ -80,7 +80,7 @@ def reset_save_download_state():
     save_download_state['last_save_hash'] = None
     save_download_state['last_saved_file'] = None
     print("[LOG] 重置保存/下载状态")
-    return gr.Button(interactive=True), gr.File(visible=False), ""  # 重新启用按钮、隐藏文件链接、清空状态文本
+    return gr.Button(interactive=False), gr.File(visible=False), ""  # 禁用按钮、隐藏文件链接、清空状态文本
 
 # 会话结果目录管理
 def get_session_results_dir(session_id: str) -> str:
@@ -1739,13 +1739,17 @@ window.saveResultsToLocal = saveResultsToLocal;
         data_list = get_current_data_list(result[2])  # result[2] is the new session_id
         return result[0], result[1], result[2], data_list
     
-    # 开始执行时启用Stop按钮，禁用Ask按钮
+    # 开始执行时启用Stop按钮，禁用Ask按钮和Generate Link按钮
     def start_execution(question, session_id, data_path):
-        return gr.Button(interactive=False), gr.Button(interactive=True)
+        return gr.Button(interactive=False), gr.Button(interactive=True), gr.Button(interactive=False)
     
-    # 停止执行时禁用Stop按钮，启用Ask按钮
+    # 停止执行时禁用Stop按钮，启用Ask按钮和Generate Link按钮
     def stop_execution_state():
-        return gr.Button(interactive=True), gr.Button(interactive=False)
+        return gr.Button(interactive=True), gr.Button(interactive=False), gr.Button(interactive=True)
+    
+    # 任务完成时启用Generate Link按钮
+    def task_completion_state():
+        return gr.Button(interactive=True), gr.Button(interactive=False), gr.Button(interactive=True)
     
     create_btn.click(
         fn=create_agent_and_update_data,
@@ -1766,14 +1770,14 @@ window.saveResultsToLocal = saveResultsToLocal;
         outputs=[intermediate_results, execution_log]
     ).then(
         fn=stop_execution_state,
-        outputs=[ask_btn, stop_btn]
+        outputs=[ask_btn, stop_btn, download_btn]
     )
     
     # Streaming ask function
     ask_btn.click(
         fn=start_execution,
         inputs=[question, session_id_state, data_path],
-        outputs=[ask_btn, stop_btn]
+        outputs=[ask_btn, stop_btn, download_btn]
     ).then(
         fn=reset_save_download_state,
         outputs=[download_btn, file_link, link_status]
@@ -1782,18 +1786,25 @@ window.saveResultsToLocal = saveResultsToLocal;
         inputs=[question, session_id_state, data_path],
         outputs=[intermediate_results, execution_log]
     ).then(
-        fn=stop_execution_state,
-        outputs=[ask_btn, stop_btn]
+        fn=task_completion_state,
+        outputs=[ask_btn, stop_btn, download_btn]
     )
     
     # Also allow Enter key to submit question
     question.submit(
+        fn=start_execution,
+        inputs=[question, session_id_state, data_path],
+        outputs=[ask_btn, stop_btn, download_btn]
+    ).then(
         fn=reset_save_download_state,
         outputs=[download_btn, file_link, link_status]
     ).then(
         fn=ask_biomni_stream,
         inputs=[question, session_id_state, data_path],
         outputs=[intermediate_results, execution_log]
+    ).then(
+        fn=task_completion_state,
+        outputs=[ask_btn, stop_btn, download_btn]
     )
     
     # 文件选择时启用上传按钮
