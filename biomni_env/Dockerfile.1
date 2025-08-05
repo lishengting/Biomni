@@ -35,6 +35,15 @@ COPY --chown=biomni:biomni bio_env.yml r_packages.yml ./
 # 切换到biomni用户
 USER biomni
 
+# 配置conda使用中科大镜像源
+RUN /opt/miniconda3/bin/conda config --add channels https://mirrors.ustc.edu.cn/anaconda/pkgs/main/ && \
+    /opt/miniconda3/bin/conda config --add channels https://mirrors.ustc.edu.cn/anaconda/pkgs/free/ && \
+    /opt/miniconda3/bin/conda config --add channels https://mirrors.ustc.edu.cn/anaconda/cloud/conda-forge/ && \
+    /opt/miniconda3/bin/conda config --add channels https://mirrors.ustc.edu.cn/anaconda/cloud/bioconda/ && \
+    /opt/miniconda3/bin/conda config --set show_channel_urls yes && \
+    /opt/miniconda3/bin/conda config --set remote_read_timeout_secs 600 && \
+    /opt/miniconda3/bin/conda config --set remote_connect_timeout_secs 600
+
 # 拆分 bio_env.yml
 RUN cat <<EOF > split_bio_env.py
 import yaml
@@ -66,9 +75,41 @@ for i in range(math.ceil(len(pip_deps)/chunk_size)):
 EOF
 RUN python3 split_bio_env.py && rm split_bio_env.py
 
-# 用 conda 安装 conda-only 依赖
-RUN /opt/miniconda3/bin/conda env update -n biomni_e1 -f bio_env.conda.yml && \
-    /opt/miniconda3/bin/conda env update -n biomni_e1 -f r_packages.yml 
+# 用 conda 安装 conda-only 依赖（增加重试机制）
+RUN for i in {1..3}; do \
+      echo "==== 尝试第 $i 次安装conda依赖 ===="; \
+      if /opt/miniconda3/bin/conda env update -n biomni_e1 -f bio_env.conda.yml; then \
+        echo "conda依赖安装成功！"; \
+        break; \
+      else \
+        echo "第 $i 次安装失败"; \
+        if [ $i -eq 3 ]; then \
+          echo "所有重试都失败了，构建失败"; \
+          exit 1; \
+        else \
+          echo "等待30秒后重试..."; \
+          sleep 30; \
+        fi; \
+      fi; \
+    done
+
+# 安装R包（增加重试机制）
+RUN for i in {1..3}; do \
+      echo "==== 尝试第 $i 次安装R包 ===="; \
+      if /opt/miniconda3/bin/conda env update -n biomni_e1 -f r_packages.yml; then \
+        echo "R包安装成功！"; \
+        break; \
+      else \
+        echo "第 $i 次安装失败"; \
+        if [ $i -eq 3 ]; then \
+          echo "所有重试都失败了，构建失败"; \
+          exit 1; \
+        else \
+          echo "等待30秒后重试..."; \
+          sleep 30; \
+        fi; \
+      fi; \
+    done
 
 # 分批安装 pip requirements
 RUN for f in requirements.*.txt; do \
