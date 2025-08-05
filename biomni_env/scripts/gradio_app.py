@@ -62,6 +62,25 @@ class SessionManager:
 # 全局会话管理器
 session_manager = SessionManager()
 
+# 全局变量用于跟踪保存和下载状态
+save_download_state = {
+    'last_save_hash': None,  # 保存只能一次，内容没变就不保存
+    'last_saved_file': None  # 保存的文件路径，用于重复下载
+}
+
+def get_content_hash(intermediate_results: str, execution_log: str, question: str) -> str:
+    """生成内容哈希值，用于检测内容是否变化"""
+    import hashlib
+    content = f"{intermediate_results}{execution_log}{question}"
+    return hashlib.md5(content.encode('utf-8')).hexdigest()
+
+def reset_save_download_state():
+    """重置保存/下载状态"""
+    global save_download_state
+    save_download_state['last_save_hash'] = None
+    save_download_state['last_saved_file'] = None
+    print("[LOG] 重置保存/下载状态")
+
 # 会话结果目录管理
 def get_session_results_dir(session_id: str) -> str:
     """获取会话的结果保存目录路径"""
@@ -1627,15 +1646,14 @@ window.saveResultsToLocal = saveResultsToLocal;
                     value="<div style='text-align: center; color: #666; padding: 20px;'>Output will appear here...</div>",
                     elem_classes=["intermediate-results"]
                 )
-                # 添加保存按钮
+                # 添加下载按钮
                 with gr.Row():
-                    save_btn = gr.Button("💾 Save Results", variant="secondary", scale=1)
-                    download_btn = gr.Button("⬇️ Download Results", variant="primary", scale=1)
+                    download_btn = gr.Button("⬇️ Download Results", variant="primary", scale=2)
                     save_status = gr.Textbox(
-                        label="Save Status",
+                        label="Download Status",
                         interactive=False,
                         lines=2,
-                        placeholder="Save status will appear here...",
+                        placeholder="Download status will appear here...",
                         scale=2
                     )
 
@@ -1750,6 +1768,9 @@ window.saveResultsToLocal = saveResultsToLocal;
         inputs=[question, session_id_state, data_path],
         outputs=[ask_btn, stop_btn]
     ).then(
+        fn=reset_save_download_state,
+        outputs=[]
+    ).then(
         fn=ask_biomni_stream,
         inputs=[question, session_id_state, data_path],
         outputs=[intermediate_results, execution_log]
@@ -1760,6 +1781,9 @@ window.saveResultsToLocal = saveResultsToLocal;
     
     # Also allow Enter key to submit question
     question.submit(
+        fn=reset_save_download_state,
+        outputs=[]
+    ).then(
         fn=ask_biomni_stream,
         inputs=[question, session_id_state, data_path],
         outputs=[intermediate_results, execution_log]
@@ -1791,38 +1815,81 @@ window.saveResultsToLocal = saveResultsToLocal;
         outputs=[data_list_display]
     )
     
-    # Save results button
-    def handle_save_results(intermediate_results, execution_log, session_id, question):
-        """处理保存结果的请求"""
-        print(f"[LOG] 处理保存结果请求，session_id: {session_id}")  # 添加日志
-        result = save_current_results(intermediate_results, execution_log, session_id, question)
-        return result[0]  # 只返回状态消息
-    
-    save_btn.click(
-        fn=handle_save_results,
-        inputs=[intermediate_results, execution_log, session_id_state, question],
-        outputs=[save_status]
-    )
+
     
     # Download results button
     def handle_download_results(intermediate_results, execution_log, session_id, question):
-        """处理下载结果的请求"""
-        print(f"[LOG] 处理下载结果请求，session_id: {session_id}")  # 添加日志
+        """处理下载结果的请求，先保存再下载，一气呵成"""
+        global save_download_state
         
-        try:
-            # 生成文件名
+        print(f"[LOG] 处理下载结果请求，session_id: {session_id}")
+        
+        # 检查内容是否变化
+        current_hash = get_content_hash(intermediate_results, execution_log, question)
+        
+        # 第一步：先保存到本地（保存只能一次）
+        print(f"[LOG] 开始保存结果到本地...")
+        
+        # 检查是否已经保存过相同内容
+        if save_download_state['last_save_hash'] == current_hash:
+            print(f"[LOG] 内容未变化，跳过保存")
+            # 如果内容没变，直接返回已保存的文件路径
+            if hasattr(save_download_state, 'last_saved_file'):
+                return f"✅ 下载已保存的文件", save_download_state['last_saved_file']
+            else:
+                return f"❌ 未找到已保存的文件", None
+        else:
+            # 执行保存
+            save_result = save_current_results(intermediate_results, execution_log, session_id, question)
+            if not save_result[0].startswith("✅"):
+                return f"❌ 保存失败: {save_result[0]}", None
+            
+            print(f"[LOG] 保存成功: {save_result[1]}")
+            
+            # 生成保存的文件路径
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             if question:
                 question_part = re.sub(r'[^\w\s-]', '', question[:20]).strip().replace(' ', '_')
                 if question_part:
-                    filename = f"biomni_results_{timestamp}_{question_part}.html"
+                    combined_filename = f"biomni_results_{timestamp}_{question_part}.html"
+                else:
+                    combined_filename = f"biomni_results_{timestamp}.html"
+            else:
+                combined_filename = f"biomni_results_{timestamp}.html"
+            
+            # 构建完整的文件路径
+            if session_id:
+                save_dir = get_session_results_dir(session_id)
+            else:
+                save_dir = "./results"
+            combined_path = os.path.join(save_dir, combined_filename)
+            
+            # 更新保存状态和文件路径
+            save_download_state['last_save_hash'] = current_hash
+            save_download_state['last_saved_file'] = combined_path  # 保存文件路径
+        
+        try:
+            # 直接使用保存的文件路径
+            if save_download_state['last_saved_file'] and os.path.exists(save_download_state['last_saved_file']):
+                print(f"[LOG] 使用已保存的文件: {save_download_state['last_saved_file']}")
+                return f"✅ 下载已保存的文件", save_download_state['last_saved_file']
+            else:
+                # 如果保存的文件不存在，重新生成
+                print(f"[LOG] 保存的文件不存在，重新生成下载文件")
+                
+                # 生成文件名
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                if question:
+                    question_part = re.sub(r'[^\w\s-]', '', question[:20]).strip().replace(' ', '_')
+                    if question_part:
+                        filename = f"biomni_results_{timestamp}_{question_part}.html"
+                    else:
+                        filename = f"biomni_results_{timestamp}.html"
                 else:
                     filename = f"biomni_results_{timestamp}.html"
-            else:
-                filename = f"biomni_results_{timestamp}.html"
-            
-            # 创建包含HTML和日志的完整文档
-            combined_content = f"""<!DOCTYPE html>
+                
+                # 创建包含HTML和日志的完整文档
+                combined_content = f"""<!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8">
@@ -1859,21 +1926,19 @@ window.saveResultsToLocal = saveResultsToLocal;
     </div>
 </body>
 </html>"""
-            
-            # 创建临时文件
-            import tempfile
-            temp_file = tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False, encoding='utf-8')
-            temp_file.write(combined_content)
-            temp_file.close()
-            
-            download_message = f"✅ 结果已准备好下载!\n\n文件名: {filename}\n\n💡 点击下载按钮开始下载。"
-            
-            print(f"[LOG] 下载文件准备完成: {filename}")  # 添加日志
-            return download_message, temp_file.name
+                
+                # 创建临时文件
+                import tempfile
+                temp_file = tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False, encoding='utf-8')
+                temp_file.write(combined_content)
+                temp_file.close()
+                
+                print(f"[LOG] 下载文件准备完成: {filename}")
+                return f"✅ 准备下载: {filename}", temp_file.name
             
         except Exception as e:
             error_message = f"❌ 下载准备失败: {str(e)}"
-            print(f"[LOG] 下载准备失败: {e}")  # 添加日志
+            print(f"[LOG] 下载准备失败: {e}")
             return error_message, None
     
     download_btn.click(
