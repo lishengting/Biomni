@@ -9,7 +9,8 @@
 options(repos = c(CRAN = 'https://mirrors.ustc.edu.cn/CRAN/'))
 # https://bioconductor.org
 # https://mirrors.westlake.edu.cn/bioconductor
-options(BioC_mirror = 'https://mirror.accum.se/mirror/bioconductor.org')
+# https://mirror.accum.se/mirror/bioconductor.org
+options(BioC_mirror = 'https://bioconductor.posit.co/')
 
 # Function to install a package if it's not already installed
 install_if_missing <- function(package_name, bioconductor = FALSE) {
