@@ -122,9 +122,10 @@ ENV MAKEFLAGS="-j16"
 RUN echo $FORCE_R_REBUILD
 # 安装额外的R包
 # 配置R使用国内镜像 https://new.bioconductor.org/about/mirrors/
-# echo "options(BioC_mirror = 'https://mirrors.westlake.edu.cn/bioconductor')" >> ~/.Rprofile
+# https://bioconductor.org
+# https://mirrors.westlake.edu.cn/bioconductor
 RUN echo "options(repos = c(CRAN = 'https://mirrors.ustc.edu.cn/CRAN/'))" > ~/.Rprofile && \
-    echo "options(BioC_mirror = 'https://mirrors.nju.edu.cn/bioconductor')" >> ~/.Rprofile
+    echo "options(BioC_mirror = 'https://mirror.accum.se/mirror/bioconductor.org')" >> ~/.Rprofile
 
 COPY --chown=biomni:biomni install_r_packages.R ./
 RUN /opt/miniconda3/envs/biomni_e1/bin/Rscript install_r_packages.R 2>&1 | tee install_r_packages.log || echo "Some R packages may have failed, continuing... (see install_r_packages.log)"
