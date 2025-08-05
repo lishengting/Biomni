@@ -12,43 +12,6 @@ options(repos = c(CRAN = 'https://mirrors.ustc.edu.cn/CRAN/'))
 # https://mirror.accum.se/mirror/bioconductor.org
 options(BioC_mirror = 'https://bioconductor.posit.co/')
 
-# 单独测试安装interp包（二进制版本）
-cat("=== 单独测试安装interp包（二进制版本）===\n")
-cat("开始时间:", Sys.time(), "\n")
-
-tryCatch({
-  cat("尝试安装interp包（二进制版本）...\n")
-  # 强制安装二进制版本，避免编译
-  install.packages("interp", type = "binary", dependencies = TRUE)
-  
-  if (require("interp", quietly = TRUE)) {
-    cat("✓ interp包安装成功！\n")
-  } else {
-    cat("✗ interp包安装失败\n")
-  }
-}, error = function(e) {
-  cat(sprintf("✗ 安装interp包时出错: %s\n", e$message))
-  cat("尝试从CRAN安装二进制版本...\n")
-  
-  # 如果上面的方法失败，尝试另一种方式
-  tryCatch({
-    # 设置二进制仓库
-    options(pkgType = "binary")
-    install.packages("interp", dependencies = TRUE)
-    
-    if (require("interp", quietly = TRUE)) {
-      cat("✓ interp包安装成功（第二次尝试）！\n")
-    } else {
-      cat("✗ interp包安装失败（第二次尝试）\n")
-    }
-  }, error = function(e2) {
-    cat(sprintf("✗ 第二次尝试也失败: %s\n", e2$message))
-  })
-}, finally = {
-  cat("结束时间:", Sys.time(), "\n")
-  cat("=== interp包测试完成 ===\n\n")
-})
-
 # Function to install a package if it's not already installed
 install_if_missing <- function(package_name, bioconductor = FALSE) {
   if (!require(package_name, character.only = TRUE, quietly = TRUE)) {
