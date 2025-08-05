@@ -1038,6 +1038,117 @@ def print_session_status():
         print(f"[LOG] 会话 {sid}: agent={sess['agent'] is not None}, error={sess['agent_error']}")
     print(f"[LOG] ===================")
 
+def save_current_results(intermediate_results: str, execution_log: str, session_id: str = "", question: str = "") -> tuple:
+    """保存当前结果到本地文件"""
+    print(f"[LOG] 开始保存结果，session_id: {session_id}")  # 添加日志
+    
+    try:
+        # 生成保存目录
+        if session_id:
+            save_dir = get_session_results_dir(session_id)
+        else:
+            save_dir = "./results"
+        
+        # 确保目录存在
+        Path(save_dir).mkdir(parents=True, exist_ok=True)
+        
+        # 生成时间戳
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        
+        # 生成文件名
+        if question:
+            # 从问题中提取前20个字符作为文件名的一部分
+            question_part = re.sub(r'[^\w\s-]', '', question[:20]).strip().replace(' ', '_')
+            if question_part:
+                output_filename = f"output_{timestamp}_{question_part}.html"
+                log_filename = f"execution_log_{timestamp}_{question_part}.txt"
+                combined_filename = f"biomni_results_{timestamp}_{question_part}.html"
+            else:
+                output_filename = f"output_{timestamp}.html"
+                log_filename = f"execution_log_{timestamp}.txt"
+                combined_filename = f"biomni_results_{timestamp}.html"
+        else:
+            output_filename = f"output_{timestamp}.html"
+            log_filename = f"execution_log_{timestamp}.txt"
+            combined_filename = f"biomni_results_{timestamp}.html"
+        
+        # 保存HTML输出
+        output_path = os.path.join(save_dir, output_filename)
+        with open(output_path, 'w', encoding='utf-8') as f:
+            f.write(intermediate_results)
+        print(f"[LOG] 已保存HTML输出到: {output_path}")  # 添加日志
+        
+        # 保存执行日志
+        log_path = os.path.join(save_dir, log_filename)
+        with open(log_path, 'w', encoding='utf-8') as f:
+            f.write(execution_log)
+        print(f"[LOG] 已保存执行日志到: {log_path}")  # 添加日志
+        
+        # 创建包含HTML和日志的完整文档
+        combined_content = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Biomni Results - {combined_filename}</title>
+    <style>
+        body {{ font-family: Arial, sans-serif; margin: 20px; }}
+        .section {{ margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }}
+        .log-section {{ background: #f8f9fa; font-family: monospace; white-space: pre-wrap; }}
+        h1, h2 {{ color: #333; }}
+        .timestamp {{ color: #666; font-size: 0.9em; }}
+        .intermediate-results {{ max-height: 800px; overflow-y: auto; padding: 20px; background-color: #ffffff; border-radius: 8px; border: 1px solid #e1e5e9; }}
+        .intermediate-results pre {{ background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px; padding: 12px; margin: 10px 0; overflow-x: auto; font-family: 'Courier New', monospace; font-size: 14px; line-height: 1.4; }}
+        .intermediate-results .execute-block {{ background-color: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 8px; margin: 10px 0; font-family: 'Courier New', monospace; white-space: pre-wrap; border-left: 4px solid #007acc; }}
+        .intermediate-results .observation-block {{ background-color: #f8f9fa; border: 1px solid #e9ecef; padding: 15px; border-radius: 8px; margin: 10px 0; }}
+        .intermediate-results .solution-block {{ background-color: #e8f5e8; border: 1px solid #c3e6c3; padding: 15px; border-radius: 8px; margin: 10px 0; }}
+        .intermediate-results .think-block {{ background-color: #f8f9fa; border: 1px solid #e9ecef; padding: 10px; border-radius: 6px; margin: 8px 0; }}
+        .intermediate-results .think-content {{ color: #6c757d; font-size: 0.9em; font-style: italic; line-height: 1.4; }}
+    </style>
+</head>
+<body>
+    <h1>🧬 Biomni AI Agent Results</h1>
+    <div class="timestamp">Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</div>
+    
+    <div class="section">
+        <h2>📊 Output & Execution Steps</h2>
+        <div class="intermediate-results">
+            {intermediate_results}
+        </div>
+    </div>
+    
+    <div class="section log-section">
+        <h2>📝 Detailed Execution Log</h2>
+        {execution_log}
+    </div>
+</body>
+</html>"""
+        
+        # 保存完整文档
+        combined_path = os.path.join(save_dir, combined_filename)
+        with open(combined_path, 'w', encoding='utf-8') as f:
+            f.write(combined_content)
+        print(f"[LOG] 已保存完整文档到: {combined_path}")  # 添加日志
+        
+        # 扫描并保存生成的文件
+        saved_files = scan_session_files(save_dir)
+        files_info = ""
+        if saved_files:
+            files_info = "\n\n生成的文件:\n"
+            for file_path in saved_files:
+                file_name = os.path.basename(file_path)
+                file_size = os.path.getsize(file_path)
+                files_info += f"• {file_name} ({file_size:,} bytes)\n"
+        
+        success_message = f"✅ 结果已成功保存到本地!\n\n保存位置: {save_dir}\n\n保存的文件:\n• {output_filename}\n• {log_filename}\n• {combined_filename}{files_info}\n\n💡 提示: 您也可以点击浏览器下载按钮直接下载完整结果文件。"
+        
+        print(f"[LOG] 保存完成，共保存 {len(saved_files) + 3} 个文件")  # 添加日志
+        return success_message, save_dir
+        
+    except Exception as e:
+        error_message = f"❌ 保存结果失败: {str(e)}"
+        print(f"[LOG] 保存失败: {e}")  # 添加日志
+        return error_message, ""
+
 # Create the Gradio interface
 with gr.Blocks(title="🧬 Biomni AI Agent Demo", theme=gr.themes.Soft(), head="""
 <script>
@@ -1144,6 +1255,66 @@ function fallbackDownloadFromFile(filePath, filename) {
 // 确保函数在全局作用域可用
 window.downloadPDFBlob = downloadPDFBlob;
 window.downloadPDFBlobFromFile = downloadPDFBlobFromFile;
+
+// 保存结果到本地的函数
+function saveResultsToLocal(htmlContent, logContent, filename) {
+    try {
+        // 创建包含HTML和日志的完整文档
+        const fullContent = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Biomni Results - ${filename}</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .log-section { background: #f8f9fa; font-family: monospace; white-space: pre-wrap; }
+        h1, h2 { color: #333; }
+        .timestamp { color: #666; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+    <h1>🧬 Biomni AI Agent Results</h1>
+    <div class="timestamp">Generated on: ${new Date().toLocaleString()}</div>
+    
+    <div class="section">
+        <h2>📊 Output & Execution Steps</h2>
+        ${htmlContent}
+    </div>
+    
+    <div class="section log-section">
+        <h2>📝 Detailed Execution Log</h2>
+        ${logContent}
+    </div>
+</body>
+</html>`;
+        
+        // 创建Blob并下载
+        const blob = new Blob([fullContent], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        
+        setTimeout(() => {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }, 100);
+        
+        console.log('Results saved to local:', filename);
+        return true;
+    } catch (error) {
+        console.error('保存结果失败:', error);
+        return false;
+    }
+}
+
+// 确保函数在全局作用域可用
+window.saveResultsToLocal = saveResultsToLocal;
 </script>
 """, css=""""
     .intermediate-results {
@@ -1451,6 +1622,18 @@ window.downloadPDFBlobFromFile = downloadPDFBlobFromFile;
             
             # Multiple output areas
             with gr.Tab("Output"):
+                # 添加保存按钮
+                with gr.Row():
+                    save_btn = gr.Button("💾 Save Results", variant="secondary", scale=1)
+                    download_btn = gr.Button("⬇️ Download Results", variant="primary", scale=1)
+                    save_status = gr.Textbox(
+                        label="Save Status",
+                        interactive=False,
+                        lines=2,
+                        placeholder="Save status will appear here...",
+                        scale=2
+                    )
+                
                 intermediate_results = gr.HTML(
                     label="Output & Execution Steps",
                     value="<div style='text-align: center; color: #666; padding: 20px;'>Output will appear here...</div>",
@@ -1607,6 +1790,97 @@ window.downloadPDFBlobFromFile = downloadPDFBlobFromFile;
         fn=get_current_data_list,
         inputs=[session_id_state],
         outputs=[data_list_display]
+    )
+    
+    # Save results button
+    def handle_save_results(intermediate_results, execution_log, session_id, question):
+        """处理保存结果的请求"""
+        print(f"[LOG] 处理保存结果请求，session_id: {session_id}")  # 添加日志
+        result = save_current_results(intermediate_results, execution_log, session_id, question)
+        return result[0]  # 只返回状态消息
+    
+    save_btn.click(
+        fn=handle_save_results,
+        inputs=[intermediate_results, execution_log, session_id_state, question],
+        outputs=[save_status]
+    )
+    
+    # Download results button
+    def handle_download_results(intermediate_results, execution_log, session_id, question):
+        """处理下载结果的请求"""
+        print(f"[LOG] 处理下载结果请求，session_id: {session_id}")  # 添加日志
+        
+        try:
+            # 生成文件名
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            if question:
+                question_part = re.sub(r'[^\w\s-]', '', question[:20]).strip().replace(' ', '_')
+                if question_part:
+                    filename = f"biomni_results_{timestamp}_{question_part}.html"
+                else:
+                    filename = f"biomni_results_{timestamp}.html"
+            else:
+                filename = f"biomni_results_{timestamp}.html"
+            
+            # 创建包含HTML和日志的完整文档
+            combined_content = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Biomni Results - {filename}</title>
+    <style>
+        body {{ font-family: Arial, sans-serif; margin: 20px; }}
+        .section {{ margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }}
+        .log-section {{ background: #f8f9fa; font-family: monospace; white-space: pre-wrap; }}
+        h1, h2 {{ color: #333; }}
+        .timestamp {{ color: #666; font-size: 0.9em; }}
+        .intermediate-results {{ max-height: 800px; overflow-y: auto; padding: 20px; background-color: #ffffff; border-radius: 8px; border: 1px solid #e1e5e9; }}
+        .intermediate-results pre {{ background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px; padding: 12px; margin: 10px 0; overflow-x: auto; font-family: 'Courier New', monospace; font-size: 14px; line-height: 1.4; }}
+        .intermediate-results .execute-block {{ background-color: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 8px; margin: 10px 0; font-family: 'Courier New', monospace; white-space: pre-wrap; border-left: 4px solid #007acc; }}
+        .intermediate-results .observation-block {{ background-color: #f8f9fa; border: 1px solid #e9ecef; padding: 15px; border-radius: 8px; margin: 10px 0; }}
+        .intermediate-results .solution-block {{ background-color: #e8f5e8; border: 1px solid #c3e6c3; padding: 15px; border-radius: 8px; margin: 10px 0; }}
+        .intermediate-results .think-block {{ background-color: #f8f9fa; border: 1px solid #e9ecef; padding: 10px; border-radius: 6px; margin: 8px 0; }}
+        .intermediate-results .think-content {{ color: #6c757d; font-size: 0.9em; font-style: italic; line-height: 1.4; }}
+    </style>
+</head>
+<body>
+    <h1>🧬 Biomni AI Agent Results</h1>
+    <div class="timestamp">Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</div>
+    
+    <div class="section">
+        <h2>📊 Output & Execution Steps</h2>
+        <div class="intermediate-results">
+            {intermediate_results}
+        </div>
+    </div>
+    
+    <div class="section log-section">
+        <h2>📝 Detailed Execution Log</h2>
+        {execution_log}
+    </div>
+</body>
+</html>"""
+            
+            # 创建临时文件
+            import tempfile
+            temp_file = tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False, encoding='utf-8')
+            temp_file.write(combined_content)
+            temp_file.close()
+            
+            download_message = f"✅ 结果已准备好下载!\n\n文件名: {filename}\n\n💡 点击下载按钮开始下载。"
+            
+            print(f"[LOG] 下载文件准备完成: {filename}")  # 添加日志
+            return download_message, temp_file.name
+            
+        except Exception as e:
+            error_message = f"❌ 下载准备失败: {str(e)}"
+            print(f"[LOG] 下载准备失败: {e}")  # 添加日志
+            return error_message, None
+    
+    download_btn.click(
+        fn=handle_download_results,
+        inputs=[intermediate_results, execution_log, session_id_state, question],
+        outputs=[save_status, gr.File(label="Download Results", visible=True)]
     )
 
 if __name__ == "__main__":
