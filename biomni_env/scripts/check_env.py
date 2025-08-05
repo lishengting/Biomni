@@ -792,6 +792,22 @@ def check_env_desc():
             print(format_status_output(tool, status))
     return results
 
+def check_specific_python_packages() -> Dict[str, Tuple[bool, str]]:
+    """检查特定的Python包"""
+    print(f"\n🔍 检查特定Python包")
+    print("=" * 80)
+    
+    specific_packages = ["langchain_aws", "hyperimpute"]
+    results = {}
+    
+    print(f"📦 检查 {len(specific_packages)} 个特定Python包:")
+    for pkg in specific_packages:
+        exists, status = check_package_any(pkg)
+        results[f"specific:{pkg}"] = (exists, status)
+        print(format_status_output(pkg, status))
+    
+    return results
+
 def main():
     """主函数"""
     print("🧬 Biomni环境检测工具 (check_env.py)")
@@ -818,6 +834,9 @@ def main():
     all_results["R包"] = check_r_packages()
     all_results["CLI工具"] = check_cli_tools()
     all_results["安装脚本"] = check_install_scripts()
+    
+    # 检查特定Python包
+    all_results["特定Python包"] = check_specific_python_packages()
     
     # 检查数据文件
     all_results["Data Lake文件"] = check_data_lake_files(data_lake_path)
