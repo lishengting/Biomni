@@ -158,6 +158,10 @@ RUN cd /opt/biomni_tools && \
     cd ADFRsuite_x86_64Linux_1.0 && \
     echo y | ./install.sh
 
+USER root
+RUN pip install langchain_aws hyperimpute
+USER biomni
+
 # 设置ADFRsuite环境变量
 ENV PATH="$PATH:/opt/biomni_tools/ADFRsuite_x86_64Linux_1.0/bin"
 ENV ADFRSUITE_HOME="/opt/biomni_tools/ADFRsuite_x86_64Linux_1.0"
