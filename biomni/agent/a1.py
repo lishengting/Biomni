@@ -244,7 +244,7 @@ class A1:
         tokens_used = token_usage_after.get("total_tokens", 0) - token_usage_before.get("total_tokens", 0)
         
         question_record = {
-            "question_id": self.session_token_stats["questions_asked"] + 1,
+            "question_id": self.session_token_stats["questions_asked"],  # 使用当前的问题ID（已经在go方法中增加过了）
             "question": question[:100] + "..." if len(question) > 100 else question,
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3],
             "tokens_before": token_usage_before,
@@ -253,7 +253,7 @@ class A1:
         }
         
         self.session_token_stats["question_history"].append(question_record)
-        self.session_token_stats["questions_asked"] += 1
+        # 移除这里的questions_asked增加，因为已经在go方法开始时增加了
         self.session_token_stats["total_session_tokens"] = token_usage_after.get("total_tokens", 0)
         
         # 记录到执行日志
@@ -1632,12 +1632,15 @@ Each library is listed with its description to help you understand its functiona
         # Record start time
         start_time = time.time()
         
+        # 立即增加问题计数（不管是否执行完成）
+        self.session_token_stats["questions_asked"] += 1
+        
         # 记录问题开始前的token使用情况
         token_usage_before = self.token_logger.get_token_summary()
         
         self._log("EXEC", "🚀", "Starting task execution...")
         self._log("EXEC", "📝", f"User prompt: {prompt[:100]}{'...' if len(prompt) > 100 else ''}")
-        self._log("TOKEN", "📊", f"开始执行前 - 累计tokens: {token_usage_before.get('total_tokens', 0):,}")
+        self._log("TOKEN", "📊", f"问题 #{self.session_token_stats['questions_asked']} 开始执行 - 累计tokens: {token_usage_before.get('total_tokens', 0):,}")
             
         self.critic_count = 0
         self.user_task = prompt
