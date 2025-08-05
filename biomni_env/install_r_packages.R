@@ -5,8 +5,10 @@
 
 # Set repository
 #options(repos = c(CRAN = "https://cran.rstudio.com/"))
+# 配置R使用国内镜像 https://new.bioconductor.org/about/mirrors/
 options(repos = c(CRAN = 'https://mirrors.ustc.edu.cn/CRAN/'))
-options(BioC_mirror = 'https://mirrors.westlake.edu.cn/bioconductor')
+# options(BioC_mirror = 'https://mirrors.westlake.edu.cn/bioconductor')
+options(BioC_mirror = 'https://mirrors.nju.edu.cn/bioconductor')
 
 # Function to install a package if it's not already installed
 install_if_missing <- function(package_name, bioconductor = FALSE) {
