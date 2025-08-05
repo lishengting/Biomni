@@ -1622,6 +1622,11 @@ window.saveResultsToLocal = saveResultsToLocal;
             
             # Multiple output areas
             with gr.Tab("Output"):
+                intermediate_results = gr.HTML(
+                    label="Output & Execution Steps",
+                    value="<div style='text-align: center; color: #666; padding: 20px;'>Output will appear here...</div>",
+                    elem_classes=["intermediate-results"]
+                )
                 # 添加保存按钮
                 with gr.Row():
                     save_btn = gr.Button("💾 Save Results", variant="secondary", scale=1)
@@ -1633,13 +1638,7 @@ window.saveResultsToLocal = saveResultsToLocal;
                         placeholder="Save status will appear here...",
                         scale=2
                     )
-                
-                intermediate_results = gr.HTML(
-                    label="Output & Execution Steps",
-                    value="<div style='text-align: center; color: #666; padding: 20px;'>Output will appear here...</div>",
-                    elem_classes=["intermediate-results"]
-                )
-            
+
             with gr.Tab("Execution Log"):
                 execution_log = gr.Textbox(
                     label="Detailed Execution Log",
