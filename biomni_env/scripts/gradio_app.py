@@ -108,8 +108,27 @@ def setup_session_workspace(session_id: str, data_path: str) -> tuple:
             target_data_path = Path(original_dir) / data_path
             target_data_path = target_data_path.resolve()
         
+        # 清空并重新创建会话目录
+        if os.path.exists(session_dir):
+            print(f"[LOG] 清空会话目录: {session_dir}")
+            import shutil
+            
+            # 安全检查：确保不会删除数据目录
+            session_path = Path(session_dir)
+            if session_path.exists():
+                # 检查是否有data符号链接，如果有先删除它
+                data_link = session_path / "data"
+                if data_link.exists() and data_link.is_symlink():
+                    print(f"[LOG] 删除数据目录符号链接: {data_link}")
+                    data_link.unlink()  # 只删除符号链接，不删除实际数据
+            
+            # 删除整个session目录
+            shutil.rmtree(session_dir)
+            print(f"[LOG] 会话目录已删除: {session_dir}")
+        
         # 创建会话目录
         Path(session_dir).mkdir(parents=True, exist_ok=True)
+        print(f"[LOG] 重新创建会话目录: {session_dir}")
         
         # 切换工作目录
         os.chdir(session_dir)
@@ -122,8 +141,8 @@ def setup_session_workspace(session_id: str, data_path: str) -> tuple:
         print(f"[LOG] 原始工作目录: {original_dir}")
         print(f"[LOG] 目标数据路径: {target_data_path}")
         print(f"[LOG] 本地数据路径: {local_data_path}")
-        print(f"[LOG] 目标路径是否存在: {target_data_path.exists()}")
-        print(f"[LOG] 本地路径是否存在: {local_data_path.exists()}")
+        #print(f"[LOG] 目标路径是否存在: {target_data_path.exists()}")
+        #print(f"[LOG] 本地路径是否存在: {local_data_path.exists()}")
         
         if target_data_path.exists() and not local_data_path.exists():
             try:
