@@ -1163,6 +1163,46 @@ def print_session_status():
         print(f"[LOG] 会话 {sid}: agent={sess['agent'] is not None}, error={sess['agent_error']}")
     print(f"[LOG] ===================")
 
+def generate_html_template(intermediate_results: str, execution_log: str, filename: str, execute_color: str = "#333333") -> str:
+    """生成通用的HTML模板"""
+    return f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Biomni Results - {filename}</title>
+    <style>
+        body {{ font-family: Arial, sans-serif; margin: 20px; }}
+        .section {{ margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }}
+        .log-section {{ background: #f8f9fa; font-family: monospace; white-space: pre-wrap; }}
+        h1, h2 {{ color: #333; }}
+        .timestamp {{ color: #666; font-size: 0.9em; }}
+        .intermediate-results {{ max-height: 800px; overflow-y: auto; padding: 20px; background-color: #ffffff; border-radius: 8px; border: 1px solid #e1e5e9; }}
+        .intermediate-results pre {{ background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px; padding: 12px; margin: 10px 0; overflow-x: auto; font-family: 'Courier New', monospace; font-size: 14px; line-height: 1.4; }}
+        .intermediate-results .execute-block {{ background-color: #1e1e1e; color: {execute_color}; padding: 15px; border-radius: 8px; margin: 10px 0; font-family: 'Courier New', monospace; white-space: pre-wrap; border-left: 4px solid #007acc; font-weight: normal; }}
+        .intermediate-results .observation-block {{ background-color: #f8f9fa; border: 1px solid #e9ecef; padding: 15px; border-radius: 8px; margin: 10px 0; }}
+        .intermediate-results .solution-block {{ background-color: #e8f5e8; border: 1px solid #c3e6c3; padding: 15px; border-radius: 8px; margin: 10px 0; }}
+        .intermediate-results .think-block {{ background-color: #f8f9fa; border: 1px solid #e9ecef; padding: 10px; border-radius: 6px; margin: 8px 0; }}
+        .intermediate-results .think-content {{ color: #6c757d; font-size: 0.9em; font-style: italic; line-height: 1.4; }}
+    </style>
+</head>
+<body>
+    <h1>🧬 Biomni AI Agent Results</h1>
+    <div class="timestamp">Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</div>
+    
+    <div class="section">
+        <h2>📊 Output & Execution Steps</h2>
+        <div class="intermediate-results">
+            {intermediate_results}
+        </div>
+    </div>
+    
+    <div class="section log-section">
+        <h2>📝 Detailed Execution Log</h2>
+        {execution_log}
+    </div>
+</body>
+</html>"""
+
 def save_current_results(intermediate_results: str, execution_log: str, session_id: str = "", question: str = "") -> tuple:
     """保存当前结果到本地文件"""
     print(f"[LOG] 开始保存结果，session_id: {session_id}")  # 添加日志
@@ -1210,43 +1250,7 @@ def save_current_results(intermediate_results: str, execution_log: str, session_
         print(f"[LOG] 已保存执行日志到: {log_path}")  # 添加日志
         
         # 创建包含HTML和日志的完整文档
-        combined_content = f"""<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <title>Biomni Results - {combined_filename}</title>
-    <style>
-        body {{ font-family: Arial, sans-serif; margin: 20px; }}
-        .section {{ margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }}
-        .log-section {{ background: #f8f9fa; font-family: monospace; white-space: pre-wrap; }}
-        h1, h2 {{ color: #333; }}
-        .timestamp {{ color: #666; font-size: 0.9em; }}
-        .intermediate-results {{ max-height: 800px; overflow-y: auto; padding: 20px; background-color: #ffffff; border-radius: 8px; border: 1px solid #e1e5e9; }}
-        .intermediate-results pre {{ background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px; padding: 12px; margin: 10px 0; overflow-x: auto; font-family: 'Courier New', monospace; font-size: 14px; line-height: 1.4; }}
-        .intermediate-results .execute-block {{ background-color: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 8px; margin: 10px 0; font-family: 'Courier New', monospace; white-space: pre-wrap; border-left: 4px solid #007acc; }}
-        .intermediate-results .observation-block {{ background-color: #f8f9fa; border: 1px solid #e9ecef; padding: 15px; border-radius: 8px; margin: 10px 0; }}
-        .intermediate-results .solution-block {{ background-color: #e8f5e8; border: 1px solid #c3e6c3; padding: 15px; border-radius: 8px; margin: 10px 0; }}
-        .intermediate-results .think-block {{ background-color: #f8f9fa; border: 1px solid #e9ecef; padding: 10px; border-radius: 6px; margin: 8px 0; }}
-        .intermediate-results .think-content {{ color: #6c757d; font-size: 0.9em; font-style: italic; line-height: 1.4; }}
-    </style>
-</head>
-<body>
-    <h1>🧬 Biomni AI Agent Results</h1>
-    <div class="timestamp">Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</div>
-    
-    <div class="section">
-        <h2>📊 Output & Execution Steps</h2>
-        <div class="intermediate-results">
-            {intermediate_results}
-        </div>
-    </div>
-    
-    <div class="section log-section">
-        <h2>📝 Detailed Execution Log</h2>
-        {execution_log}
-    </div>
-</body>
-</html>"""
+        combined_content = generate_html_template(intermediate_results, execution_log, combined_filename, "#333333")
         
         # 保存完整文档
         combined_path = os.path.join(save_dir, combined_filename)
@@ -2009,43 +2013,7 @@ window.saveResultsToLocal = saveResultsToLocal;
                     filename = f"biomni_results_{timestamp}.html"
                 
                 # 创建包含HTML和日志的完整文档
-                combined_content = f"""<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <title>Biomni Results - {filename}</title>
-    <style>
-        body {{ font-family: Arial, sans-serif; margin: 20px; }}
-        .section {{ margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }}
-        .log-section {{ background: #f8f9fa; font-family: monospace; white-space: pre-wrap; }}
-        h1, h2 {{ color: #333; }}
-        .timestamp {{ color: #666; font-size: 0.9em; }}
-        .intermediate-results {{ max-height: 800px; overflow-y: auto; padding: 20px; background-color: #ffffff; border-radius: 8px; border: 1px solid #e1e5e9; }}
-        .intermediate-results pre {{ background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px; padding: 12px; margin: 10px 0; overflow-x: auto; font-family: 'Courier New', monospace; font-size: 14px; line-height: 1.4; }}
-        .intermediate-results .execute-block {{ background-color: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 8px; margin: 10px 0; font-family: 'Courier New', monospace; white-space: pre-wrap; border-left: 4px solid #007acc; }}
-        .intermediate-results .observation-block {{ background-color: #f8f9fa; border: 1px solid #e9ecef; padding: 15px; border-radius: 8px; margin: 10px 0; }}
-        .intermediate-results .solution-block {{ background-color: #e8f5e8; border: 1px solid #c3e6c3; padding: 15px; border-radius: 8px; margin: 10px 0; }}
-        .intermediate-results .think-block {{ background-color: #f8f9fa; border: 1px solid #e9ecef; padding: 10px; border-radius: 6px; margin: 8px 0; }}
-        .intermediate-results .think-content {{ color: #6c757d; font-size: 0.9em; font-style: italic; line-height: 1.4; }}
-    </style>
-</head>
-<body>
-    <h1>🧬 Biomni AI Agent Results</h1>
-    <div class="timestamp">Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</div>
-    
-    <div class="section">
-        <h2>📊 Output & Execution Steps</h2>
-        <div class="intermediate-results">
-            {intermediate_results}
-        </div>
-    </div>
-    
-    <div class="section log-section">
-        <h2>📝 Detailed Execution Log</h2>
-        {execution_log}
-    </div>
-</body>
-</html>"""
+                combined_content = generate_html_template(intermediate_results, execution_log, filename, "#333333")
                 
                 # 创建临时文件
                 import tempfile
