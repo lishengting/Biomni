@@ -241,15 +241,31 @@ def generate_file_links_html(saved_files: list, session_dir: str) -> str:
                 """)
             except Exception as e:
                 print(f"[LOG] 图片编码失败: {file_name}, 错误: {e}")
-                # 如果base64编码失败，使用简单的文件链接
-                html_parts.append(f"""
-                <div style='margin: 15px 0; padding: 10px; border: 1px solid #ddd; border-radius: 5px;'>
-                    <h4 style='color: #333 !important;'>📸 {file_name}</h4>
-                    <p style='color: #666;'>图片文件: {file_name}</p>
-                    <a href="file://{file_path}" download="{file_name}" style="background: #28a745; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px;">⬇️ Download {file_name}</a>
-                    <span style='color: #666; margin-left: 10px;'>({file_size:,} bytes)</span>
-                </div>
-                """)
+                # 如果base64编码失败，尝试读取文件并重新编码
+                try:
+                    with open(file_path, 'rb') as f:
+                        img_data = f.read()
+                        img_base64 = base64.b64encode(img_data).decode('utf-8')
+                        mime_type = 'image/png' if file_ext == '.png' else 'image/jpeg' if file_ext in ['.jpg', '.jpeg'] else 'image/gif' if file_ext == '.gif' else 'image/svg+xml' if file_ext == '.svg' else 'image/bmp' if file_ext == '.bmp' else 'image/tiff' if file_ext == '.tiff' else 'image/webp'
+                    
+                    html_parts.append(f"""
+                    <div style='margin: 15px 0; padding: 10px; border: 1px solid #ddd; border-radius: 5px;'>
+                        <h4 style='color: #333 !important;'>📸 {file_name}</h4>
+                        <p style='color: #666;'>图片文件: {file_name}</p>
+                        <a href="data:{mime_type};base64,{img_base64}" download="{file_name}" style="background: #28a745; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px;">⬇️ Download {file_name}</a>
+                        <span style='color: #666; margin-left: 10px;'>({file_size:,} bytes)</span>
+                    </div>
+                    """)
+                except Exception as e2:
+                    print(f"[LOG] 图片文件处理完全失败: {file_name}, 错误: {e2}")
+                    html_parts.append(f"""
+                    <div style='margin: 15px 0; padding: 10px; border: 1px solid #ddd; border-radius: 5px;'>
+                        <h4 style='color: #333 !important;'>📸 {file_name}</h4>
+                        <p style='color: #666;'>图片文件: {file_name}</p>
+                        <p style='color: #dc3545;'>⚠️ 文件下载失败，请检查文件权限</p>
+                        <span style='color: #666; margin-left: 10px;'>({file_size:,} bytes)</span>
+                    </div>
+                    """)
                 
         elif file_ext in text_extensions:
             print(f"[LOG] 检测到文本文件: {file_name} (扩展名: {file_ext})")
@@ -330,27 +346,59 @@ def generate_file_links_html(saved_files: list, session_dir: str) -> str:
                 except Exception as e:
                     print(f"[LOG] 文本文件读取失败: {file_name}, 错误: {e}")
                     # 作为二进制文件处理
-                    html_parts.append(f"""
-                    <div style='margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 5px;'>
-                        <strong style='color: #333 !important;'>📄 {file_name} <span style='color: #666; font-size: 0.8em;'>(二进制文件)</span></strong>
-                        <br>
-                        <p style='color: #666; margin: 5px 0;'>无法以文本格式显示，请下载查看</p>
-                        <a href="file://{file_path}" download="{file_name}" style="background: #007bff; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px;">⬇️ Download {file_name}</a>
-                        <span style='color: #666; margin-left: 10px;'>({file_size:,} bytes)</span>
-                    </div>
-                    """)
+                    try:
+                        with open(file_path, 'rb') as f:
+                            binary_data = f.read()
+                            binary_base64 = base64.b64encode(binary_data).decode('utf-8')
+                        
+                        html_parts.append(f"""
+                        <div style='margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 5px;'>
+                            <strong style='color: #333 !important;'>📄 {file_name} <span style='color: #666; font-size: 0.8em;'>(二进制文件)</span></strong>
+                            <br>
+                            <p style='color: #666; margin: 5px 0;'>无法以文本格式显示，请下载查看</p>
+                            <a href="data:application/octet-stream;base64,{binary_base64}" download="{file_name}" style="background: #007bff; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px;">⬇️ Download {file_name}</a>
+                            <span style='color: #666; margin-left: 10px;'>({file_size:,} bytes)</span>
+                        </div>
+                        """)
+                    except Exception as e2:
+                        print(f"[LOG] 二进制文件处理失败: {file_name}, 错误: {e2}")
+                        html_parts.append(f"""
+                        <div style='margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 5px;'>
+                            <strong style='color: #333 !important;'>📄 {file_name} <span style='color: #666; font-size: 0.8em;'>(二进制文件)</span></strong>
+                            <br>
+                            <p style='color: #666; margin: 5px 0;'>无法以文本格式显示，请下载查看</p>
+                            <p style='color: #dc3545;'>⚠️ 文件下载失败，请检查文件权限</p>
+                            <span style='color: #666; margin-left: 10px;'>({file_size:,} bytes)</span>
+                        </div>
+                        """)
             except Exception as e:
                 print(f"[LOG] 文本文件处理失败: {file_name}, 错误: {e}")
                 # 作为普通文件处理
-                html_parts.append(f"""
-                <div style='margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 5px;'>
-                    <strong style='color: #333 !important;'>📄 {file_name}</strong>
-                    <br>
-                    <p style='color: #666; margin: 5px 0;'>文件读取失败，请下载查看</p>
-                    <a href="file://{file_path}" download="{file_name}" style="background: #007bff; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px;">⬇️ Download {file_name}</a>
-                    <span style='color: #666; margin-left: 10px;'>({file_size:,} bytes)</span>
-                </div>
-                """)
+                try:
+                    with open(file_path, 'rb') as f:
+                        file_data = f.read()
+                        file_base64 = base64.b64encode(file_data).decode('utf-8')
+                    
+                    html_parts.append(f"""
+                    <div style='margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 5px;'>
+                        <strong style='color: #333 !important;'>📄 {file_name}</strong>
+                        <br>
+                        <p style='color: #666; margin: 5px 0;'>文件读取失败，请下载查看</p>
+                        <a href="data:application/octet-stream;base64,{file_base64}" download="{file_name}" style="background: #007bff; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px;">⬇️ Download {file_name}</a>
+                        <span style='color: #666; margin-left: 10px;'>({file_size:,} bytes)</span>
+                    </div>
+                    """)
+                except Exception as e2:
+                    print(f"[LOG] 文件处理完全失败: {file_name}, 错误: {e2}")
+                    html_parts.append(f"""
+                    <div style='margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 5px;'>
+                        <strong style='color: #333 !important;'>📄 {file_name}</strong>
+                        <br>
+                        <p style='color: #666; margin: 5px 0;'>文件读取失败，请下载查看</p>
+                        <p style='color: #dc3545;'>⚠️ 文件下载失败，请检查文件权限</p>
+                        <span style='color: #666; margin-left: 10px;'>({file_size:,} bytes)</span>
+                    </div>
+                    """)
                 
         elif file_ext == '.pdf':
             print(f"[LOG] 检测到PDF文件: {file_name}")
@@ -380,18 +428,35 @@ def generate_file_links_html(saved_files: list, session_dir: str) -> str:
                 """)
             except Exception as e:
                 print(f"[LOG] PDF文件处理失败: {file_name}, 错误: {e}")
-                html_parts.append(f"""
-                <div style='margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 5px;'>
-                    <strong style='color: #333 !important;'>📕 {file_name} <span style='color: #666; font-size: 0.8em;'>(PDF文档)</span></strong>
-                    <br>
-                    <p style='color: #666; margin: 5px 0;'>PDF预览失败，请下载查看</p>
-                    <button onclick="downloadPDFBlobFromFile('{file_path}', '{file_name}')" 
-                            style="background: #dc3545; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px; border: none; cursor: pointer;">
-                        ⬇️ Download {file_name}
-                    </button>
-                    <span style='color: #666; margin-left: 10px;'>({file_size:,} bytes)</span>
-                </div>
-                """)
+                # 尝试重新读取PDF文件
+                try:
+                    with open(file_path, 'rb') as f:
+                        pdf_data = f.read()
+                        pdf_base64 = base64.b64encode(pdf_data).decode('utf-8')
+                    
+                    html_parts.append(f"""
+                    <div style='margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 5px;'>
+                        <strong style='color: #333 !important;'>📕 {file_name} <span style='color: #666; font-size: 0.8em;'>(PDF文档)</span></strong>
+                        <br>
+                        <p style='color: #666; margin: 5px 0;'>PDF预览失败，请下载查看</p>
+                        <button onclick="downloadPDFBlob('{pdf_base64}', '{file_name}')" 
+                                style="background: #dc3545; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px; border: none; cursor: pointer;">
+                            ⬇️ Download {file_name}
+                        </button>
+                        <span style='color: #666; margin-left: 10px;'>({file_size:,} bytes)</span>
+                    </div>
+                    """)
+                except Exception as e2:
+                    print(f"[LOG] PDF文件处理完全失败: {file_name}, 错误: {e2}")
+                    html_parts.append(f"""
+                    <div style='margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 5px;'>
+                        <strong style='color: #333 !important;'>📕 {file_name} <span style='color: #666; font-size: 0.8em;'>(PDF文档)</span></strong>
+                        <br>
+                        <p style='color: #666; margin: 5px 0;'>PDF预览失败，请下载查看</p>
+                        <p style='color: #dc3545;'>⚠️ 文件下载失败，请检查文件权限</p>
+                        <span style='color: #666; margin-left: 10px;'>({file_size:,} bytes)</span>
+                    </div>
+                    """)
                 
         else:
             print(f"[LOG] 处理普通文件: {file_name} (扩展名: {file_ext})")
@@ -425,14 +490,30 @@ def generate_file_links_html(saved_files: list, session_dir: str) -> str:
                 file_type = "未知类型"
                 color = "#6c757d"
             
-            html_parts.append(f"""
-            <div style='margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 5px; border-left: 4px solid {color};'>
-                <strong style='color: #333 !important;'>{icon} {file_name} <span style='color: #666; font-size: 0.8em;'>({file_type})</span></strong>
-                <br>
-                <a href="file://{file_path}" download="{file_name}" style="background: {color}; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px; margin-top: 5px; display: inline-block;">⬇️ Download {file_name}</a>
-                <span style='color: #666; margin-left: 10px;'>({file_size:,} bytes)</span>
-            </div>
-            """)
+            # 读取文件内容并编码为base64
+            try:
+                with open(file_path, 'rb') as f:
+                    file_data = f.read()
+                    file_base64 = base64.b64encode(file_data).decode('utf-8')
+                
+                html_parts.append(f"""
+                <div style='margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 5px; border-left: 4px solid {color};'>
+                    <strong style='color: #333 !important;'>{icon} {file_name} <span style='color: #666; font-size: 0.8em;'>({file_type})</span></strong>
+                    <br>
+                    <a href="data:application/octet-stream;base64,{file_base64}" download="{file_name}" style="background: {color}; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px; margin-top: 5px; display: inline-block;">⬇️ Download {file_name}</a>
+                    <span style='color: #666; margin-left: 10px;'>({file_size:,} bytes)</span>
+                </div>
+                """)
+            except Exception as e:
+                print(f"[LOG] 文件处理失败: {file_name}, 错误: {e}")
+                html_parts.append(f"""
+                <div style='margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 5px; border-left: 4px solid {color};'>
+                    <strong style='color: #333 !important;'>{icon} {file_name} <span style='color: #666; font-size: 0.8em;'>({file_type})</span></strong>
+                    <br>
+                    <p style='color: #dc3545;'>⚠️ 文件下载失败，请检查文件权限</p>
+                    <span style='color: #666; margin-left: 10px;'>({file_size:,} bytes)</span>
+                </div>
+                """)
     
     print(f"[LOG] HTML生成完成，共 {len(html_parts)-1} 个文件链接")
     return "".join(html_parts)
@@ -1263,13 +1344,9 @@ function fallbackDownload(base64Data, filename) {
 
 function fallbackDownloadFromFile(filePath, filename) {
     console.log('使用降级方法下载:', filePath);
-    const link = document.createElement('a');
-    link.href = 'file://' + filePath;
-    link.download = filename;
-    link.style.display = 'none';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // 由于安全限制，file:// 路径无法在浏览器中直接访问
+    // 显示错误信息而不是尝试下载
+    alert('无法下载文件: ' + filename + '\n文件路径: ' + filePath + '\n\n由于浏览器安全限制，无法直接访问本地文件。请检查文件权限或联系管理员。');
 }
 
 // 确保函数在全局作用域可用
@@ -1657,9 +1734,9 @@ window.saveResultsToLocal = saveResultsToLocal;
                 )
                 # 添加生成链接按钮和文件链接
                 with gr.Row():
-                    download_btn = gr.Button("🔗 Generate Link", variant="primary", scale=1)
+                    download_btn = gr.Button("🔗 Generate Report Link", variant="primary", scale=1)
                     file_link = gr.File(
-                        label="Download Results",
+                        label="Download Report",
                         visible=False,
                         scale=1
                     )
