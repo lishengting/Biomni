@@ -80,6 +80,7 @@ def reset_save_download_state():
     save_download_state['last_save_hash'] = None
     save_download_state['last_saved_file'] = None
     print("[LOG] 重置保存/下载状态")
+    return gr.Button(interactive=True), gr.File(visible=False)  # 重新启用按钮并隐藏文件链接
 
 # 会话结果目录管理
 def get_session_results_dir(session_id: str) -> str:
@@ -1646,15 +1647,20 @@ window.saveResultsToLocal = saveResultsToLocal;
                     value="<div style='text-align: center; color: #666; padding: 20px;'>Output will appear here...</div>",
                     elem_classes=["intermediate-results"]
                 )
-                # 添加下载按钮
+                # 添加生成链接按钮和文件链接
                 with gr.Row():
-                    download_btn = gr.Button("⬇️ Download Results", variant="primary", scale=2)
+                    download_btn = gr.Button("🔗 Generate Link", variant="primary", scale=1)
                     save_status = gr.Textbox(
-                        label="Download Status",
+                        label="Link Status",
                         interactive=False,
                         lines=2,
-                        placeholder="Download status will appear here...",
+                        placeholder="Link status will appear here...",
                         scale=2
+                    )
+                    file_link = gr.File(
+                        label="Download Results",
+                        visible=False,
+                        scale=1
                     )
 
             with gr.Tab("Execution Log"):
@@ -1769,7 +1775,7 @@ window.saveResultsToLocal = saveResultsToLocal;
         outputs=[ask_btn, stop_btn]
     ).then(
         fn=reset_save_download_state,
-        outputs=[]
+        outputs=[download_btn, file_link]
     ).then(
         fn=ask_biomni_stream,
         inputs=[question, session_id_state, data_path],
@@ -1782,7 +1788,7 @@ window.saveResultsToLocal = saveResultsToLocal;
     # Also allow Enter key to submit question
     question.submit(
         fn=reset_save_download_state,
-        outputs=[]
+        outputs=[download_btn, file_link]
     ).then(
         fn=ask_biomni_stream,
         inputs=[question, session_id_state, data_path],
@@ -1817,12 +1823,12 @@ window.saveResultsToLocal = saveResultsToLocal;
     
 
     
-    # Download results button
-    def handle_download_results(intermediate_results, execution_log, session_id, question):
-        """处理下载结果的请求，先保存再下载，一气呵成"""
+    # Generate link button
+    def handle_generate_link(intermediate_results, execution_log, session_id, question):
+        """处理生成链接的请求，先保存再生成链接，一气呵成"""
         global save_download_state
         
-        print(f"[LOG] 处理下载结果请求，session_id: {session_id}")
+        print(f"[LOG] 处理生成链接请求，session_id: {session_id}")
         
         # 检查内容是否变化
         current_hash = get_content_hash(intermediate_results, execution_log, question)
@@ -1834,15 +1840,16 @@ window.saveResultsToLocal = saveResultsToLocal;
         if save_download_state['last_save_hash'] == current_hash:
             print(f"[LOG] 内容未变化，跳过保存")
             # 如果内容没变，直接返回已保存的文件路径
-            if hasattr(save_download_state, 'last_saved_file'):
-                return f"✅ 下载已保存的文件", save_download_state['last_saved_file']
+            if save_download_state['last_saved_file'] and os.path.exists(save_download_state['last_saved_file']):
+                print(f"[LOG] 使用已保存的文件: {save_download_state['last_saved_file']}")
+                return f"✅ 链接已生成", gr.File(value=save_download_state['last_saved_file'], visible=True), gr.Button(interactive=False)
             else:
-                return f"❌ 未找到已保存的文件", None
+                return f"❌ 未找到已保存的文件", gr.File(visible=False), gr.Button(interactive=False)
         else:
             # 执行保存
             save_result = save_current_results(intermediate_results, execution_log, session_id, question)
             if not save_result[0].startswith("✅"):
-                return f"❌ 保存失败: {save_result[0]}", None
+                return f"❌ 保存失败: {save_result[0]}", gr.File(visible=False), gr.Button(interactive=False)
             
             print(f"[LOG] 保存成功: {save_result[1]}")
             
@@ -1872,7 +1879,7 @@ window.saveResultsToLocal = saveResultsToLocal;
             # 直接使用保存的文件路径
             if save_download_state['last_saved_file'] and os.path.exists(save_download_state['last_saved_file']):
                 print(f"[LOG] 使用已保存的文件: {save_download_state['last_saved_file']}")
-                return f"✅ 下载已保存的文件", save_download_state['last_saved_file']
+                return f"✅ 链接已生成", gr.File(value=save_download_state['last_saved_file'], visible=True), gr.Button(interactive=False)
             else:
                 # 如果保存的文件不存在，重新生成
                 print(f"[LOG] 保存的文件不存在，重新生成下载文件")
@@ -1933,18 +1940,18 @@ window.saveResultsToLocal = saveResultsToLocal;
                 temp_file.write(combined_content)
                 temp_file.close()
                 
-                print(f"[LOG] 下载文件准备完成: {filename}")
-                return f"✅ 准备下载: {filename}", temp_file.name
+                print(f"[LOG] 链接生成完成: {filename}")
+                return f"✅ 链接已生成", gr.File(value=temp_file.name, visible=True), gr.Button(interactive=False)
             
         except Exception as e:
-            error_message = f"❌ 下载准备失败: {str(e)}"
-            print(f"[LOG] 下载准备失败: {e}")
-            return error_message, None
+            error_message = f"❌ 链接生成失败: {str(e)}"
+            print(f"[LOG] 链接生成失败: {e}")
+            return error_message, gr.File(visible=False), gr.Button(interactive=False)
     
     download_btn.click(
-        fn=handle_download_results,
+        fn=handle_generate_link,
         inputs=[intermediate_results, execution_log, session_id_state, question],
-        outputs=[save_status, gr.File(label="Download Results", visible=True)]
+        outputs=[save_status, file_link, download_btn]
     )
 
 if __name__ == "__main__":
