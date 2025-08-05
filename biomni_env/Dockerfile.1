@@ -35,6 +35,15 @@ COPY --chown=biomni:biomni bio_env.yml r_packages.yml ./
 # 切换到biomni用户
 USER biomni
 
+# 配置conda使用中科大镜像源
+RUN /opt/miniconda3/bin/conda config --add channels https://mirrors.ustc.edu.cn/anaconda/pkgs/main/ && \
+    /opt/miniconda3/bin/conda config --add channels https://mirrors.ustc.edu.cn/anaconda/pkgs/free/ && \
+    /opt/miniconda3/bin/conda config --add channels https://mirrors.ustc.edu.cn/anaconda/cloud/conda-forge/ && \
+    /opt/miniconda3/bin/conda config --add channels https://mirrors.ustc.edu.cn/anaconda/cloud/bioconda/ && \
+    /opt/miniconda3/bin/conda config --set show_channel_urls yes && \
+    /opt/miniconda3/bin/conda config --set remote_read_timeout_secs 600 && \
+    /opt/miniconda3/bin/conda config --set remote_connect_timeout_secs 600
+
 # 拆分 bio_env.yml
 RUN cat <<EOF > split_bio_env.py
 import yaml
