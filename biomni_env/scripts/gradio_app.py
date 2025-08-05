@@ -1734,7 +1734,7 @@ window.saveResultsToLocal = saveResultsToLocal;
                 )
                 # 添加生成链接按钮和文件链接
                 with gr.Row():
-                    download_btn = gr.Button("🔗 Generate Report Link", variant="primary", scale=1)
+                    download_btn = gr.Button("🔗 Generate Report Link", variant="primary", scale=1, interactive=False)
                     file_link = gr.File(
                         label="Download Report",
                         visible=False,
