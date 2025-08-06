@@ -1919,13 +1919,19 @@ window.saveResultsToLocal = saveResultsToLocal;
                 type="password",
                 info="API key for the service. Can also be set via environment variables."
             )
+
+            # data_path = gr.Textbox(
+            #     label="Data Path",
+            #     value="./data",
+            #     placeholder="./data",
+            #     info="Path where Biomni data will be stored"
+            # ) 
+          
+            # 固定数据路径，用户不可修改
+            data_path = gr.State("./data")
             
-            data_path = gr.Textbox(
-                label="Data Path",
-                value="./data",
-                placeholder="./data",
-                info="Path where Biomni data will be stored"
-            )
+            ## 显示数据路径信息（只读）
+            #gr.Markdown("**Data Path:** `./data` (固定路径)")
             
             verbose = gr.Checkbox(
                 label="Enable Verbose Logging",
