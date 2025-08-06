@@ -674,7 +674,7 @@ def query_uniprot(
             schema=uniprot_schema,
             system_template=system_template,
             api_key=api_key,
-            base_url=base_url,
+            #base_url=base_url, #ERROR
             model=model,
         )
 
