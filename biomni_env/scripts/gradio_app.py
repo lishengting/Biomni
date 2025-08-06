@@ -1357,16 +1357,23 @@ def export_token_data(session_id: str = ""):
         csv_content = output.getvalue()
         output.close()
         
-        # 创建临时文件
-        import tempfile
+        # 创建导出目录
+        import os
+        export_dir = "./exports"
+        if not os.path.exists(export_dir):
+            os.makedirs(export_dir)
+        
+        # 生成文件名
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"token_usage_{session_id[:8]}_{timestamp}.csv"
+        file_path = os.path.join(export_dir, filename)
         
-        temp_file = tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False, encoding='utf-8')
-        temp_file.write(csv_content)
-        temp_file.close()
+        # 写入文件
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(csv_content)
         
-        return "✅ Token数据导出成功", temp_file.name
+        # 返回成功消息和文件对象供Gradio下载
+        return f"✅ Token数据导出成功！文件保存到: {file_path}", gr.File(value=file_path, visible=True)
         
     except Exception as e:
         return f"❌ 导出token数据失败: {str(e)}", None
@@ -2054,6 +2061,13 @@ window.saveResultsToLocal = saveResultsToLocal;
                 with gr.Row():
                     reset_tokens_btn = gr.Button("🔄 Reset Token Stats", variant="secondary", scale=1)
                     export_tokens_btn = gr.Button("📊 Export Token Data", variant="primary", scale=1)
+                
+                # 添加token数据下载链接
+                token_file_link = gr.File(
+                    label="📥 Download Token Data",
+                    visible=False,
+                    scale=1
+                )
 
             with gr.Tab("Execution Log"):
                 execution_log = gr.Textbox(
@@ -2255,7 +2269,7 @@ window.saveResultsToLocal = saveResultsToLocal;
     export_tokens_btn.click(
         fn=export_token_data,
         inputs=[session_id_state],
-        outputs=[link_status, file_link]
+        outputs=[link_status, token_file_link]
     )
     
 

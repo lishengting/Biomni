@@ -774,13 +774,14 @@ class PromptLogger(BaseCallbackHandler):
 
 
 class NodeLogger(BaseCallbackHandler):
-    def __init__(self):
+    def __init__(self, model_name: str = "unknown"):
         super().__init__()
         self.total_prompt_tokens = 0
         self.total_completion_tokens = 0
         self.total_tokens = 0
         self.request_count = 0
         self.token_history = []  # Store detailed token usage history
+        self.model_name = model_name  # 存储模型名称
         
     def on_llm_end(self, response, **kwargs):  # response of type LLMResult
         for generations in response.generations:  # response.generations of type List[List[Generations]] becuase "each input could have multiple candidate generations"
@@ -809,7 +810,7 @@ class NodeLogger(BaseCallbackHandler):
                         "prompt_tokens": prompt_tokens,
                         "completion_tokens": completion_tokens,
                         "total_tokens": total_tokens,
-                        "model": token_usage.get("model", "unknown"),
+                        "model": token_usage.get("model", self.model_name),  # 优先从token_usage获取，没有就用self.model_name
                         "response_length": len(generated_text)
                     }
                     self.token_history.append(token_record)
@@ -820,7 +821,7 @@ class NodeLogger(BaseCallbackHandler):
                     color_print(f"📝 输入 tokens: {prompt_tokens:,}", color="green")
                     color_print(f"💬 输出 tokens: {completion_tokens:,}", color="green") 
                     color_print(f"📊 本次总计: {total_tokens:,} tokens", color="green")
-                    color_print(f"🤖 模型: {token_usage.get('model', 'unknown')}", color="green")
+                    color_print(f"🤖 模型: {token_usage.get('model', self.model_name)}", color="green")
                     color_print(f"📏 响应长度: {len(generated_text):,} 字符", color="green")
                     
                     # 显示累计统计

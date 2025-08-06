@@ -75,7 +75,7 @@ class A1:
         self.stop_execution = False  # Flag to stop execution
         
         # 初始化token统计
-        self.token_logger = NodeLogger()
+        self.token_logger = NodeLogger(model_name=llm)
         self.session_token_stats = {
             "session_start": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "questions_asked": 0,
