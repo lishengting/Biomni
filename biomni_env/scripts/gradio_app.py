@@ -121,6 +121,12 @@ def setup_session_workspace(session_id: str, data_path: str) -> tuple:
                 if data_link.exists() and data_link.is_symlink():
                     print(f"[LOG] 删除数据目录符号链接: {data_link}")
                     data_link.unlink()  # 只删除符号链接，不删除实际数据
+                
+                # 检查是否有save_folder符号链接，如果有先删除它
+                save_folder_link = session_path / "save_folder"
+                if save_folder_link.exists() and save_folder_link.is_symlink():
+                    print(f"[LOG] 删除save_folder目录符号链接: {save_folder_link}")
+                    save_folder_link.unlink()  # 只删除符号链接，不删除实际数据
             
             # 删除整个session目录
             shutil.rmtree(session_dir)
@@ -164,6 +170,35 @@ def setup_session_workspace(session_id: str, data_path: str) -> tuple:
             print(f"[LOG] 本地数据路径已存在，跳过链接创建")
         else:
             print(f"[LOG] 目标数据路径不存在: {target_data_path}")
+        
+        # 链接save_folder目录
+        target_save_folder = target_data_path / "save_folder"
+        local_save_folder = Path("./save_folder")
+        
+        print(f"[LOG] 开始设置save_folder目录链接...")
+        print(f"[LOG] 目标save_folder路径: {target_save_folder}")
+        print(f"[LOG] 本地save_folder路径: {local_save_folder}")
+        
+        if target_save_folder.exists() and not local_save_folder.exists():
+            try:
+                # 创建符号链接（Unix/Linux）或目录连接（Windows）
+                if hasattr(os, 'symlink'):
+                    os.symlink(str(target_save_folder), str(local_save_folder))
+                    print(f"[LOG] 已创建save_folder目录符号链接: {local_save_folder} -> {target_save_folder}")
+                else:
+                    # Windows下使用目录连接
+                    import subprocess
+                    subprocess.run(['mklink', '/J', str(local_save_folder), str(target_save_folder)], shell=True)
+                    print(f"[LOG] 已创建save_folder目录连接: {local_save_folder} -> {target_save_folder}")
+            except Exception as e:
+                # 如果符号链接失败，则复制数据
+                print(f"[LOG] save_folder符号链接创建失败: {e}")
+                # shutil.copytree(str(target_save_folder), str(local_save_folder), dirs_exist_ok=True)
+                # print(f"[LOG] 已复制save_folder目录到: {local_save_folder}")
+        elif local_save_folder.exists():
+            print(f"[LOG] 本地save_folder路径已存在，跳过链接创建")
+        else:
+            print(f"[LOG] 目标save_folder路径不存在: {target_save_folder}")
         
         return session_dir, original_dir
         
