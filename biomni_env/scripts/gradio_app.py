@@ -953,6 +953,7 @@ def ask_biomni_stream(question: str, session_id: str = "", data_path: str = "./d
         # Stream updates while task is running
         last_step_count = 0
         last_intermediate_count = 0
+        last_output_index = -1  # 记录上次输出的位置
         
         while session_task.is_alive():
             # 检查停止标志
@@ -975,16 +976,20 @@ def ask_biomni_stream(question: str, session_id: str = "", data_path: str = "./d
                 
                 # 构建停止消息，保留现有内容
                 if plain:
-                    # 纯文本格式
-                    stop_message = ""
+                    # 纯文本格式 - 输出所有新内容
                     if intermediate_outputs:
-                        stop_message = f"执行步骤 ({len(intermediate_outputs)} 步):\n"
-                        stop_message += "=" * 50 + "\n"
-                        
-                        for output in intermediate_outputs:
-                            stop_message += f"\n步骤 {output['step']} ({output['message_type']}) - {output['timestamp']}\n"
-                            stop_message += "-" * 30 + "\n"
-                            stop_message += f"{output['content']}\n\n"
+                        # 从上次位置往后输出所有新内容
+                        current_index = len(intermediate_outputs) - 1
+                        if current_index > last_output_index:
+                            # 有新内容，输出从上次位置到当前位置的所有内容
+                            new_outputs = intermediate_outputs[last_output_index + 1:]
+                            stop_message = "\n\n".join([output['content'] for output in new_outputs])
+                            last_output_index = current_index
+                        else:
+                            # 没有新内容
+                            stop_message = "无新内容"
+                    else:
+                        stop_message = "无中间结果"
                     
                     # plain模式下不追加token统计，因为API有专门的token_stats输出
                     
@@ -1039,16 +1044,18 @@ def ask_biomni_stream(question: str, session_id: str = "", data_path: str = "./d
                 
                 # Format intermediate results based on plain mode
                 if plain:
-                    # Plain text format
-                    intermediate_text = ""
+                    # Plain text format for API - output all new content since last update
                     if intermediate_outputs:
-                        intermediate_text = f"执行步骤 ({len(intermediate_outputs)} 步):\n"
-                        intermediate_text += "=" * 50 + "\n"
-                        
-                        for output in intermediate_outputs:
-                            intermediate_text += f"\n步骤 {output['step']} ({output['message_type']}) - {output['timestamp']}\n"
-                            intermediate_text += "-" * 30 + "\n"
-                            intermediate_text += f"{output['content']}\n\n"
+                        # 从上次位置往后输出所有新内容
+                        current_index = len(intermediate_outputs) - 1
+                        if current_index > last_output_index:
+                            # 有新内容，输出从上次位置到当前位置的所有内容
+                            new_outputs = intermediate_outputs[last_output_index + 1:]
+                            intermediate_text = "\n\n".join([output['content'] for output in new_outputs])
+                            last_output_index = current_index
+                        else:
+                            # 没有新内容，保持上次的输出
+                            intermediate_text = "⏳ 处理中... 请等待中间结果。"
                     else:
                         intermediate_text = "⏳ 处理中... 请等待中间结果。"
                     
@@ -1124,21 +1131,21 @@ def ask_biomni_stream(question: str, session_id: str = "", data_path: str = "./d
             
             # Format the final output based on plain mode
             if plain:
-                # 纯文本格式
-                intermediate_text = ""
-                
-                # 添加中间输出
+                # 纯文本格式 - 输出所有新内容
                 intermediate_outputs = session_agent.get_intermediate_outputs()
                 if intermediate_outputs:
-                    intermediate_text += f"详细步骤 ({len(intermediate_outputs)} 步):\n"
-                    intermediate_text += "=" * 50 + "\n"
-                    
-                    for output in intermediate_outputs:
-                        intermediate_text += f"\n步骤 {output['step']} ({output['message_type']}) - {output['timestamp']}\n"
-                        intermediate_text += "-" * 30 + "\n"
-                        intermediate_text += f"{output['content']}\n\n"
+                    # 从上次位置往后输出所有新内容
+                    current_index = len(intermediate_outputs) - 1
+                    if current_index > last_output_index:
+                        # 有新内容，输出从上次位置到当前位置的所有内容
+                        new_outputs = intermediate_outputs[last_output_index + 1:]
+                        intermediate_text = "\n\n".join([output['content'] for output in new_outputs])
+                        last_output_index = current_index
+                    else:
+                        # 没有新内容
+                        intermediate_text = "无新内容"
                 else:
-                    intermediate_text += "无中间结果可用。\n"
+                    intermediate_text = "无中间结果可用。"
                 
                 # plain模式下不追加token统计，因为API有专门的token_stats输出
                 
