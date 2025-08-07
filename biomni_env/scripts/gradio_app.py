@@ -2051,6 +2051,12 @@ window.saveResultsToLocal = saveResultsToLocal;
                 info="Show detailed progress logs during execution (recommended for debugging)"
             )
             
+            plain_output = gr.Checkbox(
+                label="Plain Text Output",
+                value=False,
+                info="Output raw text without HTML formatting for intermediate results, execution logs, and token stats"
+            )
+            
             # Control buttons
             with gr.Row():
                 create_btn = gr.Button("🚀 Create Agent", variant="primary")
@@ -2203,7 +2209,7 @@ window.saveResultsToLocal = saveResultsToLocal;
     
     # Event handlers
     # 创建agent时分配新的会话ID
-    def create_agent_with_new_session(llm_model, source, base_url, api_key, data_path, verbose):
+    def create_agent_with_new_session(llm_model, source, base_url, api_key, data_path, verbose, plain_output):
         """创建agent时分配新的会话ID"""
         # 总是生成新的会话ID
         new_session_id = get_timestamp_session_id()
@@ -2243,14 +2249,14 @@ window.saveResultsToLocal = saveResultsToLocal;
         except Exception as e:
             return f"❌ Error listing data: {str(e)}"
     
-    def create_agent_and_update_data(llm_model, source, base_url, api_key, data_path, verbose):
+    def create_agent_and_update_data(llm_model, source, base_url, api_key, data_path, verbose, plain_output):
         """Create agent and update data list."""
-        result = create_agent_with_new_session(llm_model, source, base_url, api_key, data_path, verbose)
+        result = create_agent_with_new_session(llm_model, source, base_url, api_key, data_path, verbose, plain_output)
         data_list = get_current_data_list(result[2])  # result[2] is the new session_id
         return result[0], result[1], result[2], data_list
     
     # 开始执行时启用Stop按钮，禁用Ask按钮和Generate Link按钮
-    def start_execution(question, session_id, data_path):
+    def start_execution(question, session_id, data_path, plain_output):
         return gr.Button(interactive=False), gr.Button(interactive=True), gr.Button(interactive=False)
     
     # 停止执行时禁用Stop按钮，启用Ask按钮和Generate Link按钮
@@ -2272,7 +2278,7 @@ window.saveResultsToLocal = saveResultsToLocal;
     
     create_btn.click(
         fn=create_agent_and_update_data,
-        inputs=[llm_model, source, base_url, api_key, data_path, verbose],
+        inputs=[llm_model, source, base_url, api_key, data_path, verbose, plain_output],
         outputs=[status_text, config_info, session_id_state, data_list_display]
     ).then(
         fn=update_token_display,
@@ -2299,14 +2305,14 @@ window.saveResultsToLocal = saveResultsToLocal;
     # Streaming ask function
     ask_btn.click(
         fn=start_execution,
-        inputs=[question, session_id_state, data_path],
+        inputs=[question, session_id_state, data_path, plain_output],
         outputs=[ask_btn, stop_btn, download_btn]
     ).then(
         fn=reset_save_download_state,
         outputs=[download_btn, file_link, link_status]
     ).then(
         fn=ask_biomni_stream,
-        inputs=[question, session_id_state, data_path],
+        inputs=[question, session_id_state, data_path, plain_output],
         outputs=[intermediate_results, execution_log, token_stats]
     ).then(
         fn=task_completion_state,
@@ -2320,14 +2326,14 @@ window.saveResultsToLocal = saveResultsToLocal;
     # Also allow Enter key to submit question
     question.submit(
         fn=start_execution,
-        inputs=[question, session_id_state, data_path],
+        inputs=[question, session_id_state, data_path, plain_output],
         outputs=[ask_btn, stop_btn, download_btn]
     ).then(
         fn=reset_save_download_state,
         outputs=[download_btn, file_link, link_status]
     ).then(
         fn=ask_biomni_stream,
-        inputs=[question, session_id_state, data_path],
+        inputs=[question, session_id_state, data_path, plain_output],
         outputs=[intermediate_results, execution_log, token_stats]
     ).then(
         fn=task_completion_state,
