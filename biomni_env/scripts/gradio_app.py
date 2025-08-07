@@ -954,6 +954,7 @@ def ask_biomni_stream(question: str, session_id: str = "", data_path: str = "./d
         last_step_count = 0
         last_intermediate_count = 0
         last_output_index = -1  # 记录上次输出的位置
+        last_log_count = 0  # 记录上次日志的数量
         
         while session_task.is_alive():
             # 检查停止标志
@@ -963,7 +964,21 @@ def ask_biomni_stream(question: str, session_id: str = "", data_path: str = "./d
                 if session_agent:
                     session_agent.stop()
                 # 获取当前的执行日志
-                execution_log = "\n".join([entry["formatted"] for entry in session_agent.get_execution_logs()])
+                logs = session_agent.get_execution_logs()
+                if plain:
+                    # plain模式下只输出新增的日志
+                    current_log_count = len(logs)
+                    if current_log_count > last_log_count:
+                        # 有新日志，只输出新增的部分
+                        new_logs = logs[last_log_count:]
+                        execution_log = "\n".join([entry["formatted"] for entry in new_logs])
+                        last_log_count = current_log_count
+                    else:
+                        # 没有新日志
+                        execution_log = ""
+                else:
+                    # HTML模式下输出所有日志
+                    execution_log = "\n".join([entry["formatted"] for entry in logs])
                 # 获取当前的中间输出
                 intermediate_outputs = session_agent.get_intermediate_outputs()
                 
@@ -1028,7 +1043,20 @@ def ask_biomni_stream(question: str, session_id: str = "", data_path: str = "./d
             
             # Get current logs
             logs = session_agent.get_execution_logs()
-            execution_log = "\n".join([entry["formatted"] for entry in logs])
+            if plain:
+                # plain模式下只输出新增的日志
+                current_log_count = len(logs)
+                if current_log_count > last_log_count:
+                    # 有新日志，只输出新增的部分
+                    new_logs = logs[last_log_count:]
+                    execution_log = "\n".join([entry["formatted"] for entry in new_logs])
+                    last_log_count = current_log_count
+                else:
+                    # 没有新日志
+                    execution_log = ""
+            else:
+                # HTML模式下输出所有日志
+                execution_log = "\n".join([entry["formatted"] for entry in logs])
             
             # Get intermediate outputs
             intermediate_outputs = session_agent.get_intermediate_outputs()
@@ -1091,7 +1119,21 @@ def ask_biomni_stream(question: str, session_id: str = "", data_path: str = "./d
         
         # Handle results
         if 'error' in result_container:
-            execution_log = "\n".join([entry["formatted"] for entry in session_agent.get_execution_logs()])
+            logs = session_agent.get_execution_logs()
+            if plain:
+                # plain模式下只输出新增的日志
+                current_log_count = len(logs)
+                if current_log_count > last_log_count:
+                    # 有新日志，只输出新增的部分
+                    new_logs = logs[last_log_count:]
+                    execution_log = "\n".join([entry["formatted"] for entry in new_logs])
+                    last_log_count = current_log_count
+                else:
+                    # 没有新日志
+                    execution_log = ""
+            else:
+                # HTML模式下输出所有日志
+                execution_log = "\n".join([entry["formatted"] for entry in logs])
             
             # 扫描会话目录中的所有新生成文件
             saved_files = scan_session_files(session_dir)
@@ -1120,7 +1162,21 @@ def ask_biomni_stream(question: str, session_id: str = "", data_path: str = "./d
         if 'result' in result_container:
             
             # Format the full execution log
-            execution_log = "\n".join([entry["formatted"] for entry in session_agent.get_execution_logs()])
+            logs = session_agent.get_execution_logs()
+            if plain:
+                # plain模式下只输出新增的日志
+                current_log_count = len(logs)
+                if current_log_count > last_log_count:
+                    # 有新日志，只输出新增的部分
+                    new_logs = logs[last_log_count:]
+                    execution_log = "\n".join([entry["formatted"] for entry in new_logs])
+                    last_log_count = current_log_count
+                else:
+                    # 没有新日志
+                    execution_log = ""
+            else:
+                # HTML模式下输出所有日志
+                execution_log = "\n".join([entry["formatted"] for entry in logs])
             
             # 扫描会话目录中的所有新生成文件
             saved_files = scan_session_files(session_dir)
@@ -1187,18 +1243,52 @@ def ask_biomni_stream(question: str, session_id: str = "", data_path: str = "./d
             runtime_display = get_runtime_display()
             final_token_stats = format_token_stats(session_agent, plain=plain)
             
+            # 获取执行日志
+            logs = session_agent.get_execution_logs()
+            if plain:
+                # plain模式下只输出新增的日志
+                current_log_count = len(logs)
+                if current_log_count > last_log_count:
+                    # 有新日志，只输出新增的部分
+                    new_logs = logs[last_log_count:]
+                    execution_log = "\n".join([entry["formatted"] for entry in new_logs])
+                    last_log_count = current_log_count
+                else:
+                    # 没有新日志
+                    execution_log = ""
+            else:
+                # HTML模式下输出所有日志
+                execution_log = "\n".join([entry["formatted"] for entry in logs])
+            
             if plain:
                 no_result_message = f"❌ 无结果\n\n运行时间: {runtime_display}\n"
             else:
                 no_result_message = f"❌ No result received.\n\n{final_token_stats}\n\n<div style='margin: 20px 0; padding: 15px; background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%); color: white; border-radius: 8px; text-align: center;'><h3 style='margin: 0;'>⚠️ 无结果</h3><p style='margin: 5px 0 0 0;'>运行时间: {runtime_display}</p></div>"
-            yield no_result_message, "\n".join([entry["formatted"] for entry in session_agent.get_execution_logs()]), final_token_stats
+            yield no_result_message, execution_log, final_token_stats
             
     except Exception as e:
         # 确保在异常时也清理工作空间
         if 'original_dir' in locals():
             cleanup_session_workspace(original_dir)
             
-        execution_log = "\n".join([entry["formatted"] for entry in session_agent.get_execution_logs()]) if session_agent else ""
+        logs = session_agent.get_execution_logs() if session_agent else []
+        if plain:
+            # plain模式下只输出新增的日志
+            if session_agent:
+                current_log_count = len(logs)
+                if current_log_count > last_log_count:
+                    # 有新日志，只输出新增的部分
+                    new_logs = logs[last_log_count:]
+                    execution_log = "\n".join([entry["formatted"] for entry in new_logs])
+                    last_log_count = current_log_count
+                else:
+                    # 没有新日志
+                    execution_log = ""
+            else:
+                execution_log = ""
+        else:
+            # HTML模式下输出所有日志
+            execution_log = "\n".join([entry["formatted"] for entry in logs])
         
         # 扫描会话目录中的所有新生成文件（如果有）
         saved_files = []
