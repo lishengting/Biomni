@@ -2089,6 +2089,76 @@ css_code = """
     .pdf-download-btn:hover {
         background: #c82333;
     }
+    
+    /* 移除output区域的高度限制 */
+    .intermediate-results {
+        max-height: none !important;
+        height: auto !important;
+        overflow: visible !important;
+    }
+    
+    /* 移除所有output相关组件的高度限制 */
+    [data-testid="tab-content"] {
+        max-height: none !important;
+        height: auto !important;
+        overflow: visible !important;
+    }
+    
+    /* 移除gr.HTML组件的高度限制 */
+    .gr-html {
+        max-height: none !important;
+        height: auto !important;
+        overflow: visible !important;
+    }
+    
+    /* 移除gr.Textbox组件的高度限制 */
+    .gr-textbox {
+        max-height: none !important;
+        height: auto !important;
+        overflow: visible !important;
+    }
+    
+    /* 确保Tab内容区域不受限制 */
+    .tabs-content {
+        max-height: none !important;
+        height: auto !important;
+        overflow: visible !important;
+    }
+    
+    /* 移除所有可能的容器限制 */
+    .gr-container {
+        max-height: none !important;
+        height: auto !important;
+        overflow: visible !important;
+    }
+    
+    /* 移除gr-block的高度限制 */
+    .gr-block {
+        max-height: none !important;
+        height: auto !important;
+        overflow: visible !important;
+    }
+    
+    /* 移除gr-form的高度限制 */
+    .gr-form {
+        max-height: none !important;
+        height: auto !important;
+        overflow: visible !important;
+    }
+    
+    /* 确保所有输出区域都能自由扩展 */
+    [data-testid="output"] {
+        max-height: none !important;
+        height: auto !important;
+        overflow: visible !important;
+    }
+    
+    /* 移除accordion内容的高度限制 */
+    .gr-accordion-content {
+        max-height: none !important;
+        height: auto !important;
+        overflow: visible !important;
+    }
 """
 with gr.Blocks(title="🧬 Biomni AI Agent Demo", theme=gr.themes.Soft(), head=js_code, css=css_code) as demo:
     # gr.HTML(js_code)
@@ -2256,14 +2326,16 @@ with gr.Blocks(title="🧬 Biomni AI Agent Demo", theme=gr.themes.Soft(), head=j
             with gr.Tab("Token Statistics"):
                 token_stats = gr.HTML(
                     label="Token Usage Statistics",
-                    value="<div style='text-align: center; color: #666; padding: 20px;'>Token statistics will appear here after agent initialization...</div>"
+                    value="<div style='text-align: center; color: #666; padding: 20px;'>Token statistics will appear here after agent initialization...</div>",
+                    container=False
                 )
                 
                 # 添加token历史记录
                 with gr.Accordion("📊 详细Token历史", open=False):
                     token_history = gr.HTML(
                         label="Token History",
-                        value="<div style='text-align: center; color: #666; padding: 10px;'>No token history available yet...</div>"
+                        value="<div style='text-align: center; color: #666; padding: 10px;'>No token history available yet...</div>",
+                        container=False
                     )
                 
                 # 添加token管理按钮
@@ -2283,7 +2355,8 @@ with gr.Blocks(title="🧬 Biomni AI Agent Demo", theme=gr.themes.Soft(), head=j
                     label="Detailed Execution Log",
                     lines=30,
                     interactive=False,
-                    placeholder="Detailed execution logs will appear here..."
+                    placeholder="Detailed execution logs will appear here...",
+                    container=False
                 )
             
             
