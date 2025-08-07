@@ -1746,7 +1746,7 @@ def save_current_results(intermediate_results: str, execution_log: str, session_
         return error_message, ""
 
 # Create the Gradio interface
-with gr.Blocks(title="🧬 Biomni AI Agent Demo", theme=gr.themes.Soft(), js="""
+js_code = """
 <script>
 // 将base64转换为Blob的函数
 function base64ToBlob(base64, type = "application/pdf") {
@@ -1908,7 +1908,9 @@ function saveResultsToLocal(htmlContent, logContent, filename) {
 // 确保函数在全局作用域可用
 window.saveResultsToLocal = saveResultsToLocal;
 </script>
-""", css=""""
+"""
+
+css_code = """
     .intermediate-results {
         max-height: 800px;
         overflow-y: auto;
@@ -2087,7 +2089,8 @@ window.saveResultsToLocal = saveResultsToLocal;
     .pdf-download-btn:hover {
         background: #c82333;
     }
-""") as demo:
+"""
+with gr.Blocks(title="🧬 Biomni AI Agent Demo", theme=gr.themes.Soft(), head=js_code, css=css_code) as demo:
     gr.Markdown("# 🧬 Biomni AI Agent Demo")
     gr.Markdown("Configure your LLM settings and ask Biomni to run biomedical tasks!")
     
