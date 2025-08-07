@@ -2090,7 +2090,7 @@ css_code = """
         background: #c82333;
     }
 """
-with gr.Blocks(title="🧬 Biomni AI Agent Demo", theme=gr.themes.Soft(), head=js_code, css=css_code) as demo:
+with gr.Blocks(title="🧬 Biomni AI Agent Demo", theme=gr.themes.Soft(), js=js_code, css=css_code) as demo:
     gr.Markdown("# 🧬 Biomni AI Agent Demo")
     gr.Markdown("Configure your LLM settings and ask Biomni to run biomedical tasks!")
     
