@@ -986,8 +986,7 @@ def ask_biomni_stream(question: str, session_id: str = "", data_path: str = "./d
                             stop_message += "-" * 30 + "\n"
                             stop_message += f"{output['content']}\n\n"
                     
-                    # 添加token统计
-                    stop_message += f"\n{final_token_stats}\n"
+                    # plain模式下不追加token统计，因为API有专门的token_stats输出
                     
                     # 添加停止信息
                     runtime_display = get_runtime_display()
@@ -1053,9 +1052,7 @@ def ask_biomni_stream(question: str, session_id: str = "", data_path: str = "./d
                     else:
                         intermediate_text = "⏳ 处理中... 请等待中间结果。"
                     
-                    # 添加token统计
-                    if current_token_stats:
-                        intermediate_text += f"\n{current_token_stats}\n"
+                    # plain模式下不追加token统计，因为API有专门的token_stats输出
                     
                 else:
                     # HTML format
@@ -1101,7 +1098,7 @@ def ask_biomni_stream(question: str, session_id: str = "", data_path: str = "./d
             if plain:
                 # 纯文本格式错误消息
                 error_message = f"❌ 错误: {result_container['error']}\n\n"
-                error_message += f"{final_token_stats}\n"
+                # plain模式下不追加token统计，因为API有专门的token_stats输出
                 error_message += f"运行时间: {runtime_display}\n"
             else:
                 # HTML格式错误消息
@@ -1143,8 +1140,7 @@ def ask_biomni_stream(question: str, session_id: str = "", data_path: str = "./d
                 else:
                     intermediate_text += "无中间结果可用。\n"
                 
-                # 添加token统计
-                intermediate_text += f"\n{final_token_stats}\n"
+                # plain模式下不追加token统计，因为API有专门的token_stats输出
                 
                 # 添加总运行时间
                 runtime_display = get_runtime_display()
@@ -1185,7 +1181,7 @@ def ask_biomni_stream(question: str, session_id: str = "", data_path: str = "./d
             final_token_stats = format_token_stats(session_agent, plain=plain)
             
             if plain:
-                no_result_message = f"❌ 无结果\n\n{final_token_stats}\n\n运行时间: {runtime_display}\n"
+                no_result_message = f"❌ 无结果\n\n运行时间: {runtime_display}\n"
             else:
                 no_result_message = f"❌ No result received.\n\n{final_token_stats}\n\n<div style='margin: 20px 0; padding: 15px; background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%); color: white; border-radius: 8px; text-align: center;'><h3 style='margin: 0;'>⚠️ 无结果</h3><p style='margin: 5px 0 0 0;'>运行时间: {runtime_display}</p></div>"
             yield no_result_message, "\n".join([entry["formatted"] for entry in session_agent.get_execution_logs()]), final_token_stats
@@ -1214,7 +1210,7 @@ def ask_biomni_stream(question: str, session_id: str = "", data_path: str = "./d
             error_message = f"❌ 处理问题时出错: {str(e)}\n\n"
             if files_html:
                 error_message += files_html
-            error_message += f"\n{error_token_stats}\n"
+            # plain模式下不追加token统计，因为API有专门的token_stats输出
             error_message += f"运行时间: {runtime_display}\n"
         else:
             error_message = f"❌ Error processing question: {str(e)}\n\n"
