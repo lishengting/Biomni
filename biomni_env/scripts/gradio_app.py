@@ -2241,7 +2241,8 @@ with gr.Blocks(title="🧬 Biomni AI Agent Demo", theme=gr.themes.Soft(), head=j
                 intermediate_results = gr.HTML(
                     label="Output & Execution Steps",
                     value="<div style='text-align: center; color: #666; padding: 20px;'>Output will appear here...</div>",
-                    elem_classes=["intermediate-results"]
+                    elem_classes=["intermediate-results"],
+                    container=False
                 )
                 # 添加生成链接按钮和文件链接
                 with gr.Row():
