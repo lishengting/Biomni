@@ -1746,8 +1746,8 @@ def save_current_results(intermediate_results: str, execution_log: str, session_
         return error_message, ""
 
 # Create the Gradio interface
-with gr.Blocks(title="🧬 Biomni AI Agent Demo", theme=gr.themes.Soft(), head="""
-<script>
+with gr.Blocks(title="🧬 Biomni AI Agent Demo", theme=gr.themes.Soft(), js="""
+// <script>
 // 将base64转换为Blob的函数
 function base64ToBlob(base64, type = "application/pdf") {
     const binStr = atob(base64);
@@ -1907,7 +1907,7 @@ function saveResultsToLocal(htmlContent, logContent, filename) {
 
 // 确保函数在全局作用域可用
 window.saveResultsToLocal = saveResultsToLocal;
-</script>
+// </script>
 """, css=""""
     .intermediate-results {
         max-height: 800px;
