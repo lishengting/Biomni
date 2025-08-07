@@ -797,7 +797,7 @@ def stop_execution(session_id: str = ""):
     
     return "⏹️ No active session found.", "No session to stop."
 
-def ask_biomni_stream(question: str, session_id: str = "", data_path: str = "./data"):
+def ask_biomni_stream(question: str, session_id: str = "", data_path: str = "./data", plain: bool = False):
     """Ask a question to the Biomni agent with streaming output."""
     global agent, agent_error, current_task, stop_flag
     
@@ -822,7 +822,7 @@ def ask_biomni_stream(question: str, session_id: str = "", data_path: str = "./d
             return f"{hours}小时{minutes}分{seconds:.1f}秒"
     
     # 格式化token统计信息
-    def format_token_stats(agent):
+    def format_token_stats(agent, plain=False):
         """格式化token统计信息用于显示"""
         try:
             if not hasattr(agent, 'get_token_summary'):
@@ -830,27 +830,45 @@ def ask_biomni_stream(question: str, session_id: str = "", data_path: str = "./d
             
             token_summary = agent.get_token_summary()
             
-            stats_html = f"""
-            <div style='margin: 20px 0; padding: 15px; background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); color: white; border-radius: 8px;'>
-                <h3 style='margin: 0 0 10px 0; color: white;'>🔢 Token 使用统计</h3>
-                <div style='display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 14px;'>
-                    <div><strong>总请求数:</strong> {token_summary.get('total_requests', 0):,}</div>
-                    <div><strong>会话问题数:</strong> {token_summary.get('questions_asked', 0):,}</div>
-                    <div><strong>累计输入tokens:</strong> {token_summary.get('total_prompt_tokens', 0):,}</div>
-                    <div><strong>累计输出tokens:</strong> {token_summary.get('total_completion_tokens', 0):,}</div>
-                    <div><strong>累计总tokens:</strong> {token_summary.get('total_tokens', 0):,}</div>
-                    <div><strong>会话时长:</strong> {token_summary.get('session_duration', 'N/A')}</div>
+            if plain:
+                # 纯文本格式
+                stats_text = f"""Token 使用统计:
+总请求数: {token_summary.get('total_requests', 0):,}
+会话问题数: {token_summary.get('questions_asked', 0):,}
+累计输入tokens: {token_summary.get('total_prompt_tokens', 0):,}
+累计输出tokens: {token_summary.get('total_completion_tokens', 0):,}
+累计总tokens: {token_summary.get('total_tokens', 0):,}
+会话时长: {token_summary.get('session_duration', 'N/A')}
+平均每次输入: {token_summary.get('average_prompt_tokens', 0):.1f} tokens
+平均每次输出: {token_summary.get('average_completion_tokens', 0):.1f} tokens
+平均每次总计: {token_summary.get('average_total_tokens', 0):.1f} tokens"""
+                return stats_text
+            else:
+                # HTML格式
+                stats_html = f"""
+                <div style='margin: 20px 0; padding: 15px; background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); color: white; border-radius: 8px;'>
+                    <h3 style='margin: 0 0 10px 0; color: white;'>🔢 Token 使用统计</h3>
+                    <div style='display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 14px;'>
+                        <div><strong>总请求数:</strong> {token_summary.get('total_requests', 0):,}</div>
+                        <div><strong>会话问题数:</strong> {token_summary.get('questions_asked', 0):,}</div>
+                        <div><strong>累计输入tokens:</strong> {token_summary.get('total_prompt_tokens', 0):,}</div>
+                        <div><strong>累计输出tokens:</strong> {token_summary.get('total_completion_tokens', 0):,}</div>
+                        <div><strong>累计总tokens:</strong> {token_summary.get('total_tokens', 0):,}</div>
+                        <div><strong>会话时长:</strong> {token_summary.get('session_duration', 'N/A')}</div>
+                    </div>
+                    <div style='margin-top: 10px; font-size: 13px; border-top: 1px solid rgba(255,255,255,0.3); padding-top: 10px;'>
+                        <div><strong>平均每次输入:</strong> {token_summary.get('average_prompt_tokens', 0):.1f} tokens</div>
+                        <div><strong>平均每次输出:</strong> {token_summary.get('average_completion_tokens', 0):.1f} tokens</div>
+                        <div><strong>平均每次总计:</strong> {token_summary.get('average_total_tokens', 0):.1f} tokens</div>
+                    </div>
                 </div>
-                <div style='margin-top: 10px; font-size: 13px; border-top: 1px solid rgba(255,255,255,0.3); padding-top: 10px;'>
-                    <div><strong>平均每次输入:</strong> {token_summary.get('average_prompt_tokens', 0):.1f} tokens</div>
-                    <div><strong>平均每次输出:</strong> {token_summary.get('average_completion_tokens', 0):.1f} tokens</div>
-                    <div><strong>平均每次总计:</strong> {token_summary.get('average_total_tokens', 0):.1f} tokens</div>
-                </div>
-            </div>
-            """
-            return stats_html
+                """
+                return stats_html
         except Exception as e:
-            return f"<div style='color: #dc3545;'>Token统计获取失败: {str(e)}</div>"
+            if plain:
+                return f"Token统计获取失败: {str(e)}"
+            else:
+                return f"<div style='color: #dc3545;'>Token统计获取失败: {str(e)}</div>"
     
     # 检查是否有有效的会话ID
     if not session_id or session_id == "":
@@ -914,7 +932,7 @@ def ask_biomni_stream(question: str, session_id: str = "", data_path: str = "./d
         session_agent.clear_execution_logs()
         
         # 记录执行前的token统计
-        initial_token_stats = format_token_stats(session_agent)
+        initial_token_stats = format_token_stats(session_agent, plain=plain)
         
         # Start execution in a separate thread
         result_container = {}
@@ -953,28 +971,49 @@ def ask_biomni_stream(question: str, session_id: str = "", data_path: str = "./d
                 files_html = generate_file_links_html(saved_files, session_dir)
                 
                 # 获取最终token统计
-                final_token_stats = format_token_stats(session_agent)
+                final_token_stats = format_token_stats(session_agent, plain=plain)
                 
                 # 构建停止消息，保留现有内容
-                stop_message = ""
-                if intermediate_outputs:
-                    stop_message = f"<div style='margin: 30px 0; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 10px; text-align: center;'><h2 style='margin: 0; font-size: 1.5em;'>📊 Execution Steps ({len(intermediate_outputs)} total)</h2></div>\n\n"
-                    for output in intermediate_outputs:
-                        step_header = f"<div style='margin: 40px 0 20px 0; border-top: 3px solid #007acc; padding-top: 20px;'><h3><strong>📝 Step {output['step']} ({output['message_type']}) - {output['timestamp']}</strong></h3></div>"
-                        step_content = output['content']
-                        parsed_content = parse_advanced_content(step_content)
-                        stop_message += f"{step_header}\n{parsed_content}\n\n"
-                
-                # 添加生成的文件链接
-                if files_html:
-                    stop_message += files_html
-                
-                # 添加token统计信息
-                stop_message += final_token_stats
-                
-                # 追加停止信息和运行时间
-                runtime_display = get_runtime_display()
-                stop_message += f"\n\n<div style='margin: 20px 0; padding: 15px; background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; border-radius: 8px; text-align: center;'><h3 style='margin: 0;'>⏹️ Execution Stopped</h3><p style='margin: 5px 0 0 0;'>Task execution has been stopped by user.</p><p style='margin: 5px 0 0 0;'>运行时间: {runtime_display}</p></div>"
+                if plain:
+                    # 纯文本格式
+                    stop_message = ""
+                    if intermediate_outputs:
+                        stop_message = f"执行步骤 ({len(intermediate_outputs)} 步):\n"
+                        stop_message += "=" * 50 + "\n"
+                        
+                        for output in intermediate_outputs:
+                            stop_message += f"\n步骤 {output['step']} ({output['message_type']}) - {output['timestamp']}\n"
+                            stop_message += "-" * 30 + "\n"
+                            stop_message += f"{output['content']}\n\n"
+                    
+                    # 添加token统计
+                    stop_message += f"\n{final_token_stats}\n"
+                    
+                    # 添加停止信息
+                    runtime_display = get_runtime_display()
+                    stop_message += f"\n⏹️ 执行已停止\n用户已停止任务执行。\n运行时间: {runtime_display}\n"
+                    
+                else:
+                    # HTML格式
+                    stop_message = ""
+                    if intermediate_outputs:
+                        stop_message = f"<div style='margin: 30px 0; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 10px; text-align: center;'><h2 style='margin: 0; font-size: 1.5em;'>📊 Execution Steps ({len(intermediate_outputs)} total)</h2></div>\n\n"
+                        for output in intermediate_outputs:
+                            step_header = f"<div style='margin: 40px 0 20px 0; border-top: 3px solid #007acc; padding-top: 20px;'><h3><strong>📝 Step {output['step']} ({output['message_type']}) - {output['timestamp']}</strong></h3></div>"
+                            step_content = output['content']
+                            parsed_content = parse_advanced_content(step_content)
+                            stop_message += f"{step_header}\n{parsed_content}\n\n"
+                    
+                    # 添加生成的文件链接
+                    if files_html:
+                        stop_message += files_html
+                    
+                    # 添加token统计信息
+                    stop_message += final_token_stats
+                    
+                    # 追加停止信息和运行时间
+                    runtime_display = get_runtime_display()
+                    stop_message += f"\n\n<div style='margin: 20px 0; padding: 15px; background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; border-radius: 8px; text-align: center;'><h3 style='margin: 0;'>⏹️ Execution Stopped</h3><p style='margin: 5px 0 0 0;'>Task execution has been stopped by user.</p><p style='margin: 5px 0 0 0;'>运行时间: {runtime_display}</p></div>"
                 
                 # 清理会话工作空间
                 cleanup_session_workspace(original_dir)
@@ -991,7 +1030,7 @@ def ask_biomni_stream(question: str, session_id: str = "", data_path: str = "./d
             intermediate_outputs = session_agent.get_intermediate_outputs()
             
             # Get current token stats
-            current_token_stats = format_token_stats(session_agent)
+            current_token_stats = format_token_stats(session_agent, plain=plain)
             
             # Check if we have new steps or intermediate results
             if len(logs) > last_step_count or len(intermediate_outputs) > last_intermediate_count:
@@ -999,22 +1038,42 @@ def ask_biomni_stream(question: str, session_id: str = "", data_path: str = "./d
                 last_intermediate_count = len(intermediate_outputs)
                 
                 
-                # Format intermediate results with advanced parsing
-                intermediate_text = ""
-                if intermediate_outputs:
-                    intermediate_text = f"<div style='margin: 30px 0; padding: 20px; background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border-radius: 10px; text-align: center;'><h2 style='margin: 0; font-size: 1.5em;'>⚙️ Execution Steps ({len(intermediate_outputs)} total)</h2></div>\n\n"
-                    # Show all intermediate outputs without truncation
-                    for output in intermediate_outputs:
-                        step_header = f"<div style='margin: 40px 0 20px 0; border-top: 3px solid #007acc; padding-top: 20px;'><h3><strong>📝 Step {output['step']} ({output['message_type']}) - {output['timestamp']}</strong></h3></div>"
-                        step_content = output['content']
-                        # 使用高级解析函数处理内容
-                        parsed_content = parse_advanced_content(step_content)
-                        intermediate_text += f"{step_header}\n{parsed_content}\n\n"
+                # Format intermediate results based on plain mode
+                if plain:
+                    # Plain text format
+                    intermediate_text = ""
+                    if intermediate_outputs:
+                        intermediate_text = f"执行步骤 ({len(intermediate_outputs)} 步):\n"
+                        intermediate_text += "=" * 50 + "\n"
+                        
+                        for output in intermediate_outputs:
+                            intermediate_text += f"\n步骤 {output['step']} ({output['message_type']}) - {output['timestamp']}\n"
+                            intermediate_text += "-" * 30 + "\n"
+                            intermediate_text += f"{output['content']}\n\n"
+                    else:
+                        intermediate_text = "⏳ 处理中... 请等待中间结果。"
+                    
+                    # 添加token统计
+                    if current_token_stats:
+                        intermediate_text += f"\n{current_token_stats}\n"
+                    
                 else:
-                    intermediate_text = "⏳ Processing... Please wait for intermediate results."
-                
-                # 添加当前token统计
-                intermediate_text += current_token_stats
+                    # HTML format
+                    intermediate_text = ""
+                    if intermediate_outputs:
+                        intermediate_text = f"<div style='margin: 30px 0; padding: 20px; background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border-radius: 10px; text-align: center;'><h2 style='margin: 0; font-size: 1.5em;'>⚙️ Execution Steps ({len(intermediate_outputs)} total)</h2></div>\n\n"
+                        # Show all intermediate outputs without truncation
+                        for output in intermediate_outputs:
+                            step_header = f"<div style='margin: 40px 0 20px 0; border-top: 3px solid #007acc; padding-top: 20px;'><h3><strong>📝 Step {output['step']} ({output['message_type']}) - {output['timestamp']}</strong></h3></div>"
+                            step_content = output['content']
+                            # 使用高级解析函数处理内容
+                            parsed_content = parse_advanced_content(step_content)
+                            intermediate_text += f"{step_header}\n{parsed_content}\n\n"
+                    else:
+                        intermediate_text = "⏳ Processing... Please wait for intermediate results."
+                    
+                    # 添加当前token统计
+                    intermediate_text += current_token_stats
                 
                 yield intermediate_text, execution_log, current_token_stats
             
@@ -1035,14 +1094,22 @@ def ask_biomni_stream(question: str, session_id: str = "", data_path: str = "./d
             files_html = generate_file_links_html(saved_files, session_dir)
             
             # 获取最终token统计
-            final_token_stats = format_token_stats(session_agent)
+            final_token_stats = format_token_stats(session_agent, plain=plain)
             
             runtime_display = get_runtime_display()
-            error_message = f"❌ **Error:** {result_container['error']}\n\n"
-            if files_html:
-                error_message += files_html
-            error_message += final_token_stats
-            error_message += f"\n\n<div style='margin: 20px 0; padding: 15px; background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; border-radius: 8px; text-align: center;'><h3 style='margin: 0;'>❌ 执行出错</h3><p style='margin: 5px 0 0 0;'>运行时间: {runtime_display}</p></div>"
+            
+            if plain:
+                # 纯文本格式错误消息
+                error_message = f"❌ 错误: {result_container['error']}\n\n"
+                error_message += f"{final_token_stats}\n"
+                error_message += f"运行时间: {runtime_display}\n"
+            else:
+                # HTML格式错误消息
+                error_message = f"❌ **Error:** {result_container['error']}\n\n"
+                if files_html:
+                    error_message += files_html
+                error_message += final_token_stats
+                error_message += f"\n\n<div style='margin: 20px 0; padding: 15px; background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; border-radius: 8px; text-align: center;'><h3 style='margin: 0;'>❌ 执行出错</h3><p style='margin: 5px 0 0 0;'>运行时间: {runtime_display}</p></div>"
             yield error_message, execution_log, final_token_stats
             return
         
@@ -1056,41 +1123,71 @@ def ask_biomni_stream(question: str, session_id: str = "", data_path: str = "./d
             files_html = generate_file_links_html(saved_files, session_dir)
             
             # 获取最终token统计
-            final_token_stats = format_token_stats(session_agent)
+            final_token_stats = format_token_stats(session_agent, plain=plain)
             
-            # Format the final output with advanced parsing
-            intermediate_text = ""
-            
-            # Add intermediate outputs with advanced parsing
-            intermediate_outputs = session_agent.get_intermediate_outputs()
-            if intermediate_outputs:
-                intermediate_text += f"<div style='margin: 30px 0; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 10px; text-align: center;'><h2 style='margin: 0; font-size: 1.5em;'>📊 Detailed Steps ({len(intermediate_outputs)} total)</h2></div>\n\n"
-                for output in intermediate_outputs:
-                    step_header = f"<div style='margin: 40px 0 20px 0; border-top: 3px solid #007acc; padding-top: 20px;'><h3><strong>📝 Step {output['step']} ({output['message_type']}) - {output['timestamp']}</strong></h3></div>"
-                    step_content = output['content']
-                    # 使用高级解析函数处理内容
-                    parsed_content = parse_advanced_content(step_content)
-                    intermediate_text += f"{step_header}\n{parsed_content}\n\n"
-            
-            if not intermediate_outputs:
-                intermediate_text += "No intermediate results available."
-            
-            # 添加生成的文件链接
-            if files_html:
-                intermediate_text += files_html
+            # Format the final output based on plain mode
+            if plain:
+                # 纯文本格式
+                intermediate_text = ""
                 
-            # 添加最终token统计
-            intermediate_text += final_token_stats
-            
-            # 添加总运行时间
-            runtime_display = get_runtime_display()
-            intermediate_text += f"\n\n<div style='margin: 20px 0; padding: 15px; background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border-radius: 8px; text-align: center;'><h3 style='margin: 0;'>✅ 执行完成</h3><p style='margin: 5px 0 0 0;'>总运行时间: {runtime_display}</p></div>"
+                # 添加中间输出
+                intermediate_outputs = session_agent.get_intermediate_outputs()
+                if intermediate_outputs:
+                    intermediate_text += f"详细步骤 ({len(intermediate_outputs)} 步):\n"
+                    intermediate_text += "=" * 50 + "\n"
+                    
+                    for output in intermediate_outputs:
+                        intermediate_text += f"\n步骤 {output['step']} ({output['message_type']}) - {output['timestamp']}\n"
+                        intermediate_text += "-" * 30 + "\n"
+                        intermediate_text += f"{output['content']}\n\n"
+                else:
+                    intermediate_text += "无中间结果可用。\n"
+                
+                # 添加token统计
+                intermediate_text += f"\n{final_token_stats}\n"
+                
+                # 添加总运行时间
+                runtime_display = get_runtime_display()
+                intermediate_text += f"\n✅ 执行完成\n总运行时间: {runtime_display}\n"
+                
+            else:
+                # HTML格式
+                intermediate_text = ""
+                
+                # 添加中间输出
+                intermediate_outputs = session_agent.get_intermediate_outputs()
+                if intermediate_outputs:
+                    intermediate_text += f"<div style='margin: 30px 0; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 10px; text-align: center;'><h2 style='margin: 0; font-size: 1.5em;'>📊 Detailed Steps ({len(intermediate_outputs)} total)</h2></div>\n\n"
+                    for output in intermediate_outputs:
+                        step_header = f"<div style='margin: 40px 0 20px 0; border-top: 3px solid #007acc; padding-top: 20px;'><h3><strong>📝 Step {output['step']} ({output['message_type']}) - {output['timestamp']}</strong></h3></div>"
+                        step_content = output['content']
+                        # 使用高级解析函数处理内容
+                        parsed_content = parse_advanced_content(step_content)
+                        intermediate_text += f"{step_header}\n{parsed_content}\n\n"
+                
+                if not intermediate_outputs:
+                    intermediate_text += "No intermediate results available."
+                
+                # 添加生成的文件链接
+                if files_html:
+                    intermediate_text += files_html
+                    
+                # 添加最终token统计
+                intermediate_text += final_token_stats
+                
+                # 添加总运行时间
+                runtime_display = get_runtime_display()
+                intermediate_text += f"\n\n<div style='margin: 20px 0; padding: 15px; background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border-radius: 8px; text-align: center;'><h3 style='margin: 0;'>✅ 执行完成</h3><p style='margin: 5px 0 0 0;'>总运行时间: {runtime_display}</p></div>"
             
             yield intermediate_text, execution_log, final_token_stats
         else:
             runtime_display = get_runtime_display()
-            final_token_stats = format_token_stats(session_agent)
-            no_result_message = f"❌ No result received.\n\n{final_token_stats}\n\n<div style='margin: 20px 0; padding: 15px; background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%); color: white; border-radius: 8px; text-align: center;'><h3 style='margin: 0;'>⚠️ 无结果</h3><p style='margin: 5px 0 0 0;'>运行时间: {runtime_display}</p></div>"
+            final_token_stats = format_token_stats(session_agent, plain=plain)
+            
+            if plain:
+                no_result_message = f"❌ 无结果\n\n{final_token_stats}\n\n运行时间: {runtime_display}\n"
+            else:
+                no_result_message = f"❌ No result received.\n\n{final_token_stats}\n\n<div style='margin: 20px 0; padding: 15px; background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%); color: white; border-radius: 8px; text-align: center;'><h3 style='margin: 0;'>⚠️ 无结果</h3><p style='margin: 5px 0 0 0;'>运行时间: {runtime_display}</p></div>"
             yield no_result_message, "\n".join([entry["formatted"] for entry in session_agent.get_execution_logs()]), final_token_stats
             
     except Exception as e:
@@ -1109,19 +1206,27 @@ def ask_biomni_stream(question: str, session_id: str = "", data_path: str = "./d
                 files_html = generate_file_links_html(saved_files, session_dir)
         
         # 获取错误时的token统计
-        error_token_stats = format_token_stats(session_agent) if session_agent else "<div style='color: #dc3545;'>Token统计不可用</div>"
+        error_token_stats = format_token_stats(session_agent, plain=plain) if session_agent else ("Token统计不可用" if plain else "<div style='color: #dc3545;'>Token统计不可用</div>")
         
         runtime_display = get_runtime_display()
-        error_message = f"❌ Error processing question: {str(e)}\n\n"
-        if files_html:
-            error_message += files_html
-        error_message += error_token_stats
-        error_message += f"\n\n<div style='margin: 20px 0; padding: 15px; background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; border-radius: 8px; text-align: center;'><h3 style='margin: 0;'>❌ 处理出错</h3><p style='margin: 5px 0 0 0;'>运行时间: {runtime_display}</p></div>"
+        
+        if plain:
+            error_message = f"❌ 处理问题时出错: {str(e)}\n\n"
+            if files_html:
+                error_message += files_html
+            error_message += f"\n{error_token_stats}\n"
+            error_message += f"运行时间: {runtime_display}\n"
+        else:
+            error_message = f"❌ Error processing question: {str(e)}\n\n"
+            if files_html:
+                error_message += files_html
+            error_message += error_token_stats
+            error_message += f"\n\n<div style='margin: 20px 0; padding: 15px; background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; border-radius: 8px; text-align: center;'><h3 style='margin: 0;'>❌ 处理出错</h3><p style='margin: 5px 0 0 0;'>运行时间: {runtime_display}</p></div>"
         yield error_message, execution_log, error_token_stats
 
-def ask_biomni(question: str, data_path: str = "./data"):
+def ask_biomni(question: str, data_path: str = "./data", plain: bool = False):
     """Non-streaming version for backward compatibility."""
-    for result in ask_biomni_stream(question, data_path=data_path):
+    for result in ask_biomni_stream(question, data_path=data_path, plain=plain):
         final_result = result
     return final_result
 
