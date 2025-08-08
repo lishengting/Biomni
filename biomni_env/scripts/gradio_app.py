@@ -83,10 +83,13 @@ def reset_save_download_state():
     return gr.Button(interactive=False), gr.File(visible=False), ""  # 禁用按钮、隐藏文件链接、清空状态文本
 
 # 会话结果目录管理
-def get_session_results_dir(session_id: str) -> str:
+def get_session_results_dir(session_id: str) -> Optional[str]:
     """获取会话的结果保存目录路径"""
+    print(f"[LOG] 获取会话结果目录，session_id: {session_id}")
+    
     if not session_id:
-        return "./results"
+        print(f"[LOG] 无效的session_id，返回None")
+        return None  # 删除原因：没有session_id时应该返回None而不是默认目录
     
     # 创建基于日期和会话ID的目录
     date_str = datetime.now().strftime("%Y%m%d")
@@ -94,11 +97,15 @@ def get_session_results_dir(session_id: str) -> str:
     
     # 确保目录存在
     Path(session_dir).mkdir(parents=True, exist_ok=True)
+    print(f"[LOG] 会话结果目录: {session_dir}")
     return session_dir
 
 def setup_session_workspace(session_id: str, data_path: str) -> tuple:
     """设置会话工作空间，包括创建目录和链接数据"""
     session_dir = get_session_results_dir(session_id)
+    if session_dir is None:
+        return False, f"❌ 错误：无效的会话ID '{session_id}'，无法设置工作空间"
+    
     original_dir = os.getcwd()
     
     try:
@@ -1514,6 +1521,10 @@ def get_new_files_list(session_id: str = "") -> list:
     
     # 获取会话结果目录
     session_dir = get_session_results_dir(session_id)
+    if session_dir is None:
+        print(f"[LOG] 无效的会话ID '{session_id}'，无法获取文件列表")
+        return []
+    
     print(f"[LOG] 获取新增文件列表，会话目录: {session_dir}")
     
     # 使用scan_session_files获取所有文件
@@ -1523,7 +1534,10 @@ def get_new_files_list(session_id: str = "") -> list:
 
 def export_token_data(session_id: str = ""):
     """导出token使用数据"""
+    print(f"[LOG] 开始导出token数据，session_id: {session_id}")
+    
     if not session_id or session_id == "":
+        print(f"[LOG] 未提供session_id，导出失败")
         return "❌ No session assigned. Please create an agent first.", None
     
     session = session_manager.get_session(session_id)
@@ -1577,9 +1591,13 @@ def export_token_data(session_id: str = ""):
         csv_content = output.getvalue()
         output.close()
         
-        # 创建导出目录
+        # 创建导出目录 - 使用会话结果目录
         import os
-        export_dir = "./exports"
+        # export_dir = "./exports"  # 删除原因：目录路径不正确，应该使用会话结果目录
+        export_dir = get_session_results_dir(session_id)
+        if export_dir is None:
+            return f"❌ 错误：无效的会话ID '{session_id}'，无法导出token数据", None
+        
         if not os.path.exists(export_dir):
             os.makedirs(export_dir)
         
@@ -1593,9 +1611,11 @@ def export_token_data(session_id: str = ""):
             f.write(csv_content)
         
         # 返回成功消息和文件对象供Gradio下载
+        print(f"[LOG] Token数据导出成功，文件路径: {file_path}")
         return f"✅ Token数据导出成功！文件保存到: {file_path}", gr.File(value=file_path, visible=True)
         
     except Exception as e:
+        print(f"[LOG] Token数据导出失败: {str(e)}")
         return f"❌ 导出token数据失败: {str(e)}", None
 
 def reset_agent(session_id: str = ""):
@@ -1700,8 +1720,11 @@ def save_current_results(intermediate_results: str, execution_log: str, session_
         # 生成保存目录
         if session_id:
             save_dir = get_session_results_dir(session_id)
+            if save_dir is None:
+                return f"❌ 错误：无效的会话ID '{session_id}'", ""
         else:
-            save_dir = "./results"
+            # save_dir = "./results"
+            return f"❌ 错误：无效的会话ID '{session_id}'，无法保存结果", ""
         
         # 确保目录存在
         Path(save_dir).mkdir(parents=True, exist_ok=True)
@@ -2675,8 +2698,11 @@ with gr.Blocks(title="🧬 Biomni AI Agent Demo", theme=gr.themes.Soft(), head=j
             # 构建完整的文件路径
             if session_id:
                 save_dir = get_session_results_dir(session_id)
+                if save_dir is None:
+                    return f"❌ 错误：无效的会话ID '{session_id}'", gr.File(visible=False), gr.Button(interactive=False)
             else:
-                save_dir = "./results"
+                # save_dir = "./results"
+                return f"❌ 错误：无效的会话ID '{session_id}'，无法生成链接", gr.File(visible=False), gr.Button(interactive=False)
             combined_path = os.path.join(save_dir, combined_filename)
             
             # 更新保存状态和文件路径
