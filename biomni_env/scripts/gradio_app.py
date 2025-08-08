@@ -2455,7 +2455,7 @@ with gr.Blocks(title="🧬 Biomni AI Agent Demo", theme=gr.themes.Soft(), head=j
         except Exception as e:
             return f"❌ Error listing data: {str(e)}"
     
-    def update_new_files_list(session_id):
+    def get_result_files_list(session_id, plain: bool = False):
         """更新新增文件列表显示"""
         if not session_id or session_id == "":
             return "❌ No session assigned. Please create an agent first."
@@ -2463,10 +2463,16 @@ with gr.Blocks(title="🧬 Biomni AI Agent Demo", theme=gr.themes.Soft(), head=j
         try:
             new_files = get_new_files_list(session_id)
             if new_files:
-                file_list = "\n".join([f"📁 {file}" for file in new_files])
-                return f"🗂️ 发现 {len(new_files)} 个新增文件:\n\n{file_list}"
+                if plain:
+                    return "\n".join(new_files)
+                else:
+                    file_list = "\n".join([f"📁 {file}" for file in new_files])
+                    return f"🗂️ 发现 {len(new_files)} 个新增文件:\n\n{file_list}"
             else:
-                return "📂 暂无新增文件"
+                if plain:
+                    return ""
+                else:
+                    return "📂 暂无新增文件"
         except Exception as e:
             return f"❌ 获取文件列表失败: {str(e)}"
     
@@ -2506,8 +2512,8 @@ with gr.Blocks(title="🧬 Biomni AI Agent Demo", theme=gr.themes.Soft(), head=j
         inputs=[session_id_state],
         outputs=[token_stats, token_history]
     ).then(
-        fn=update_new_files_list,
-        inputs=[session_id_state],
+        fn=get_result_files_list,
+        inputs=[session_id_state, plain_output],
         outputs=[new_files_list]
     )
     
@@ -2547,8 +2553,8 @@ with gr.Blocks(title="🧬 Biomni AI Agent Demo", theme=gr.themes.Soft(), head=j
         inputs=[session_id_state],
         outputs=[token_stats, token_history]
     ).then(
-        fn=update_new_files_list,
-        inputs=[session_id_state],
+        fn=get_result_files_list,
+        inputs=[session_id_state, plain_output],
         outputs=[new_files_list]
     )
     
@@ -2572,8 +2578,8 @@ with gr.Blocks(title="🧬 Biomni AI Agent Demo", theme=gr.themes.Soft(), head=j
         inputs=[session_id_state],
         outputs=[token_stats, token_history]
     ).then(
-        fn=update_new_files_list,
-        inputs=[session_id_state],
+        fn=get_result_files_list,
+        inputs=[session_id_state, plain_output],
         outputs=[new_files_list]
     )
     
@@ -2618,8 +2624,8 @@ with gr.Blocks(title="🧬 Biomni AI Agent Demo", theme=gr.themes.Soft(), head=j
     
     # Refresh files button
     refresh_files_btn.click(
-        fn=update_new_files_list,
-        inputs=[session_id_state],
+        fn=get_result_files_list,
+        inputs=[session_id_state, plain_output],
         outputs=[new_files_list]
     )
     
