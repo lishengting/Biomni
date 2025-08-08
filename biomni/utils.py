@@ -770,7 +770,7 @@ def color_print(text, color="blue"):
 class PromptLogger(BaseCallbackHandler):
     def on_chat_model_start(self, serialized, messages, **kwargs):
         for message in messages[0]:
-            color_print(message.pretty_repr(), color="green")
+            print(message.pretty_repr())
 
 
 class NodeLogger(BaseCallbackHandler):
@@ -816,33 +816,33 @@ class NodeLogger(BaseCallbackHandler):
                     self.token_history.append(token_record)
                     
                     # 输出详细的token使用信息
-                    color_print("=" * 60, color="blue")
-                    color_print(f"🔢 TOKEN 使用统计 - 请求 #{self.request_count}", color="blue")
-                    color_print(f"📝 输入 tokens: {prompt_tokens:,}", color="green")
-                    color_print(f"💬 输出 tokens: {completion_tokens:,}", color="green") 
-                    color_print(f"📊 本次总计: {total_tokens:,} tokens", color="green")
-                    color_print(f"🤖 模型: {token_usage.get('model', self.model_name)}", color="green")
-                    color_print(f"📏 响应长度: {len(generated_text):,} 字符", color="green")
+                    print("=" * 60)
+                    print(f"🔢 TOKEN 使用统计 - 请求 #{self.request_count}")
+                    print(f"📝 输入 tokens: {prompt_tokens:,}")
+                    print(f"💬 输出 tokens: {completion_tokens:,}") 
+                    print(f"📊 本次总计: {total_tokens:,} tokens")
+                    print(f"🤖 模型: {token_usage.get('model', self.model_name)}")
+                    print(f"📏 响应长度: {len(generated_text):,} 字符")
                     
                     # 显示累计统计
-                    color_print("-" * 40, color="blue")
-                    color_print(f"📈 累计统计 (共 {self.request_count} 次请求):", color="blue")
-                    color_print(f"📝 累计输入 tokens: {self.total_prompt_tokens:,}", color="yellow")
-                    color_print(f"💬 累计输出 tokens: {self.total_completion_tokens:,}", color="yellow")
-                    color_print(f"📊 累计总计: {self.total_tokens:,} tokens", color="yellow")
+                    print("-" * 40)
+                    print(f"📈 累计统计 (共 {self.request_count} 次请求):")
+                    print(f"📝 累计输入 tokens: {self.total_prompt_tokens:,}")
+                    print(f"💬 累计输出 tokens: {self.total_completion_tokens:,}")
+                    print(f"📊 累计总计: {self.total_tokens:,} tokens")
                     
                     # 计算平均值
                     if self.request_count > 0:
                         avg_prompt = self.total_prompt_tokens / self.request_count
                         avg_completion = self.total_completion_tokens / self.request_count
                         avg_total = self.total_tokens / self.request_count
-                        color_print(f"📊 平均每次: 输入 {avg_prompt:.1f}, 输出 {avg_completion:.1f}, 总计 {avg_total:.1f} tokens", color="yellow")
+                        print(f"📊 平均每次: 输入 {avg_prompt:.1f}, 输出 {avg_completion:.1f}, 总计 {avg_total:.1f} tokens")
                     
-                    color_print("=" * 60, color="blue")
+                    print("=" * 60)
                 else:
-                    color_print("⚠️ 未获取到token使用信息", color="red")
+                    print("⚠️ 未获取到token使用信息")
                 
-                color_print(generated_text, color="yellow")
+                print(generated_text)
     
     def get_token_summary(self):
         """获取token使用摘要"""
@@ -866,18 +866,18 @@ class NodeLogger(BaseCallbackHandler):
         self.token_history = []
 
     def on_agent_action(self, action, **kwargs):
-        color_print(action.log, color="pink")
+        print(action.log)
 
     def on_agent_finish(self, finish, **kwargs):
-        color_print(finish, color="red")
+        print(finish)
 
     def on_tool_start(self, serialized, input_str, **kwargs):
         tool_name = serialized.get("name")
-        color_print(f"Calling {tool_name} with inputs: {input_str}", color="pink")
+        print(f"Calling {tool_name} with inputs: {input_str}")
 
     def on_tool_end(self, output, **kwargs):
         output = str(output)
-        color_print(output, color="blue")
+        print(output)
 
 
 def check_or_create_path(path=None):
