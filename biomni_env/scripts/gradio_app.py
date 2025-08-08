@@ -2736,4 +2736,4 @@ with gr.Blocks(title="🧬 Biomni AI Agent Demo", theme=gr.themes.Soft(), head=j
 
 if __name__ == "__main__":
     demo.queue(default_concurrency_limit=10, max_size=100)
-    demo.launch(server_name="0.0.0.0", server_port=7860, share=False) 
+    demo.launch(server_name="0.0.0.0", server_port=7860, share=False, allowed_paths=["/opt/biomni/results/"]) 
