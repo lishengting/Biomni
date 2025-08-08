@@ -483,10 +483,10 @@ def generate_file_links_html(saved_files: list, session_dir: str) -> str:
                         </iframe>
                     </div>
                     <br>
-                    <button onclick="window.downloadPDFBlob('{pdf_base64}', '{file_name}')" 
-                            style="background: #dc3545; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px; border: none; cursor: pointer;">
+                    <a href="data:application/pdf;base64,{pdf_base64}" download="{file_name}" 
+                       style="background: #dc3545; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px; border: none; cursor: pointer; display: inline-block;">
                         ⬇️ Download {file_name}
-                    </button>
+                    </a>
                     <span style='color: #666; margin-left: 10px;'>({file_size:,} bytes)</span>
                 </div>
                 """)
@@ -504,10 +504,10 @@ def generate_file_links_html(saved_files: list, session_dir: str) -> str:
                         <strong style='color: #333 !important;'>📕 {file_name} <span style='color: #666; font-size: 0.8em;'>(PDF文档)</span></strong>
                         <br>
                         <p style='color: #666; margin: 5px 0;'>PDF预览失败，请下载查看</p>
-                        <button onclick="window.downloadPDFBlob('{pdf_base64}', '{file_name}')" 
-                                style="background: #dc3545; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px; border: none; cursor: pointer;">
+                        <a href="data:application/pdf;base64,{pdf_base64}" download="{file_name}" 
+                           style="background: #dc3545; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px; border: none; cursor: pointer; display: inline-block;">
                             ⬇️ Download {file_name}
-                        </button>
+                        </a>
                         <span style='color: #666; margin-left: 10px;'>({file_size:,} bytes)</span>
                     </div>
                     """)
@@ -1775,165 +1775,10 @@ def save_current_results(intermediate_results: str, execution_log: str, session_
 # Create the Gradio interface
 js_code = """
 <script>
-// 将base64转换为Blob的函数
-function base64ToBlob(base64, type = "application/pdf") {
-    const binStr = atob(base64);
-    const len = binStr.length;
-    const arr = new Uint8Array(len);
-    for (let i = 0; i < len; i++) {
-        arr[i] = binStr.charCodeAt(i);
-    }
-    return new Blob([arr], { type: type });
-}
+// 删除原因：移除downloadPDFBlob相关函数，改用base64 data URL方式下载
+// 所有文件下载现在都使用 <a href="data:application/xxx;base64,xxx" download="filename"> 的方式
 
-// 使用Blob下载PDF的函数
-function downloadPDFBlob(base64Data, filename) {
-    try {
-        const blob = base64ToBlob(base64Data, 'application/pdf');
-        const url = URL.createObjectURL(blob);
-        
-        // 创建临时下载链接
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        a.style.display = 'none';
-        
-        // 添加到文档并触发点击
-        document.body.appendChild(a);
-        a.click();
-        
-        // 清理
-        setTimeout(() => {
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }, 100);
-        
-        console.log('PDF downloaded via Blob:', filename);
-    } catch (error) {
-        console.error('Blob下载失败:', error);
-        // 降级到原始方法
-        fallbackDownload(base64Data, filename);
-    }
-}
-
-// 从文件路径下载PDF的函数
-function downloadPDFBlobFromFile(filePath, filename) {
-    try {
-        console.log('尝试下载文件:', filePath);
-        // 由于安全限制，直接从文件系统读取可能不可行
-        // 使用fetch获取文件内容，然后创建Blob
-        fetch(filePath)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.blob();
-            })
-            .then(blob => {
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = filename;
-                a.style.display = 'none';
-                document.body.appendChild(a);
-                a.click();
-                
-                setTimeout(() => {
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
-                }, 100);
-            })
-            .catch(error => {
-                console.error('文件下载失败:', error);
-                fallbackDownloadFromFile(filePath, filename);
-            });
-    } catch (error) {
-        console.error('Blob下载失败:', error);
-        fallbackDownloadFromFile(filePath, filename);
-    }
-}
-
-// 降级下载方法
-function fallbackDownload(base64Data, filename) {
-    const link = document.createElement('a');
-    link.href = 'data:application/pdf;base64,' + base64Data;
-    link.download = filename;
-    link.style.display = 'none';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-}
-
-function fallbackDownloadFromFile(filePath, filename) {
-    console.log('使用降级方法下载:', filePath);
-    // 由于安全限制，file:// 路径无法在浏览器中直接访问
-    // 显示错误信息而不是尝试下载
-    alert('无法下载文件: ' + filename + '\n文件路径: ' + filePath + '\n\n由于浏览器安全限制，无法直接访问本地文件。请检查文件权限或联系管理员。');
-}
-
-// 确保函数在全局作用域可用
-window.downloadPDFBlob = downloadPDFBlob;
-window.downloadPDFBlobFromFile = downloadPDFBlobFromFile;
-
-// 保存结果到本地的函数
-function saveResultsToLocal(htmlContent, logContent, filename) {
-    try {
-        // 创建包含HTML和日志的完整文档
-        const fullContent = `<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <title>Biomni Results - ${filename}</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
-        .log-section { background: #f8f9fa; font-family: monospace; white-space: pre-wrap; }
-        h1, h2 { color: #333; }
-        .timestamp { color: #666; font-size: 0.9em; }
-    </style>
-</head>
-<body>
-    <h1>🧬 Biomni AI Agent Results</h1>
-    <div class="timestamp">Generated on: ${new Date().toLocaleString()}</div>
-    
-    <div class="section">
-        <h2>📊 Output & Execution Steps</h2>
-        ${htmlContent}
-    </div>
-    
-    <div class="section log-section">
-        <h2>📝 Detailed Execution Log</h2>
-        ${logContent}
-    </div>
-</body>
-</html>`;
-        
-        // 创建Blob并下载
-        const blob = new Blob([fullContent], { type: 'text/html' });
-        const url = URL.createObjectURL(blob);
-        
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        a.style.display = 'none';
-        document.body.appendChild(a);
-        a.click();
-        
-        setTimeout(() => {
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }, 100);
-        
-        console.log('Results saved to local:', filename);
-        return true;
-    } catch (error) {
-        console.error('保存结果失败:', error);
-        return false;
-    }
-}
-
-// 确保函数在全局作用域可用
-window.saveResultsToLocal = saveResultsToLocal;
+// 保存结果到本地的函数 saveResultsToLocal 也移除
 </script>
 """
 
