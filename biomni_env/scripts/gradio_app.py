@@ -483,7 +483,7 @@ def generate_file_links_html(saved_files: list, session_dir: str) -> str:
                         </iframe>
                     </div>
                     <br>
-                    <button onclick="downloadPDFBlob('{pdf_base64}', '{file_name}')" 
+                    <button onclick="window.downloadPDFBlob('{pdf_base64}', '{file_name}')" 
                             style="background: #dc3545; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px; border: none; cursor: pointer;">
                         ⬇️ Download {file_name}
                     </button>
@@ -504,7 +504,7 @@ def generate_file_links_html(saved_files: list, session_dir: str) -> str:
                         <strong style='color: #333 !important;'>📕 {file_name} <span style='color: #666; font-size: 0.8em;'>(PDF文档)</span></strong>
                         <br>
                         <p style='color: #666; margin: 5px 0;'>PDF预览失败，请下载查看</p>
-                        <button onclick="downloadPDFBlob('{pdf_base64}', '{file_name}')" 
+                        <button onclick="window.downloadPDFBlob('{pdf_base64}', '{file_name}')" 
                                 style="background: #dc3545; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px; border: none; cursor: pointer;">
                             ⬇️ Download {file_name}
                         </button>
