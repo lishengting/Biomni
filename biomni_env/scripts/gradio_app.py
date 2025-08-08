@@ -1045,7 +1045,7 @@ def ask_biomni_stream(question: str, session_id: str = "", data_path: str = "./d
                 cleanup_session_workspace(original_dir)
                 
                 yield stop_message, execution_log, final_token_stats
-                session_task.join(timeout=1)  # Give it a moment to finish
+                session_task.join()  # Give it a moment to finish timeout=1
                 return
             
             # Get current logs
