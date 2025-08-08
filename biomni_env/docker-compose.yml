@@ -51,7 +51,7 @@ services:
       - ../biomni_data:/opt/biomni/data:ro
       - ./scripts:/opt/biomni/scripts
       - ./notebooks:/opt/biomni/notebooks
-      - ./results:/opt/biomni/results
+      - ../test_results:/opt/biomni/results
       - ./downloads:/opt/biomni/downloads
     environment:
       - JUPYTER_ENABLE_LAB=yes
@@ -167,7 +167,7 @@ services:
       - ../pyproject.toml:/opt/biomni/pyproject.toml
       - ../biomni_data:/opt/biomni/data:ro
       - ./scripts:/opt/biomni/scripts
-      - ./biomni_results:/opt/biomni/results
+      - ../biomni_results:/opt/biomni/results
       - biomni_cache:/home/biomni/.cache
       - ./notebooks:/opt/biomni/notebooks
       - ./downloads:/opt/biomni/downloads
@@ -251,7 +251,7 @@ services:
   #   volumes:
   #     - ../:/opt/biomni
   #     - ../biomni_data:/opt/biomni/data:ro
-  #     - ./biomni_results:/opt/biomni/results
+  #     - ../biomni_results:/opt/biomni/results
   #     - biomni_cache:/home/biomni/.cache
   #   environment:
   #     - PYTHONPATH=/opt/biomni
