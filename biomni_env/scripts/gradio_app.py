@@ -1737,34 +1737,16 @@ def save_current_results(intermediate_results: str, execution_log: str, session_
             # 从问题中提取前20个字符作为文件名的一部分
             question_part = re.sub(r'[^\w\s-]', '', question[:20]).strip().replace(' ', '_')
             if question_part:
-                output_filename = f"output_{timestamp}_{question_part}.html"
-                log_filename = f"execution_log_{timestamp}_{question_part}.txt"
                 combined_filename = f"biomni_results_{timestamp}_{question_part}.html"
             else:
-                output_filename = f"output_{timestamp}.html"
-                log_filename = f"execution_log_{timestamp}.txt"
                 combined_filename = f"biomni_results_{timestamp}.html"
         else:
-            output_filename = f"output_{timestamp}.html"
-            log_filename = f"execution_log_{timestamp}.txt"
             combined_filename = f"biomni_results_{timestamp}.html"
         
-        # 保存HTML输出
-        output_path = os.path.join(save_dir, output_filename)
-        with open(output_path, 'w', encoding='utf-8') as f:
-            f.write(intermediate_results)
-        print(f"[LOG] 已保存HTML输出到: {output_path}")  # 添加日志
-        
-        # 保存执行日志
-        log_path = os.path.join(save_dir, log_filename)
-        with open(log_path, 'w', encoding='utf-8') as f:
-            f.write(execution_log)
-        print(f"[LOG] 已保存执行日志到: {log_path}")  # 添加日志
-        
-        # 创建包含HTML和日志的完整文档
+        # 创建包含HTML和日志的完整文档（只生成这一个文件）
         combined_content = generate_html_template(intermediate_results, execution_log, combined_filename, "#333333")
         
-        # 保存完整文档
+        # 保存完整文档（这是唯一生成的文件）
         combined_path = os.path.join(save_dir, combined_filename)
         with open(combined_path, 'w', encoding='utf-8') as f:
             f.write(combined_content)
@@ -1780,9 +1762,9 @@ def save_current_results(intermediate_results: str, execution_log: str, session_
                 file_size = os.path.getsize(file_path)
                 files_info += f"• {file_name} ({file_size:,} bytes)\n"
         
-        success_message = f"✅ 结果已成功保存到本地!\n\n保存位置: {save_dir}\n\n保存的文件:\n• {output_filename}\n• {log_filename}\n• {combined_filename}{files_info}\n\n💡 提示: 您也可以点击浏览器下载按钮直接下载完整结果文件。"
+        success_message = f"✅ 结果已成功保存到本地!\n\n保存位置: {save_dir}\n\n保存的文件:\n• {combined_filename}{files_info}\n\n💡 提示: 您也可以点击浏览器下载按钮直接下载完整结果文件。"
         
-        print(f"[LOG] 保存完成，共保存 {len(saved_files) + 3} 个文件")  # 添加日志
+        print(f"[LOG] 保存完成，共保存 {len(saved_files) + 1} 个文件")  # 添加日志
         return success_message, save_dir
         
     except Exception as e:
