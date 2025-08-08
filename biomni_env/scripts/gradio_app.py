@@ -1499,6 +1499,28 @@ def reset_token_statistics(session_id: str = ""):
     except Exception as e:
         return f"❌ 重置token统计失败: {str(e)}", ""
 
+def get_new_files_list(session_id: str = "") -> list:
+    """获取会话目录中所有新增文件的完整路径列表
+    
+    Args:
+        session_id: 会话ID，如果为空则返回空列表
+        
+    Returns:
+        list: 所有新增文件的完整路径列表
+    """
+    if not session_id or session_id == "":
+        print("[LOG] 未提供会话ID，返回空列表")
+        return []
+    
+    # 获取会话结果目录
+    session_dir = get_session_results_dir(session_id)
+    print(f"[LOG] 获取新增文件列表，会话目录: {session_dir}")
+    
+    # 使用scan_session_files获取所有文件
+    new_files = scan_session_files(session_dir)
+    print(f"[LOG] 发现 {len(new_files)} 个新增文件")
+    return new_files
+
 def export_token_data(session_id: str = ""):
     """导出token使用数据"""
     if not session_id or session_id == "":
@@ -2270,6 +2292,19 @@ with gr.Blocks(title="🧬 Biomni AI Agent Demo", theme=gr.themes.Soft(), head=j
                 placeholder="Link status will appear here..."
             )
             
+            # New files list display
+            gr.Markdown("## 📁 New Files List")
+            new_files_list = gr.Textbox(
+                label="Generated Files",
+                interactive=False,
+                lines=10,
+                placeholder="Newly generated files will appear here after execution...",
+                container=True
+            )
+            
+            # Button to refresh new files list
+            refresh_files_btn = gr.Button("🔄 Refresh Files List", variant="secondary")
+            
 
             
         with gr.Column(scale=3):
@@ -2420,6 +2455,21 @@ with gr.Blocks(title="🧬 Biomni AI Agent Demo", theme=gr.themes.Soft(), head=j
         except Exception as e:
             return f"❌ Error listing data: {str(e)}"
     
+    def update_new_files_list(session_id):
+        """更新新增文件列表显示"""
+        if not session_id or session_id == "":
+            return "❌ No session assigned. Please create an agent first."
+        
+        try:
+            new_files = get_new_files_list(session_id)
+            if new_files:
+                file_list = "\n".join([f"📁 {file}" for file in new_files])
+                return f"🗂️ 发现 {len(new_files)} 个新增文件:\n\n{file_list}"
+            else:
+                return "📂 暂无新增文件"
+        except Exception as e:
+            return f"❌ 获取文件列表失败: {str(e)}"
+    
     def create_agent_and_update_data(llm_model, source, base_url, api_key, data_path, verbose, plain_output):
         """Create agent and update data list."""
         result = create_agent_with_new_session(llm_model, source, base_url, api_key, data_path, verbose, plain_output)
@@ -2455,6 +2505,10 @@ with gr.Blocks(title="🧬 Biomni AI Agent Demo", theme=gr.themes.Soft(), head=j
         fn=update_token_display,
         inputs=[session_id_state],
         outputs=[token_stats, token_history]
+    ).then(
+        fn=update_new_files_list,
+        inputs=[session_id_state],
+        outputs=[new_files_list]
     )
     
     reset_btn.click(
@@ -2492,6 +2546,10 @@ with gr.Blocks(title="🧬 Biomni AI Agent Demo", theme=gr.themes.Soft(), head=j
         fn=update_token_display,
         inputs=[session_id_state],
         outputs=[token_stats, token_history]
+    ).then(
+        fn=update_new_files_list,
+        inputs=[session_id_state],
+        outputs=[new_files_list]
     )
     
     # Also allow Enter key to submit question
@@ -2513,6 +2571,10 @@ with gr.Blocks(title="🧬 Biomni AI Agent Demo", theme=gr.themes.Soft(), head=j
         fn=update_token_display,
         inputs=[session_id_state],
         outputs=[token_stats, token_history]
+    ).then(
+        fn=update_new_files_list,
+        inputs=[session_id_state],
+        outputs=[new_files_list]
     )
     
     # 文件选择时启用上传按钮
@@ -2552,6 +2614,13 @@ with gr.Blocks(title="🧬 Biomni AI Agent Demo", theme=gr.themes.Soft(), head=j
         fn=export_token_data,
         inputs=[session_id_state],
         outputs=[link_status, token_file_link]
+    )
+    
+    # Refresh files button
+    refresh_files_btn.click(
+        fn=update_new_files_list,
+        inputs=[session_id_state],
+        outputs=[new_files_list]
     )
     
 
