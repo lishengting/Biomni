@@ -490,7 +490,7 @@ def _create_file_display_html(file_path: str, session_dir: str, use_base64: bool
     """
 
 # 文件大小阈值配置（字节）
-FILE_SIZE_THRESHOLD = 100 * 1024  # 100KB
+FILE_SIZE_THRESHOLD = 2 * 1024 * 1024  # 2MB
 
 def generate_file_links_html(saved_files: list, session_dir: str) -> str:
     """生成保存文件的HTML下载链接 - 优化版本
