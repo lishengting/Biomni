@@ -738,7 +738,7 @@ def stop_execution(session_id: str = ""):
     
     return "⏹️ No active session found.", "No session to stop."
 
-def ask_biomni_stream(question: str, session_id: str = "", data_path: str = "./data", plain: bool = False):
+def ask_biomni_stream(question: str, session_id: str = "", data_path: str = "./data", plain: bool = True):
     """Ask a question to the Biomni agent with streaming output."""
     global agent, agent_error, current_task, stop_flag
     
@@ -1258,7 +1258,7 @@ def ask_biomni_stream(question: str, session_id: str = "", data_path: str = "./d
             error_message += f"\n\n<div style='margin: 20px 0; padding: 15px; background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; border-radius: 8px; text-align: center;'><h3 style='margin: 0;'>❌ 处理出错</h3><p style='margin: 5px 0 0 0;'>运行时间: {runtime_display}</p></div>"
         yield error_message, execution_log, error_token_stats
 
-def ask_biomni(question: str, data_path: str = "./data", plain: bool = False):
+def ask_biomni(question: str, data_path: str = "./data", plain: bool = True):
     """Non-streaming version for backward compatibility."""
     for result in ask_biomni_stream(question, data_path=data_path, plain=plain):
         final_result = result
@@ -2240,7 +2240,7 @@ with gr.Blocks(title="🧬 Biomni AI Agent Demo", theme=gr.themes.Soft(), head=j
         except Exception as e:
             return f"❌ Error listing data: {str(e)}"
     
-    def get_result_files_list(session_id, plain: bool = False):
+    def get_result_files_list(session_id, plain: bool = True):
         """更新新增文件列表显示，包含文件大小"""
         print(f"[LOG] 进入 get_result_files_list: session_id={session_id}, plain={plain}")
         if not session_id or session_id == "":
