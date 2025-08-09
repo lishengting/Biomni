@@ -2324,7 +2324,7 @@ with gr.Blocks(title="🧬 Biomni AI Agent Demo", theme=gr.themes.Soft(), head=j
                     for file_path in new_files:
                         try:
                             file_size = os.path.getsize(file_path)
-                            file_info_list.append(f"{file_path} ({file_size})")
+                            file_info_list.append(f"{file_path}\t{file_size}")
                         except Exception as e:
                             file_info_list.append(f"{file_path} (Unknown)")
                     print(f"[LOG] get_result_files_list: plain模式，共 {len(file_info_list)} 个文件")
