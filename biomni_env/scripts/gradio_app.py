@@ -1265,7 +1265,7 @@ def ask_biomni(question: str, data_path: str = "./data", plain: bool = True):
     return final_result
 
 
-def upload_and_add_data(files, descriptions, session_id: str = ""):
+def upload_and_add_data(files, descriptions, session_id: str = "", plain: bool = True):
     """Upload files and add them to the agent's data lake."""
     if not session_id or session_id == "":
         return "❌ No session assigned. Please create an agent first.", ""
@@ -1278,23 +1278,49 @@ def upload_and_add_data(files, descriptions, session_id: str = ""):
         return "❌ No files selected for upload.", ""
     
     try:
-        # Prepare data dictionary
+        # Get session results directory and create upload subdirectory
+        session_dir = get_session_results_dir(session_id)
+        if session_dir is None:
+            return "❌ Failed to get session directory.", ""
+            
+        upload_dir = Path(session_dir) / "upload"
+        upload_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Prepare data dictionary and move files
         data_dict = {}
+        moved_files = []
+        
         for i, file in enumerate(files):
             if file is not None:
                 # Get description for this file
-                description = descriptions[i] if i < len(descriptions) and descriptions[i].strip() else f"Uploaded file: {file.name}"
-                data_dict[file.name] = description
+                file_name = os.path.basename(file.name)  # Extract just the filename
+                # Move file to upload directory
+                destination_path = upload_dir / file_name
+                try:
+                    shutil.copy2(file.name, str(destination_path))  # file.name is the full temp path
+                except Exception as e:
+                    print(f"[ERROR] Failed to copy file {file.name} to {destination_path}: {str(e)}")
+                    # Continue with other files instead of failing completely
+                    continue
+
+                description = descriptions[i] if i < len(descriptions) and descriptions[i].strip() else f"Uploaded file: {str(destination_path)}"
+                data_dict[str(destination_path)] = description
+                moved_files.append(str(destination_path))
+
         
         # Add data to agent
         success = session['agent'].add_data(data_dict)
         
         if success:
-            # List current custom data
+            # HTML mode: detailed output  
             custom_data = session['agent'].list_custom_data()
-            data_list = "\n".join([f"• {name}: {desc}" for name, desc in custom_data])
-            
-            return f"✅ Successfully added {len(data_dict)} file(s) to data lake.", f"📊 Custom Data in Agent:\n\n{data_list}"
+            if plain:
+                # Plain mode: simplified output
+                data_list = "\n".join([f"{name}: {desc}" for name, desc in custom_data])
+                return f"✅ Successfully added {len(data_dict)} file(s) to data lake.", data_list
+            else:
+                data_list = "\n".join([f"• {name}: {desc}" for name, desc in custom_data])
+                return f"✅ Successfully added {len(data_dict)} file(s) to data lake.", f"📊 Custom Data in Agent:\n\n{data_list}"
         else:
             return "❌ Failed to add data to agent.", ""
             
@@ -2211,7 +2237,7 @@ with gr.Blocks(title="🧬 Biomni AI Agent Demo", theme=gr.themes.Soft(), head=j
         return status_text, result[1], new_session_id
     
     # Data management event handlers
-    def handle_upload(files, descriptions, session_id):
+    def handle_upload(files, descriptions, session_id, plain: bool = True):
         """Handle file upload with descriptions."""
         if not files:
             return "❌ No files selected for upload.", ""
@@ -2219,7 +2245,7 @@ with gr.Blocks(title="🧬 Biomni AI Agent Demo", theme=gr.themes.Soft(), head=j
         # Split descriptions by newlines
         desc_list = descriptions.split('\n') if descriptions.strip() else []
         
-        return upload_and_add_data(files, desc_list, session_id)
+        return upload_and_add_data(files, desc_list, session_id, plain)
     
     def get_current_data_list(session_id):
         """Get current data list for display."""
@@ -2415,7 +2441,7 @@ with gr.Blocks(title="🧬 Biomni AI Agent Demo", theme=gr.themes.Soft(), head=j
     
     upload_btn.click(
         fn=handle_upload,
-        inputs=[file_upload, file_descriptions, session_id_state],
+        inputs=[file_upload, file_descriptions, session_id_state, plain_output],
         outputs=[upload_status, data_list_display]
     ).then(
         fn=lambda: gr.Button(interactive=False),
