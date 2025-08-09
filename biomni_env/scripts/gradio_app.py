@@ -256,8 +256,250 @@ def scan_session_files(session_dir: str) -> list:
     print(f"[LOG] 扫描完成，共发现 {len(generated_files)} 个文件")
     return generated_files
 
+def _get_file_type_info(file_ext: str) -> dict:
+    """获取文件类型信息"""
+    file_ext = file_ext.lower()
+    
+    # 文件类型映射
+    type_mapping = {
+        # 图片类型
+        '.png': {'icon': '📸', 'type': '图片文件', 'color': '#28a745', 'mime': 'image/png'},
+        '.jpg': {'icon': '📸', 'type': '图片文件', 'color': '#28a745', 'mime': 'image/jpeg'},
+        '.jpeg': {'icon': '📸', 'type': '图片文件', 'color': '#28a745', 'mime': 'image/jpeg'},
+        '.gif': {'icon': '📸', 'type': '图片文件', 'color': '#28a745', 'mime': 'image/gif'},
+        '.bmp': {'icon': '📸', 'type': '图片文件', 'color': '#28a745', 'mime': 'image/bmp'},
+        '.svg': {'icon': '📸', 'type': '矢量图', 'color': '#28a745', 'mime': 'image/svg+xml'},
+        '.tiff': {'icon': '📸', 'type': '图片文件', 'color': '#28a745', 'mime': 'image/tiff'},
+        '.webp': {'icon': '📸', 'type': '图片文件', 'color': '#28a745', 'mime': 'image/webp'},
+        
+        # 文本类型
+        '.txt': {'icon': '📄', 'type': '文本文件', 'color': '#6c757d', 'mime': 'text/plain'},
+        '.log': {'icon': '📄', 'type': '日志文件', 'color': '#6c757d', 'mime': 'text/plain'},
+        '.md': {'icon': '📝', 'type': 'Markdown文件', 'color': '#4169e1', 'mime': 'text/markdown'},
+        '.py': {'icon': '💻', 'type': 'Python代码', 'color': '#007acc', 'mime': 'text/x-python'},
+        '.js': {'icon': '💻', 'type': 'JavaScript代码', 'color': '#f7df1e', 'mime': 'application/javascript'},
+        '.html': {'icon': '💻', 'type': 'HTML文档', 'color': '#e34f26', 'mime': 'text/html'},
+        '.css': {'icon': '💻', 'type': '样式表', 'color': '#1572b6', 'mime': 'text/css'},
+        '.json': {'icon': '🔧', 'type': 'JSON文件', 'color': '#ffa500', 'mime': 'application/json'},
+        '.xml': {'icon': '💻', 'type': 'XML文件', 'color': '#ff6600', 'mime': 'application/xml'},
+        '.yaml': {'icon': '💻', 'type': 'YAML文件', 'color': '#cb171e', 'mime': 'text/yaml'},
+        '.yml': {'icon': '💻', 'type': 'YAML文件', 'color': '#cb171e', 'mime': 'text/yaml'},
+        '.csv': {'icon': '📊', 'type': 'CSV数据', 'color': '#32cd32', 'mime': 'text/csv'},
+        '.tsv': {'icon': '📊', 'type': 'TSV数据', 'color': '#32cd32', 'mime': 'text/tab-separated-values'},
+        
+        # 文档类型
+        '.pdf': {'icon': '📕', 'type': 'PDF文档', 'color': '#dc3545', 'mime': 'application/pdf'},
+        '.xlsx': {'icon': '📊', 'type': 'Excel文件', 'color': '#28a745', 'mime': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'},
+        '.xls': {'icon': '📊', 'type': 'Excel文件', 'color': '#28a745', 'mime': 'application/vnd.ms-excel'},
+        '.docx': {'icon': '📝', 'type': 'Word文档', 'color': '#007bff', 'mime': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'},
+        '.doc': {'icon': '📝', 'type': 'Word文档', 'color': '#007bff', 'mime': 'application/msword'},
+        '.pptx': {'icon': '📋', 'type': 'PPT文件', 'color': '#fd7e14', 'mime': 'application/vnd.openxmlformats-officedocument.presentationml.presentation'},
+        '.ppt': {'icon': '📋', 'type': 'PPT文件', 'color': '#fd7e14', 'mime': 'application/vnd.ms-powerpoint'},
+        
+        # 压缩文件
+        '.zip': {'icon': '🗜️', 'type': '压缩文件', 'color': '#6f42c1', 'mime': 'application/zip'},
+        '.rar': {'icon': '🗜️', 'type': '压缩文件', 'color': '#6f42c1', 'mime': 'application/vnd.rar'},
+        '.7z': {'icon': '🗜️', 'type': '压缩文件', 'color': '#6f42c1', 'mime': 'application/x-7z-compressed'},
+        '.tar': {'icon': '🗜️', 'type': '压缩文件', 'color': '#6f42c1', 'mime': 'application/x-tar'},
+        '.gz': {'icon': '🗜️', 'type': '压缩文件', 'color': '#6f42c1', 'mime': 'application/gzip'},
+        
+        # 媒体文件
+        '.mp4': {'icon': '🎬', 'type': '视频文件', 'color': '#e83e8c', 'mime': 'video/mp4'},
+        '.avi': {'icon': '🎬', 'type': '视频文件', 'color': '#e83e8c', 'mime': 'video/x-msvideo'},
+        '.mov': {'icon': '🎬', 'type': '视频文件', 'color': '#e83e8c', 'mime': 'video/quicktime'},
+        '.mkv': {'icon': '🎬', 'type': '视频文件', 'color': '#e83e8c', 'mime': 'video/x-matroska'},
+        '.mp3': {'icon': '🎵', 'type': '音频文件', 'color': '#20c997', 'mime': 'audio/mpeg'},
+        '.wav': {'icon': '🎵', 'type': '音频文件', 'color': '#20c997', 'mime': 'audio/wav'},
+        '.flac': {'icon': '🎵', 'type': '音频文件', 'color': '#20c997', 'mime': 'audio/flac'},
+        '.aac': {'icon': '🎵', 'type': '音频文件', 'color': '#20c997', 'mime': 'audio/aac'},
+    }
+    
+    return type_mapping.get(file_ext, {'icon': '📁', 'type': '未知类型', 'color': '#6c757d', 'mime': 'application/octet-stream'})
+
+def _encode_file_to_base64(file_path: str) -> str:
+    """将文件编码为base64字符串"""
+    try:
+        import base64
+        with open(file_path, 'rb') as f:
+            return base64.b64encode(f.read()).decode('utf-8')
+    except Exception as e:
+        print(f"[LOG] 文件编码失败: {file_path}, 错误: {e}")
+        return ""
+
+def _get_direct_download_url(file_path: str, session_dir: str) -> str:
+    """获取文件的直接下载URL"""
+    try:
+        # 构建相对于/opt/biomni/results的路径
+        abs_file_path = os.path.abspath(file_path)
+        if abs_file_path.startswith('/opt/biomni/results'):
+            # 已经是/opt/biomni/results下的文件
+            relative_path = abs_file_path[len('/opt/biomni/results'):].lstrip('/')
+        else:
+            # 构建相对于session_dir的路径
+            session_abs = os.path.abspath(session_dir)
+            if abs_file_path.startswith(session_abs):
+                session_name = os.path.basename(session_abs)
+                relative_path = f"{session_name}/{abs_file_path[len(session_abs):].lstrip('/')}"
+            else:
+                # 使用文件名
+                relative_path = os.path.basename(abs_file_path)
+        
+        # 构建下载URL
+        download_url = f"/gradio_api/file=/opt/biomni/results/{relative_path}"
+        return download_url
+    except Exception as e:
+        print(f"[LOG] 构建下载URL失败: {file_path}, 错误: {e}")
+        return ""
+
+def _create_file_display_html(file_path: str, session_dir: str, use_base64: bool = True) -> str:
+    """创建单个文件的显示HTML"""
+    file_name = os.path.basename(file_path)
+    file_size = os.path.getsize(file_path)
+    file_size_str = format_file_size(file_size)
+    file_ext = os.path.splitext(file_path)[1].lower()
+    
+    type_info = _get_file_type_info(file_ext)
+    
+    if use_base64 and file_size <= FILE_SIZE_THRESHOLD:  # 小于阈值使用base64
+        file_data = _encode_file_to_base64(file_path)
+        if not file_data:
+            return f"""
+            <div style='margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 5px; border-left: 4px solid {type_info['color']};'>
+                <strong style='color: #333 !important;'>{type_info['icon']} {file_name} <span style='color: #666; font-size: 0.8em;'>({type_info['type']})</span></strong>
+                <br>
+                <p style='color: #dc3545;'>⚠️ 文件读取失败</p>
+                <span style='color: #666; margin-left: 10px;'>({file_size_str})</span>
+            </div>
+            """
+        
+        # 使用base64的下载链接
+        download_link = f"data:{type_info['mime']};base64,{file_data}"
+    else:
+        # 使用直接下载链接
+        download_url = _get_direct_download_url(file_path, session_dir)
+        if not download_url:
+            download_url = f"data:{type_info['mime']};base64,{_encode_file_to_base64(file_path) or ''}"
+        download_link = download_url
+    
+    # 根据文件类型生成不同的显示方式
+    if file_ext in {'.png', '.jpg', '.jpeg', '.gif', '.bmp', '.svg', '.tiff', '.webp'}:
+        # 图片文件预览
+        if use_base64 and file_size <= FILE_SIZE_THRESHOLD:
+            return f"""
+            <div style='margin: 15px 0; padding: 10px; border: 1px solid #ddd; border-radius: 5px;'>
+                <h4 style='color: #333 !important;'>{type_info['icon']} {file_name}</h4>
+                <img src="data:{type_info['mime']};base64,{file_data}" style="max-width: 100%; height: auto; border: 1px solid #ccc; border-radius: 4px;" alt="{file_name}">
+                <br><br>
+                <a href="{download_link}" download="{file_name}" style="background: {type_info['color']}; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px;">⬇️ Download {file_name}</a>
+                <span style='color: #666; margin-left: 10px;'>({file_size_str})</span>
+            </div>
+            """
+        else:
+            return f"""
+            <div style='margin: 15px 0; padding: 10px; border: 1px solid #ddd; border-radius: 5px;'>
+                <h4 style='color: #333 !important;'>{type_info['icon']} {file_name}</h4>
+                <p style='color: #666;'>图片文件: {file_name}</p>
+                <a href="{download_link}" target="_blank" style="background: {type_info['color']}; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px;">⬇️ Download {file_name}</a>
+                <span style='color: #666; margin-left: 10px;'>({file_size_str})</span>
+            </div>
+            """
+    
+    elif file_ext in {'.txt', '.log', '.md', '.py', '.js', '.html', '.css', '.json', '.xml', '.yaml', '.yml', '.csv', '.tsv'}:
+        # 文本文件预览
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+                if len(content) > 5000:
+                    display_content = content[:5000] + "\n\n... (内容过长，已截断，请下载完整文件查看)"
+                    truncated = True
+                else:
+                    display_content = content
+                    truncated = False
+                
+                # 转义HTML特殊字符
+                display_content = display_content.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+                
+                return f"""
+                <div style='margin: 15px 0; padding: 10px; border: 2px solid {type_info['color']}; border-radius: 5px; background: #f8f9fa;'>
+                    <h4 style='color: #333 !important;'>{type_info['icon']} {file_name} <span style='color: #666; font-size: 0.8em;'>({type_info['type']})</span></h4>
+                    <div style='max-height: 400px; overflow-y: auto; background: white; padding: 15px; border-radius: 4px; border: 1px solid #ddd; font-family: monospace; font-size: 13px; line-height: 1.4; white-space: pre-wrap; color: #333 !important;'>{display_content}</div>
+                    <br>
+                    <a href="{download_link}" download="{file_name}" style="background: {type_info['color']}; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px;">⬇️ Download {file_name}</a>
+                    <span style='color: #666; margin-left: 10px;'>({file_size_str})</span>
+                </div>
+                """
+        except UnicodeDecodeError:
+            # 尝试其他编码
+            try:
+                with open(file_path, 'r', encoding='gbk') as f:
+                    content = f.read()
+                    if len(content) > 5000:
+                        display_content = content[:5000] + "\n\n... (内容过长，已截断，请下载完整文件查看)"
+                    else:
+                        display_content = content
+                    display_content = display_content.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+                    
+                    return f"""
+                    <div style='margin: 15px 0; padding: 10px; border: 2px solid {type_info['color']}; border-radius: 5px; background: #f8f9fa;'>
+                        <h4 style='color: #333 !important;'>{type_info['icon']} {file_name} <span style='color: #666; font-size: 0.8em;'>({type_info['type']} - GBK编码)</span></h4>
+                        <div style='max-height: 400px; overflow-y: auto; background: white; padding: 15px; border-radius: 4px; border: 1px solid #ddd; font-family: monospace; font-size: 13px; line-height: 1.4; white-space: pre-wrap; color: #333 !important;'>{display_content}</div>
+                        <br>
+                        <a href="{download_link}" download="{file_name}" style="background: {type_info['color']}; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px;">⬇️ Download {file_name}</a>
+                        <span style='color: #666; margin-left: 10px;'>({file_size_str})</span>
+                    </div>
+                    """
+            except Exception:
+                pass
+        except Exception:
+            pass
+    
+    elif file_ext == '.pdf':
+        # PDF文件
+        if use_base64 and file_size <= FILE_SIZE_THRESHOLD:
+            return f"""
+            <div style='margin: 15px 0; padding: 10px; border: 2px solid {type_info['color']}; border-radius: 5px; background: #fff5f5;'>
+                <h4 style='color: #333 !important;'>{type_info['icon']} {file_name} <span style='color: #666; font-size: 0.8em;'>(PDF文档)</span></h4>
+                <div style='border: 1px solid #ddd; border-radius: 4px; overflow: hidden;'>
+                    <iframe src="data:application/pdf;base64,{file_data}" width="100%" height="500px" style="border: none;">
+                        <p>您的浏览器不支持PDF预览。请点击下载按钮下载文件。</p>
+                    </iframe>
+                </div>
+                <br>
+                <a href="{download_link}" download="{file_name}" style="background: {type_info['color']}; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px;">⬇️ Download {file_name}</a>
+                <span style='color: #666; margin-left: 10px;'>({file_size_str})</span>
+            </div>
+            """
+        else:
+            return f"""
+            <div style='margin: 15px 0; padding: 10px; border: 2px solid {type_info['color']}; border-radius: 5px; background: #fff5f5;'>
+                <h4 style='color: #333 !important;'>{type_info['icon']} {file_name} <span style='color: #666; font-size: 0.8em;'>(PDF文档)</span></h4>
+                <p style='color: #666;'>PDF文档: {file_name}</p>
+                <a href="{download_link}" target="_blank" style="background: {type_info['color']}; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px;">⬇️ Download {file_name}</a>
+                <span style='color: #666; margin-left: 10px;'>({file_size_str})</span>
+            </div>
+            """
+    
+    # 默认显示方式
+    return f"""
+    <div style='margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 5px; border-left: 4px solid {type_info['color']};'>
+        <strong style='color: #333 !important;'>{type_info['icon']} {file_name} <span style='color: #666; font-size: 0.8em;'>({type_info['type']})</span></strong>
+        <br>
+        <a href="{download_link}" target="_blank" style="background: {type_info['color']}; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px; margin-top: 5px; display: inline-block;">⬇️ Download {file_name}</a>
+        <span style='color: #666; margin-left: 10px;'>({file_size_str})</span>
+    </div>
+    """
+
+# 文件大小阈值配置（字节）
+FILE_SIZE_THRESHOLD = 100 * 1024  # 100KB
+
 def generate_file_links_html(saved_files: list, session_dir: str) -> str:
-    """生成保存文件的HTML下载链接"""
+    """生成保存文件的HTML下载链接 - 优化版本
+    
+    规则：
+    - 小于FILE_SIZE_THRESHOLD的文件：使用base64编码内嵌显示
+    - 大于FILE_SIZE_THRESHOLD的文件：使用直接下载链接
+    - 根据文件类型提供不同的展示方式
+    """
     if not saved_files:
         print(f"[LOG] 没有文件需要生成HTML链接")
         return ""
@@ -267,324 +509,13 @@ def generate_file_links_html(saved_files: list, session_dir: str) -> str:
     html_parts.append("<div style='margin: 20px 0; padding: 15px; background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); color: white; border-radius: 8px;'><h3 style='margin: 0 0 10px 0;'>📁 Generated Files</h3></div>")
     
     for file_path in saved_files:
-        file_name = os.path.basename(file_path)
         file_size = os.path.getsize(file_path)
-        file_size_str = format_file_size(file_size)
+        use_base64 = file_size <= FILE_SIZE_THRESHOLD
         
-        print(f"[LOG] 处理文件: {file_name} ({file_size_str})")
-        
-        # 检查文件类型并决定展示方式
-        file_ext = os.path.splitext(file_path)[1].lower()
-        
-        # 定义不同类型的文件扩展名
-        image_extensions = {'.png', '.jpg', '.jpeg', '.gif', '.bmp', '.svg', '.tiff', '.webp'}
-        text_extensions = {'.txt', '.log', '.md', '.py', '.js', '.html', '.css', '.json', '.xml', '.yaml', '.yml', '.csv', '.tsv'}
-        code_extensions = {'.py', '.js', '.html', '.css', '.json', '.xml', '.yaml', '.yml', '.sql', '.r', '.sh', '.bat'}
-        
-        if file_ext in image_extensions:
-            print(f"[LOG] 检测到图片文件: {file_name} (扩展名: {file_ext})")
-            # 图片直接展示 - 使用base64编码
-            try:
-                import base64
-                with open(file_path, 'rb') as f:
-                    img_data = f.read()
-                    img_base64 = base64.b64encode(img_data).decode('utf-8')
-                    mime_type = 'image/png' if file_ext == '.png' else 'image/jpeg' if file_ext in ['.jpg', '.jpeg'] else 'image/gif' if file_ext == '.gif' else 'image/svg+xml' if file_ext == '.svg' else 'image/bmp' if file_ext == '.bmp' else 'image/tiff' if file_ext == '.tiff' else 'image/webp'
-                
-                print(f"[LOG] 成功编码图片: {file_name} (MIME类型: {mime_type})")
-                html_parts.append(f"""
-                <div style='margin: 15px 0; padding: 10px; border: 1px solid #ddd; border-radius: 5px;'>
-                    <h4 style='color: #333 !important;'>📸 {file_name}</h4>
-                    <img src="data:{mime_type};base64,{img_base64}" style="max-width: 100%; height: auto; border: 1px solid #ccc; border-radius: 4px;" alt="{file_name}">
-                    <br><br>
-                    <a href="data:{mime_type};base64,{img_base64}" download="{file_name}" style="background: #28a745; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px;">⬇️ Download {file_name}</a>
-                    <span style='color: #666; margin-left: 10px;'>({file_size_str})</span>
-                </div>
-                """)
-            except Exception as e:
-                print(f"[LOG] 图片编码失败: {file_name}, 错误: {e}")
-                # 如果base64编码失败，尝试读取文件并重新编码
-                try:
-                    import base64
-                    with open(file_path, 'rb') as f:
-                        img_data = f.read()
-                        img_base64 = base64.b64encode(img_data).decode('utf-8')
-                        mime_type = 'image/png' if file_ext == '.png' else 'image/jpeg' if file_ext in ['.jpg', '.jpeg'] else 'image/gif' if file_ext == '.gif' else 'image/svg+xml' if file_ext == '.svg' else 'image/bmp' if file_ext == '.bmp' else 'image/tiff' if file_ext == '.tiff' else 'image/webp'
-                    
-                    html_parts.append(f"""
-                    <div style='margin: 15px 0; padding: 10px; border: 1px solid #ddd; border-radius: 5px;'>
-                        <h4 style='color: #333 !important;'>📸 {file_name}</h4>
-                        <p style='color: #666;'>图片文件: {file_name}</p>
-                        <a href="data:{mime_type};base64,{img_base64}" download="{file_name}" style="background: #28a745; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px;">⬇️ Download {file_name}</a>
-                        <span style='color: #666; margin-left: 10px;'>({file_size_str})</span>
-                    </div>
-                    """)
-                except Exception as e2:
-                    print(f"[LOG] 图片文件处理完全失败: {file_name}, 错误: {e2}")
-                    html_parts.append(f"""
-                    <div style='margin: 15px 0; padding: 10px; border: 1px solid #ddd; border-radius: 5px;'>
-                        <h4 style='color: #333 !important;'>📸 {file_name}</h4>
-                        <p style='color: #666;'>图片文件: {file_name}</p>
-                        <p style='color: #dc3545;'>⚠️ 文件下载失败，请检查文件权限</p>
-                        <span style='color: #666; margin-left: 10px;'>({file_size_str})</span>
-                    </div>
-                    """)
-                
-        elif file_ext in text_extensions:
-            print(f"[LOG] 检测到文本文件: {file_name} (扩展名: {file_ext})")
-            # 文本文件直接展示内容
-            try:
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    content = f.read()
-                    # 限制显示长度，避免页面过长
-                    if len(content) > 5000:
-                        display_content = content[:5000] + "\n\n... (内容过长，已截断，请下载完整文件查看)"
-                        truncated = True
-                    else:
-                        display_content = content
-                        truncated = False
-                    
-                    # 转义HTML特殊字符
-                    display_content = display_content.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
-                    
-                    # 根据文件类型选择图标和样式
-                    if file_ext in code_extensions:
-                        #icon = "💻"
-                        title = "代码文件"
-                        bg_color = "#f8f9fa"
-                        border_color = "#007acc"
-                    elif file_ext in ['.md']:
-                        #icon = "📝"
-                        title = "Markdown文件"
-                        bg_color = "#f0f8ff"
-                        border_color = "#4169e1"
-                    elif file_ext in ['.json']:
-                        #icon = "🔧"
-                        title = "JSON文件"
-                        bg_color = "#fff8dc"
-                        border_color = "#ffa500"
-                    elif file_ext in ['.csv', '.tsv']:
-                        #icon = "📊"
-                        title = "数据文件"
-                        bg_color = "#f0fff0"
-                        border_color = "#32cd32"
-                    else:
-                        #icon = "📄"
-                        title = "文本文件"
-                        bg_color = "#f8f9fa"
-                        border_color = "#6c757d"
-                    icon = get_file_icon(file_ext)
-                
-                print(f"[LOG] 成功读取文本文件: {file_name} ({'截断' if truncated else '完整'})")
-                html_parts.append(f"""
-                <div style='margin: 15px 0; padding: 10px; border: 2px solid {border_color}; border-radius: 5px; background: {bg_color};'>
-                    <h4 style='color: #333 !important;'>{icon} {file_name} <span style='color: #666; font-size: 0.8em;'>({title})</span></h4>
-                    <div style='max-height: 400px; overflow-y: auto; background: white; padding: 15px; border-radius: 4px; border: 1px solid #ddd; font-family: monospace; font-size: 13px; line-height: 1.4; white-space: pre-wrap; color: #333 !important;'>{display_content}</div>
-                    <br>
-                    <a href="data:text/plain;charset=utf-8;base64,{__import__('base64').b64encode(content.encode('utf-8')).decode('utf-8')}" download="{file_name}" style="background: #28a745; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px;">⬇️ Download {file_name}</a>
-                    <span style='color: #666; margin-left: 10px;'>({file_size_str})</span>
-                </div>
-                """)
-            except UnicodeDecodeError:
-                print(f"[LOG] 文本文件编码错误: {file_name}, 尝试其他编码")
-                # 尝试其他编码
-                try:
-                    with open(file_path, 'r', encoding='gbk') as f:
-                        content = f.read()
-                        if len(content) > 5000:
-                            display_content = content[:5000] + "\n\n... (内容过长，已截断，请下载完整文件查看)"
-                        else:
-                            display_content = content
-                        display_content = display_content.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
-                        
-                    print(f"[LOG] 使用GBK编码成功读取: {file_name}")
-                    html_parts.append(f"""
-                    <div style='margin: 15px 0; padding: 10px; border: 2px solid #6c757d; border-radius: 5px; background: #f8f9fa;'>
-                        <h4 style='color: #333 !important;'>📄 {file_name} <span style='color: #666; font-size: 0.8em;'>(文本文件 - GBK编码)</span></h4>
-                        <div style='max-height: 400px; overflow-y: auto; background: white; padding: 15px; border-radius: 4px; border: 1px solid #ddd; font-family: monospace; font-size: 13px; line-height: 1.4; white-space: pre-wrap; color: #333 !important;'>{display_content}</div>
-                        <br>
-                        <a href="data:text/plain;charset=gbk;base64,{__import__('base64').b64encode(content.encode('gbk')).decode('utf-8')}" download="{file_name}" style="background: #28a745; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px;">⬇️ Download {file_name}</a>
-                        <span style='color: #666; margin-left: 10px;'>({file_size_str})</span>
-                    </div>
-                    """)
-                except Exception as e:
-                    print(f"[LOG] 文本文件读取失败: {file_name}, 错误: {e}")
-                    # 作为二进制文件处理
-                    try:
-                        import base64
-                        with open(file_path, 'rb') as f:
-                            binary_data = f.read()
-                            binary_base64 = base64.b64encode(binary_data).decode('utf-8')
-                        
-                        html_parts.append(f"""
-                        <div style='margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 5px;'>
-                            <strong style='color: #333 !important;'>📄 {file_name} <span style='color: #666; font-size: 0.8em;'>(二进制文件)</span></strong>
-                            <br>
-                            <p style='color: #666; margin: 5px 0;'>无法以文本格式显示，请下载查看</p>
-                            <a href="data:application/octet-stream;base64,{binary_base64}" download="{file_name}" style="background: #007bff; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px;">⬇️ Download {file_name}</a>
-                            <span style='color: #666; margin-left: 10px;'>({file_size_str})</span>
-                        </div>
-                        """)
-                    except Exception as e2:
-                        print(f"[LOG] 二进制文件处理失败: {file_name}, 错误: {e2}")
-                        html_parts.append(f"""
-                        <div style='margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 5px;'>
-                            <strong style='color: #333 !important;'>📄 {file_name} <span style='color: #666; font-size: 0.8em;'>(二进制文件)</span></strong>
-                            <br>
-                            <p style='color: #666; margin: 5px 0;'>无法以文本格式显示，请下载查看</p>
-                            <p style='color: #dc3545;'>⚠️ 文件下载失败，请检查文件权限</p>
-                            <span style='color: #666; margin-left: 10px;'>({file_size_str})</span>
-                        </div>
-                        """)
-            except Exception as e:
-                print(f"[LOG] 文本文件处理失败: {file_name}, 错误: {e}")
-                # 作为普通文件处理
-                try:
-                    import base64
-                    with open(file_path, 'rb') as f:
-                        file_data = f.read()
-                        file_base64 = base64.b64encode(file_data).decode('utf-8')
-                    
-                    html_parts.append(f"""
-                    <div style='margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 5px;'>
-                        <strong style='color: #333 !important;'>📄 {file_name}</strong>
-                        <br>
-                        <p style='color: #666; margin: 5px 0;'>文件读取失败，请下载查看</p>
-                        <a href="data:application/octet-stream;base64,{file_base64}" download="{file_name}" style="background: #007bff; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px;">⬇️ Download {file_name}</a>
-                        <span style='color: #666; margin-left: 10px;'>({file_size_str})</span>
-                    </div>
-                    """)
-                except Exception as e2:
-                    print(f"[LOG] 文件处理完全失败: {file_name}, 错误: {e2}")
-                    html_parts.append(f"""
-                    <div style='margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 5px;'>
-                        <strong style='color: #333 !important;'>📄 {file_name}</strong>
-                        <br>
-                        <p style='color: #666; margin: 5px 0;'>文件读取失败，请下载查看</p>
-                        <p style='color: #dc3545;'>⚠️ 文件下载失败，请检查文件权限</p>
-                        <span style='color: #666; margin-left: 10px;'>({file_size_str})</span>
-                    </div>
-                    """)
-                
-        elif file_ext == '.pdf':
-            print(f"[LOG] 检测到PDF文件: {file_name}")
-            # PDF文件使用iframe展示和Blob下载
-            try:
-                import base64
-                with open(file_path, 'rb') as f:
-                    pdf_data = f.read()
-                    pdf_base64 = base64.b64encode(pdf_data).decode('utf-8')
-                
-                print(f"[LOG] 成功编码PDF文件: {file_name}")
-                html_parts.append(f"""
-                <div style='margin: 15px 0; padding: 10px; border: 2px solid #dc3545; border-radius: 5px; background: #fff5f5;'>
-                    <h4 style='color: #333 !important;'>📕 {file_name} <span style='color: #666; font-size: 0.8em;'>(PDF文档)</span></h4>
-                    <div style='border: 1px solid #ddd; border-radius: 4px; overflow: hidden;'>
-                        <iframe src="data:application/pdf;base64,{pdf_base64}" width="100%" height="500px" style="border: none;">
-                            <p>您的浏览器不支持PDF预览。请点击下载按钮下载文件。</p>
-                        </iframe>
-                    </div>
-                    <br>
-                    <a href="data:application/pdf;base64,{pdf_base64}" download="{file_name}" 
-                       style="background: #dc3545; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px; border: none; cursor: pointer; display: inline-block;">
-                        ⬇️ Download {file_name}
-                    </a>
-                    <span style='color: #666; margin-left: 10px;'>({file_size_str})</span>
-                </div>
-                """)
-            except Exception as e:
-                print(f"[LOG] PDF文件处理失败: {file_name}, 错误: {e}")
-                # 尝试重新读取PDF文件
-                try:
-                    import base64
-                    with open(file_path, 'rb') as f:
-                        pdf_data = f.read()
-                        pdf_base64 = base64.b64encode(pdf_data).decode('utf-8')
-                    
-                    html_parts.append(f"""
-                    <div style='margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 5px;'>
-                        <strong style='color: #333 !important;'>📕 {file_name} <span style='color: #666; font-size: 0.8em;'>(PDF文档)</span></strong>
-                        <br>
-                        <p style='color: #666; margin: 5px 0;'>PDF预览失败，请下载查看</p>
-                        <a href="data:application/pdf;base64,{pdf_base64}" download="{file_name}" 
-                           style="background: #dc3545; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px; border: none; cursor: pointer; display: inline-block;">
-                            ⬇️ Download {file_name}
-                        </a>
-                        <span style='color: #666; margin-left: 10px;'>({file_size_str})</span>
-                    </div>
-                    """)
-                except Exception as e2:
-                    print(f"[LOG] PDF文件处理完全失败: {file_name}, 错误: {e2}")
-                    html_parts.append(f"""
-                    <div style='margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 5px;'>
-                        <strong style='color: #333 !important;'>📕 {file_name} <span style='color: #666; font-size: 0.8em;'>(PDF文档)</span></strong>
-                        <br>
-                        <p style='color: #666; margin: 5px 0;'>PDF预览失败，请下载查看</p>
-                        <p style='color: #dc3545;'>⚠️ 文件下载失败，请检查文件权限</p>
-                        <span style='color: #666; margin-left: 10px;'>({file_size_str})</span>
-                    </div>
-                    """)
-            
-        else:
-            print(f"[LOG] 处理普通文件: {file_name} (扩展名: {file_ext})")
-            # 其他文件类型，根据扩展名显示不同图标
-            if file_ext in ['.xlsx', '.xls']:
-                #icon = "📊"
-                file_type = "Excel文件"
-                color = "#28a745"
-            elif file_ext in ['.docx', '.doc']:
-                #icon = "📝"
-                file_type = "Word文档"
-                color = "#007bff"
-            elif file_ext in ['.pptx', '.ppt']:
-                #icon = "📋"
-                file_type = "PowerPoint文件"
-                color = "#fd7e14"
-            elif file_ext in ['.zip', '.rar', '.7z', '.tar', '.gz']:
-                #icon = "🗜️"
-                file_type = "压缩文件"
-                color = "#6f42c1"
-            elif file_ext in ['.mp4', '.avi', '.mov', '.mkv']:
-                #icon = "🎬"
-                file_type = "视频文件"
-                color = "#e83e8c"
-            elif file_ext in ['.mp3', '.wav', '.flac', '.aac']:
-                #icon = "🎵"
-                file_type = "音频文件"
-                color = "#20c997"
-            else:
-                #icon = "📄"
-                file_type = "未知类型"
-                color = "#6c757d"
-            icon = get_file_icon(file_ext)
-            
-            # 读取文件内容并编码为base64
-            try:
-                import base64
-                with open(file_path, 'rb') as f:
-                    file_data = f.read()
-                    file_base64 = base64.b64encode(file_data).decode('utf-8')
-                
-                html_parts.append(f"""
-                <div style='margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 5px; border-left: 4px solid {color};'>
-                    <strong style='color: #333 !important;'>{icon} {file_name} <span style='color: #666; font-size: 0.8em;'>({file_type})</span></strong>
-                    <br>
-                    <a href="data:application/octet-stream;base64,{file_base64}" download="{file_name}" style="background: {color}; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px; margin-top: 5px; display: inline-block;">⬇️ Download {file_name}</a>
-                    <span style='color: #666; margin-left: 10px;'>({file_size_str})</span>
-                </div>
-                """)
-            except Exception as e:
-                print(f"[LOG] 文件处理失败: {file_name}, 错误: {e}")
-                html_parts.append(f"""
-                <div style='margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 5px; border-left: 4px solid {color};'>
-                    <strong style='color: #333 !important;'>{icon} {file_name} <span style='color: #666; font-size: 0.8em;'>({file_type})</span></strong>
-                    <br>
-                    <p style='color: #dc3545;'>⚠️ 文件下载失败，请检查文件权限</p>
-                    <span style='color: #666; margin-left: 10px;'>({file_size_str})</span>
-                </div>
-                """)
+        file_html = _create_file_display_html(file_path, session_dir, use_base64)
+        html_parts.append(file_html)
     
-    print(f"[LOG] HTML生成完成，共 {len(html_parts)-1} 个文件链接")
+    print(f"[LOG] HTML生成完成，共 {len(saved_files)} 个文件链接")
     return "".join(html_parts)
 
 # 兼容性变量（用于向后兼容）
