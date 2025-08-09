@@ -269,8 +269,9 @@ def generate_file_links_html(saved_files: list, session_dir: str) -> str:
     for file_path in saved_files:
         file_name = os.path.basename(file_path)
         file_size = os.path.getsize(file_path)
+        file_size_str = format_file_size(file_size)
         
-        print(f"[LOG] 处理文件: {file_name} ({file_size:,} bytes)")
+        print(f"[LOG] 处理文件: {file_name} ({file_size_str})")
         
         # 检查文件类型并决定展示方式
         file_ext = os.path.splitext(file_path)[1].lower()
@@ -297,7 +298,7 @@ def generate_file_links_html(saved_files: list, session_dir: str) -> str:
                     <img src="data:{mime_type};base64,{img_base64}" style="max-width: 100%; height: auto; border: 1px solid #ccc; border-radius: 4px;" alt="{file_name}">
                     <br><br>
                     <a href="data:{mime_type};base64,{img_base64}" download="{file_name}" style="background: #28a745; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px;">⬇️ Download {file_name}</a>
-                    <span style='color: #666; margin-left: 10px;'>({file_size:,} bytes)</span>
+                    <span style='color: #666; margin-left: 10px;'>({file_size_str})</span>
                 </div>
                 """)
             except Exception as e:
@@ -315,7 +316,7 @@ def generate_file_links_html(saved_files: list, session_dir: str) -> str:
                         <h4 style='color: #333 !important;'>📸 {file_name}</h4>
                         <p style='color: #666;'>图片文件: {file_name}</p>
                         <a href="data:{mime_type};base64,{img_base64}" download="{file_name}" style="background: #28a745; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px;">⬇️ Download {file_name}</a>
-                        <span style='color: #666; margin-left: 10px;'>({file_size:,} bytes)</span>
+                        <span style='color: #666; margin-left: 10px;'>({file_size_str})</span>
                     </div>
                     """)
                 except Exception as e2:
@@ -325,7 +326,7 @@ def generate_file_links_html(saved_files: list, session_dir: str) -> str:
                         <h4 style='color: #333 !important;'>📸 {file_name}</h4>
                         <p style='color: #666;'>图片文件: {file_name}</p>
                         <p style='color: #dc3545;'>⚠️ 文件下载失败，请检查文件权限</p>
-                        <span style='color: #666; margin-left: 10px;'>({file_size:,} bytes)</span>
+                        <span style='color: #666; margin-left: 10px;'>({file_size_str})</span>
                     </div>
                     """)
                 
@@ -348,30 +349,31 @@ def generate_file_links_html(saved_files: list, session_dir: str) -> str:
                     
                     # 根据文件类型选择图标和样式
                     if file_ext in code_extensions:
-                        icon = "💻"
+                        #icon = "💻"
                         title = "代码文件"
                         bg_color = "#f8f9fa"
                         border_color = "#007acc"
                     elif file_ext in ['.md']:
-                        icon = "📝"
+                        #icon = "📝"
                         title = "Markdown文件"
                         bg_color = "#f0f8ff"
                         border_color = "#4169e1"
                     elif file_ext in ['.json']:
-                        icon = "🔧"
+                        #icon = "🔧"
                         title = "JSON文件"
                         bg_color = "#fff8dc"
                         border_color = "#ffa500"
                     elif file_ext in ['.csv', '.tsv']:
-                        icon = "📊"
+                        #icon = "📊"
                         title = "数据文件"
                         bg_color = "#f0fff0"
                         border_color = "#32cd32"
                     else:
-                        icon = "📄"
+                        #icon = "📄"
                         title = "文本文件"
                         bg_color = "#f8f9fa"
                         border_color = "#6c757d"
+                    icon = get_file_icon(file_ext)
                 
                 print(f"[LOG] 成功读取文本文件: {file_name} ({'截断' if truncated else '完整'})")
                 html_parts.append(f"""
@@ -380,7 +382,7 @@ def generate_file_links_html(saved_files: list, session_dir: str) -> str:
                     <div style='max-height: 400px; overflow-y: auto; background: white; padding: 15px; border-radius: 4px; border: 1px solid #ddd; font-family: monospace; font-size: 13px; line-height: 1.4; white-space: pre-wrap; color: #333 !important;'>{display_content}</div>
                     <br>
                     <a href="data:text/plain;charset=utf-8;base64,{__import__('base64').b64encode(content.encode('utf-8')).decode('utf-8')}" download="{file_name}" style="background: #28a745; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px;">⬇️ Download {file_name}</a>
-                    <span style='color: #666; margin-left: 10px;'>({file_size:,} bytes)</span>
+                    <span style='color: #666; margin-left: 10px;'>({file_size_str})</span>
                 </div>
                 """)
             except UnicodeDecodeError:
@@ -402,7 +404,7 @@ def generate_file_links_html(saved_files: list, session_dir: str) -> str:
                         <div style='max-height: 400px; overflow-y: auto; background: white; padding: 15px; border-radius: 4px; border: 1px solid #ddd; font-family: monospace; font-size: 13px; line-height: 1.4; white-space: pre-wrap; color: #333 !important;'>{display_content}</div>
                         <br>
                         <a href="data:text/plain;charset=gbk;base64,{__import__('base64').b64encode(content.encode('gbk')).decode('utf-8')}" download="{file_name}" style="background: #28a745; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px;">⬇️ Download {file_name}</a>
-                        <span style='color: #666; margin-left: 10px;'>({file_size:,} bytes)</span>
+                        <span style='color: #666; margin-left: 10px;'>({file_size_str})</span>
                     </div>
                     """)
                 except Exception as e:
@@ -420,7 +422,7 @@ def generate_file_links_html(saved_files: list, session_dir: str) -> str:
                             <br>
                             <p style='color: #666; margin: 5px 0;'>无法以文本格式显示，请下载查看</p>
                             <a href="data:application/octet-stream;base64,{binary_base64}" download="{file_name}" style="background: #007bff; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px;">⬇️ Download {file_name}</a>
-                            <span style='color: #666; margin-left: 10px;'>({file_size:,} bytes)</span>
+                            <span style='color: #666; margin-left: 10px;'>({file_size_str})</span>
                         </div>
                         """)
                     except Exception as e2:
@@ -431,7 +433,7 @@ def generate_file_links_html(saved_files: list, session_dir: str) -> str:
                             <br>
                             <p style='color: #666; margin: 5px 0;'>无法以文本格式显示，请下载查看</p>
                             <p style='color: #dc3545;'>⚠️ 文件下载失败，请检查文件权限</p>
-                            <span style='color: #666; margin-left: 10px;'>({file_size:,} bytes)</span>
+                            <span style='color: #666; margin-left: 10px;'>({file_size_str})</span>
                         </div>
                         """)
             except Exception as e:
@@ -449,7 +451,7 @@ def generate_file_links_html(saved_files: list, session_dir: str) -> str:
                         <br>
                         <p style='color: #666; margin: 5px 0;'>文件读取失败，请下载查看</p>
                         <a href="data:application/octet-stream;base64,{file_base64}" download="{file_name}" style="background: #007bff; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px;">⬇️ Download {file_name}</a>
-                        <span style='color: #666; margin-left: 10px;'>({file_size:,} bytes)</span>
+                        <span style='color: #666; margin-left: 10px;'>({file_size_str})</span>
                     </div>
                     """)
                 except Exception as e2:
@@ -460,7 +462,7 @@ def generate_file_links_html(saved_files: list, session_dir: str) -> str:
                         <br>
                         <p style='color: #666; margin: 5px 0;'>文件读取失败，请下载查看</p>
                         <p style='color: #dc3545;'>⚠️ 文件下载失败，请检查文件权限</p>
-                        <span style='color: #666; margin-left: 10px;'>({file_size:,} bytes)</span>
+                        <span style='color: #666; margin-left: 10px;'>({file_size_str})</span>
                     </div>
                     """)
                 
@@ -487,7 +489,7 @@ def generate_file_links_html(saved_files: list, session_dir: str) -> str:
                        style="background: #dc3545; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px; border: none; cursor: pointer; display: inline-block;">
                         ⬇️ Download {file_name}
                     </a>
-                    <span style='color: #666; margin-left: 10px;'>({file_size:,} bytes)</span>
+                    <span style='color: #666; margin-left: 10px;'>({file_size_str})</span>
                 </div>
                 """)
             except Exception as e:
@@ -508,7 +510,7 @@ def generate_file_links_html(saved_files: list, session_dir: str) -> str:
                            style="background: #dc3545; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px; border: none; cursor: pointer; display: inline-block;">
                             ⬇️ Download {file_name}
                         </a>
-                        <span style='color: #666; margin-left: 10px;'>({file_size:,} bytes)</span>
+                        <span style='color: #666; margin-left: 10px;'>({file_size_str})</span>
                     </div>
                     """)
                 except Exception as e2:
@@ -519,41 +521,42 @@ def generate_file_links_html(saved_files: list, session_dir: str) -> str:
                         <br>
                         <p style='color: #666; margin: 5px 0;'>PDF预览失败，请下载查看</p>
                         <p style='color: #dc3545;'>⚠️ 文件下载失败，请检查文件权限</p>
-                        <span style='color: #666; margin-left: 10px;'>({file_size:,} bytes)</span>
+                        <span style='color: #666; margin-left: 10px;'>({file_size_str})</span>
                     </div>
                     """)
-                
+            
         else:
             print(f"[LOG] 处理普通文件: {file_name} (扩展名: {file_ext})")
             # 其他文件类型，根据扩展名显示不同图标
             if file_ext in ['.xlsx', '.xls']:
-                icon = "📊"
+                #icon = "📊"
                 file_type = "Excel文件"
                 color = "#28a745"
             elif file_ext in ['.docx', '.doc']:
-                icon = "📝"
+                #icon = "📝"
                 file_type = "Word文档"
                 color = "#007bff"
             elif file_ext in ['.pptx', '.ppt']:
-                icon = "📋"
+                #icon = "📋"
                 file_type = "PowerPoint文件"
                 color = "#fd7e14"
             elif file_ext in ['.zip', '.rar', '.7z', '.tar', '.gz']:
-                icon = "🗜️"
+                #icon = "🗜️"
                 file_type = "压缩文件"
                 color = "#6f42c1"
             elif file_ext in ['.mp4', '.avi', '.mov', '.mkv']:
-                icon = "🎬"
+                #icon = "🎬"
                 file_type = "视频文件"
                 color = "#e83e8c"
             elif file_ext in ['.mp3', '.wav', '.flac', '.aac']:
-                icon = "🎵"
+                #icon = "🎵"
                 file_type = "音频文件"
                 color = "#20c997"
             else:
-                icon = "📄"
+                #icon = "📄"
                 file_type = "未知类型"
                 color = "#6c757d"
+            icon = get_file_icon(file_ext)
             
             # 读取文件内容并编码为base64
             try:
@@ -567,7 +570,7 @@ def generate_file_links_html(saved_files: list, session_dir: str) -> str:
                     <strong style='color: #333 !important;'>{icon} {file_name} <span style='color: #666; font-size: 0.8em;'>({file_type})</span></strong>
                     <br>
                     <a href="data:application/octet-stream;base64,{file_base64}" download="{file_name}" style="background: {color}; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; font-size: 14px; margin-top: 5px; display: inline-block;">⬇️ Download {file_name}</a>
-                    <span style='color: #666; margin-left: 10px;'>({file_size:,} bytes)</span>
+                    <span style='color: #666; margin-left: 10px;'>({file_size_str})</span>
                 </div>
                 """)
             except Exception as e:
@@ -577,7 +580,7 @@ def generate_file_links_html(saved_files: list, session_dir: str) -> str:
                     <strong style='color: #333 !important;'>{icon} {file_name} <span style='color: #666; font-size: 0.8em;'>({file_type})</span></strong>
                     <br>
                     <p style='color: #dc3545;'>⚠️ 文件下载失败，请检查文件权限</p>
-                    <span style='color: #666; margin-left: 10px;'>({file_size:,} bytes)</span>
+                    <span style='color: #666; margin-left: 10px;'>({file_size_str})</span>
                 </div>
                 """)
     
@@ -1760,7 +1763,8 @@ def save_current_results(intermediate_results: str, execution_log: str, session_
             for file_path in saved_files:
                 file_name = os.path.basename(file_path)
                 file_size = os.path.getsize(file_path)
-                files_info += f"• {file_name} ({file_size:,} bytes)\n"
+                file_size_str = format_file_size(file_size)
+                files_info += f"• {file_name} ({file_size_str})\n"
         
         success_message = f"✅ 结果已成功保存到本地!\n\n保存位置: {save_dir}\n\n保存的文件:\n• {combined_filename}{files_info}\n\n💡 提示: 您也可以点击浏览器下载按钮直接下载完整结果文件。"
         
@@ -2306,7 +2310,8 @@ with gr.Blocks(title="🧬 Biomni AI Agent Demo", theme=gr.themes.Soft(), head=j
             return f"❌ Error listing data: {str(e)}"
     
     def get_result_files_list(session_id, plain: bool = False):
-        """更新新增文件列表显示"""
+        """更新新增文件列表显示，包含文件大小"""
+        print(f"[LOG] 进入 get_result_files_list: session_id={session_id}, plain={plain}")
         if not session_id or session_id == "":
             return "❌ No session assigned. Please create an agent first."
         
@@ -2314,16 +2319,50 @@ with gr.Blocks(title="🧬 Biomni AI Agent Demo", theme=gr.themes.Soft(), head=j
             new_files = get_new_files_list(session_id)
             if new_files:
                 if plain:
-                    return "\n".join(new_files)
+                    # plain模式下显示文件路径和大小
+                    file_info_list = []
+                    for file_path in new_files:
+                        try:
+                            file_size = os.path.getsize(file_path)
+                            file_info_list.append(f"{file_path} ({file_size})")
+                        except Exception as e:
+                            file_info_list.append(f"{file_path} (Unknown)")
+                    print(f"[LOG] get_result_files_list: plain模式，共 {len(file_info_list)} 个文件")
+                    return "\n".join(file_info_list)
                 else:
-                    file_list = "\n".join([f"📁 {file}" for file in new_files])
-                    return f"🗂️ 发现 {len(new_files)} 个新增文件:\n\n{file_list}"
+                    # HTML模式下显示文件路径、大小和图标
+                    file_info_list = []
+                    total_size = 0
+                    for file_path in new_files:
+                        try:
+                            file_size = os.path.getsize(file_path)
+                            total_size += file_size
+                            file_name = os.path.basename(file_path)
+                            file_ext = os.path.splitext(file_path)[1].lower()
+                            
+                            # 根据文件类型选择图标
+                            icon = get_file_icon(file_ext)
+                            size_str = format_file_size(file_size)
+                            file_info_list.append(f"{icon} {file_name} ({size_str})")
+                        except Exception as e:
+                            file_name = os.path.basename(file_path)
+                            file_info_list.append(f"📁 {file_name} (大小未知)")
+                    
+                    # 格式化总大小
+                    total_size_str = format_file_size(total_size)
+                    
+                    file_list = "\n".join(file_info_list)
+                    print(f"[LOG] get_result_files_list: HTML模式，共 {len(new_files)} 个文件，总大小 {total_size_str}")
+                    return f"🗂️ 发现 {len(new_files)} 个新增文件 (总大小: {total_size_str}):\n\n{file_list}"
             else:
                 if plain:
+                    print(f"[LOG] get_result_files_list: plain模式，无新增文件")
                     return ""
                 else:
+                    print(f"[LOG] get_result_files_list: HTML模式，无新增文件")
                     return "📂 暂无新增文件"
         except Exception as e:
+            print(f"[LOG] get_result_files_list 失败: {e}")
             return f"❌ 获取文件列表失败: {str(e)}"
     
     def create_agent_and_update_data(llm_model, source, base_url, api_key, data_path, verbose, plain_output):
@@ -2578,6 +2617,53 @@ with gr.Blocks(title="🧬 Biomni AI Agent Demo", theme=gr.themes.Soft(), head=j
         inputs=[intermediate_results, execution_log, session_id_state, question],
         outputs=[link_status, file_link, download_btn]
     )
+
+def format_file_size(file_size: int) -> str:
+    """格式化文件大小显示"""
+    if file_size < 1024:
+        return f"{file_size} B"
+    elif file_size < 1024 * 1024:
+        return f"{file_size / 1024:.1f} KB"
+    elif file_size < 1024 * 1024 * 1024:
+        return f"{file_size / (1024 * 1024):.1f} MB"
+    else:
+        return f"{file_size / (1024 * 1024 * 1024):.1f} GB"
+
+def get_file_icon(file_ext: str) -> str:
+    """根据文件扩展名获取图标"""
+    file_ext = file_ext.lower()
+    image_exts = {'.png', '.jpg', '.jpeg', '.gif', '.bmp', '.svg', '.tiff', '.webp'}
+    text_exts = {'.txt', '.log', '.md'}
+    code_exts = {'.py', '.js', '.ts', '.html', '.css', '.json', '.xml', '.yaml', '.yml', '.sql', '.r', '.sh', '.bat'}
+    data_exts = {'.csv', '.tsv', '.xlsx', '.xls', '.parquet'}
+    pdf_exts = {'.pdf'}
+    doc_exts = {'.docx', '.doc'}
+    ppt_exts = {'.pptx', '.ppt'}
+    archive_exts = {'.zip', '.rar', '.7z', '.tar', '.gz'}
+    video_exts = {'.mp4', '.avi', '.mov', '.mkv'}
+    audio_exts = {'.mp3', '.wav', '.flac', '.aac'}
+
+    if file_ext in image_exts:
+        return "📸"
+    if file_ext in text_exts:
+        return "📄"
+    if file_ext in code_exts:
+        return "💻"
+    if file_ext in data_exts:
+        return "📊"
+    if file_ext in pdf_exts:
+        return "📕"
+    if file_ext in doc_exts:
+        return "📝"
+    if file_ext in ppt_exts:
+        return "📋"
+    if file_ext in archive_exts:
+        return "🗜️"
+    if file_ext in video_exts:
+        return "🎬"
+    if file_ext in audio_exts:
+        return "🎵"
+    return "📁"
 
 if __name__ == "__main__":
     demo.queue(default_concurrency_limit=10, max_size=100)
