@@ -1292,14 +1292,23 @@ def upload_and_add_data(files, descriptions, session_id: str = "", plain: bool =
         
         for i, file in enumerate(files):
             if file is not None:
-                # Get description for this file
-                file_name = os.path.basename(file.name)  # Extract just the filename
+                # Get file path and name from Gradio file object
+                if isinstance(file, dict) and 'path' in file:
+                    # Gradio file object format
+                    file_path = file['path']
+                    file_name = file.get('orig_name', os.path.basename(file_path))
+                else:
+                    # Legacy format
+                    file_path = file.name
+                    file_name = os.path.basename(file.name)
+                
                 # Move file to upload directory
                 destination_path = upload_dir / file_name
                 try:
-                    shutil.copy2(file.name, str(destination_path))  # file.name is the full temp path
+                    shutil.copy2(file_path, str(destination_path))
+                    print(f"[INFO] Successfully copied file: {file_path} -> {destination_path}")
                 except Exception as e:
-                    print(f"[ERROR] Failed to copy file {file.name} to {destination_path}: {str(e)}")
+                    print(f"[ERROR] Failed to copy file {file_path} to {destination_path}: {str(e)}")
                     # Continue with other files instead of failing completely
                     continue
 
