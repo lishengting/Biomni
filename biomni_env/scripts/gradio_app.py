@@ -134,10 +134,41 @@ def setup_session_workspace(session_id: str, data_path: str) -> tuple:
                 if save_folder_link.exists() and save_folder_link.is_symlink():
                     print(f"[LOG] 删除save_folder目录符号链接: {save_folder_link}")
                     save_folder_link.unlink()  # 只删除符号链接，不删除实际数据
-            
-            # 删除整个session目录
-            shutil.rmtree(session_dir)
-            print(f"[LOG] 会话目录已删除: {session_dir}")
+
+            # 删除原因：不再直接删除session目录，改为先备份再重建，保留_upload_内容
+            # shutil.rmtree(session_dir)
+            # print(f"[LOG] 会话目录已删除: {session_dir}")
+
+            # 新流程：mv -> mkdir -> 恢复_upload_ -> 删除备份
+            try:
+                bak_dir = f"{session_dir}.bak"
+                if os.path.exists(bak_dir):
+                    print(f"[LOG] 发现历史备份目录，先删除: {bak_dir}")
+                    shutil.rmtree(bak_dir)
+
+                print(f"[LOG] 备份当前会话目录 -> {bak_dir}")
+                shutil.move(session_dir, bak_dir)
+
+                print(f"[LOG] 创建新的会话目录: {session_dir}")
+                Path(session_dir).mkdir(parents=True, exist_ok=True)
+
+                upload_src = os.path.join(bak_dir, "_upload_")
+                if os.path.exists(upload_src) and os.path.isdir(upload_src):
+                    dest_upload = os.path.join(session_dir, "_upload_")
+                    if os.path.exists(dest_upload):
+                        print(f"[LOG] 新目录中已存在_upload_，将先删除: {dest_upload}")
+                        shutil.rmtree(dest_upload)
+                    print(f"[LOG] 恢复上传目录: {upload_src} -> {dest_upload}")
+                    shutil.move(upload_src, dest_upload)
+                else:
+                    print(f"[LOG] 备份中未发现上传目录'_upload_'，跳过恢复")
+
+                print(f"[LOG] 删除备份目录: {bak_dir}")
+                shutil.rmtree(bak_dir)
+                print(f"[LOG] 备份目录已删除: {bak_dir}")
+            except Exception as e:
+                print(f"[LOG] 基于备份的会话目录重建失败: {e}")
+                # 删除原因：保底措施仅记录错误，不回退为直接删除，避免与新需求冲突
         
         # 创建会话目录
         Path(session_dir).mkdir(parents=True, exist_ok=True)
@@ -1283,7 +1314,7 @@ def upload_and_add_data(files, descriptions, session_id: str = "", plain: bool =
         if session_dir is None:
             return "❌ Failed to get session directory.", ""
             
-        upload_dir = Path(session_dir) / "upload"
+        upload_dir = Path(session_dir) / "_upload_"
         upload_dir.mkdir(parents=True, exist_ok=True)
         
         # Prepare data dictionary and move files
