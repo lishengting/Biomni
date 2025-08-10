@@ -1343,7 +1343,9 @@ def upload_and_add_data(files, descriptions, session_id: str = "", plain: bool =
                     # Continue with other files instead of failing completely
                     continue
 
-                description = descriptions[i] if i < len(descriptions) and descriptions[i].strip() else f"Uploaded file: {str(destination_path)}"
+                description_path = Path("__upload__") / file_name
+
+                description = descriptions[i] if i < len(descriptions) and descriptions[i].strip() else f"Uploaded file: {str(description_path)}"
                 data_dict[str(destination_path)] = description
                 moved_files.append(str(destination_path))
 
