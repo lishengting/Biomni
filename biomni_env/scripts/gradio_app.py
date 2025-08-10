@@ -152,16 +152,16 @@ def setup_session_workspace(session_id: str, data_path: str) -> tuple:
                 print(f"[LOG] 创建新的会话目录: {session_dir}")
                 Path(session_dir).mkdir(parents=True, exist_ok=True)
 
-                upload_src = os.path.join(bak_dir, "_upload_")
+                upload_src = os.path.join(bak_dir, "__upload__")
                 if os.path.exists(upload_src) and os.path.isdir(upload_src):
-                    dest_upload = os.path.join(session_dir, "_upload_")
+                    dest_upload = os.path.join(session_dir, "__upload__")
                     if os.path.exists(dest_upload):
                         print(f"[LOG] 新目录中已存在_upload_，将先删除: {dest_upload}")
                         shutil.rmtree(dest_upload)
                     print(f"[LOG] 恢复上传目录: {upload_src} -> {dest_upload}")
                     shutil.move(upload_src, dest_upload)
                 else:
-                    print(f"[LOG] 备份中未发现上传目录'_upload_'，跳过恢复")
+                    print(f"[LOG] 备份中未发现上传目录'__upload__'，跳过恢复")
 
                 print(f"[LOG] 删除备份目录: {bak_dir}")
                 shutil.rmtree(bak_dir)
@@ -262,7 +262,7 @@ def scan_session_files(session_dir: str) -> list:
     generated_files = []
     
     # 扫描会话目录中的所有文件（排除特定目录）
-    exclude_dirs = {'data', '.git', '__pycache__', '.ipynb_checkpoints'}
+    exclude_dirs = {'data', '.git', '__pycache__', '.ipynb_checkpoints', '__upload__', 'save_folder'}
     
     print(f"[LOG] 开始扫描会话目录: {session_dir}")
     print(f"[LOG] 当前工作目录: {os.getcwd()}")
@@ -1314,7 +1314,7 @@ def upload_and_add_data(files, descriptions, session_id: str = "", plain: bool =
         if session_dir is None:
             return "❌ Failed to get session directory.", ""
             
-        upload_dir = Path(session_dir) / "_upload_"
+        upload_dir = Path(session_dir) / "__upload__"
         upload_dir.mkdir(parents=True, exist_ok=True)
         
         # Prepare data dictionary and move files
@@ -2540,6 +2540,14 @@ with gr.Blocks(title="🧬 Biomni AI Agent Demo", theme=gr.themes.Soft(), head=j
             else:
                 return f"❌ 未找到已保存的文件", gr.File(visible=False), gr.Button(interactive=False)
         else:
+            if session_id:
+                save_dir = get_session_results_dir(session_id)
+                if save_dir is None:
+                    return f"❌ 错误：无效的会话ID '{session_id}'", gr.File(visible=False), gr.Button(interactive=False)
+            else:
+                # save_dir = "./results"
+                return f"❌ 错误：无效的会话ID '{session_id}'，无法生成链接", gr.File(visible=False), gr.Button(interactive=False)
+
             # 执行保存
             save_result = save_current_results(intermediate_results, execution_log, session_id, question)
             if not save_result[0].startswith("✅"):
@@ -2557,15 +2565,8 @@ with gr.Blocks(title="🧬 Biomni AI Agent Demo", theme=gr.themes.Soft(), head=j
                     combined_filename = f"biomni_results_{timestamp}.html"
             else:
                 combined_filename = f"biomni_results_{timestamp}.html"
-            
-            # 构建完整的文件路径
-            if session_id:
-                save_dir = get_session_results_dir(session_id)
-                if save_dir is None:
-                    return f"❌ 错误：无效的会话ID '{session_id}'", gr.File(visible=False), gr.Button(interactive=False)
-            else:
-                # save_dir = "./results"
-                return f"❌ 错误：无效的会话ID '{session_id}'，无法生成链接", gr.File(visible=False), gr.Button(interactive=False)
+
+             # 构建完整的文件路径
             combined_path = os.path.join(save_dir, combined_filename)
             
             # 更新保存状态和文件路径
