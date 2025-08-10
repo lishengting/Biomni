@@ -256,57 +256,7 @@ def convert_to_html(input_file: str, output_dir: Optional[str] = None) -> dict:
     return convert_document_libreoffice(input_file, "html", output_dir)
 
 
-def get_supported_formats() -> dict:
-    """获取支持的文档格式信息。
-    
-    Returns:
-        dict: 包含支持格式信息的字典
-    """
-    formats_info = {
-        "input_formats": {
-            "word_processing": ["docx", "doc", "odt", "rtf", "txt", "html"],
-            "spreadsheets": ["xlsx", "xls", "ods", "csv"],
-            "presentations": ["pptx", "ppt", "odp"],
-            "graphics": ["svg", "wmf", "emf"],
-            "web_formats": ["html", "htm"],
-            "other": ["xml", "uot", "uof", "fodt", "fods", "fodp"]
-        },
-        "output_formats": {
-            "document": ["pdf", "txt", "html", "rtf", "docx", "doc", "odt", "xml"],
-            "spreadsheet": ["pdf", "xlsx", "xls", "ods", "csv", "html"],
-            "presentation": ["pdf", "pptx", "ppt", "odp", "html"],
-            "graphics": ["pdf", "svg", "png", "jpg", "jpeg", "gif", "bmp", "wmf", "emf"],
-            "web": ["html", "htm", "xml"]
-        },
-        "conversion_tool": "LibreOffice - 功能完整的开源办公套件",
-        "capabilities": [
-            "支持Microsoft Office格式 (docx, xlsx, pptx, doc, xls, ppt)",
-            "支持OpenDocument格式 (odt, ods, odp)",
-            "支持PDF转换和生成",
-            "支持多种图形格式转换",
-            "支持Web格式 (HTML, XML)",
-            "支持纯文本和富文本格式",
-            "支持CSV和数据库格式",
-            "支持矢量图形格式 (SVG, WMF, EMF)"
-        ],
-        "file_types_description": {
-            "docx/doc": "Microsoft Word文档",
-            "xlsx/xls": "Microsoft Excel电子表格", 
-            "pptx/ppt": "Microsoft PowerPoint演示文稿",
-            "odt": "OpenDocument文本文档",
-            "ods": "OpenDocument电子表格",
-            "odp": "OpenDocument演示文稿",
-            "pdf": "便携式文档格式",
-            "rtf": "富文本格式",
-            "html": "超文本标记语言",
-            "txt": "纯文本文件",
-            "csv": "逗号分隔值文件",
-            "svg": "可缩放矢量图形",
-            "xml": "可扩展标记语言"
-        }
-    }
-    
-    return formats_info
+
 
 
 def check_libreoffice_availability() -> dict:
@@ -380,7 +330,7 @@ def get_document_info(input_file: str) -> dict:
         }
         
         # 检查是否为支持的格式
-        supported_formats = get_supported_formats()["input_formats"]
+        supported_formats = ["docx", "doc", "odt", "rtf", "txt", "html", "htm", "xlsx", "xls", "ods", "csv", "pptx", "ppt", "odp", "svg", "wmf", "emf", "xml", "uot", "uof", "fodt", "fods", "fodp"]
         file_info["is_supported"] = file_info["file_extension"][1:] in supported_formats
         
         logger.info(f"文档信息获取成功: {file_info['file_name']}")
