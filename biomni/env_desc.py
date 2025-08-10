@@ -220,7 +220,7 @@ library_content_dict = {
     "FastTree": "[CLI Tool] Phylogenetic trees from sequence alignments.",
     "muscle": "[CLI Tool] Multiple sequence alignment tool.",
     # Genetic Analysis Tools
-    "plink": "[CLI Tool] A comprehensive toolkit for genome association studies that can perform a range of large-scale analyses in a computationally efficient manner. Use with subprocess.run(['plink', ...]).",
+    #"plink": "[CLI Tool] A comprehensive toolkit for genome association studies that can perform a range of large-scale analyses in a computationally efficient manner. Use with subprocess.run(['plink', ...]).",
     "plink2": "[CLI Tool] A comprehensive toolkit for genome association studies that can perform a range of large-scale analyses in a computationally efficient manner. Use with subprocess.run(['plink2', ...]).",
     "gcta64": "[CLI Tool] Genome-wide Complex Trait Analysis (GCTA) tool for estimating the proportion of phenotypic variance explained by genome-wide SNPs and analyzing genetic relationships. Use with subprocess.run(['gcta64', ...]).",
     "iqtree2": "[CLI Tool] An efficient phylogenetic software for maximum likelihood analysis with built-in model selection and ultrafast bootstrap. Use with subprocess.run(['iqtree2', ...]).",
@@ -230,4 +230,6 @@ library_content_dict = {
     "plannotate": "[CLI Tool] A tool for annotating plasmid sequences with common features. ",
     "vina": "[CLI Tool] An open-source program for molecular docking and virtual screening, known for its speed and accuracy improvements over AutoDock 4.",
     "autosite": "[CLI Tool] A binding site detection tool used to identify potential ligand binding pockets on protein structures for molecular docking.",
+    # === DOCUMENT PROCESSING TOOLS ===
+    "libreoffice": "[CLI Tool] A comprehensive office suite for document processing, conversion, and editing. Use with subprocess.run(['libreoffice', '--headless', '--convert-to', 'format', 'input_file', '--outdir', 'output_dir']) for batch conversion, or subprocess.run(['libreoffice', '--headless', '--convert-to', 'txt', 'document.docx']) for single file conversion. Supports formats: docx, doc, xlsx, xls, pptx, ppt, odt, ods, odp, pdf, txt, html, rtf.",
 }
