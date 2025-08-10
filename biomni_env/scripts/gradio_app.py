@@ -58,6 +58,12 @@ class SessionManager:
                     except:
                         pass
                 del self.sessions[session_id]
+                
+                # 清理会话结果目录记录
+                global session_results_dirs
+                if session_id in session_results_dirs:
+                    print(f"[LOG] 清理会话结果目录记录: {session_id}")
+                    del session_results_dirs[session_id]
 
 # 全局会话管理器
 session_manager = SessionManager()
@@ -67,6 +73,9 @@ save_download_state = {
     'last_save_hash': None,  # 保存只能一次，内容没变就不保存
     'last_saved_file': None  # 保存的文件路径，用于重复下载
 }
+
+# 全局变量用于记录会话结果目录，避免重复生成日期
+session_results_dirs = {}
 
 def get_content_hash(intermediate_results: str, execution_log: str, question: str) -> str:
     """生成内容哈希值，用于检测内容是否变化"""
@@ -91,13 +100,22 @@ def get_session_results_dir(session_id: str) -> Optional[str]:
         print(f"[LOG] 无效的session_id，返回None")
         return None  # 删除原因：没有session_id时应该返回None而不是默认目录
     
-    # 创建基于日期和会话ID的目录
+    # 检查是否已经为该会话生成过目录
+    global session_results_dirs
+    if session_id in session_results_dirs:
+        print(f"[LOG] 使用已记录的会话结果目录: {session_results_dirs[session_id]}")
+        return session_results_dirs[session_id]
+    
+    # 第一次调用时创建基于日期和会话ID的目录
     date_str = datetime.now().strftime("%Y%m%d")
     session_dir = f"./results/{date_str}_{session_id}"
     
     # 确保目录存在
     Path(session_dir).mkdir(parents=True, exist_ok=True)
-    print(f"[LOG] 会话结果目录: {session_dir}")
+    
+    # 记录该会话的目录路径
+    session_results_dirs[session_id] = session_dir
+    print(f"[LOG] 新生成会话结果目录: {session_dir}")
     return session_dir
 
 def setup_session_workspace(session_id: str, data_path: str) -> tuple:
@@ -2275,7 +2293,7 @@ with gr.Blocks(title="🧬 Biomni AI Agent Demo", theme=gr.themes.Soft(), head=j
         print(f"[LOG] 创建agent时分配新会话ID: {new_session_id}")  # 添加日志
         result = create_agent(llm_model, source, base_url, api_key, data_path, verbose, new_session_id)
         # 更新status显示，整合session id信息
-        status_text = f"✅ Agent created successfully!\nSession ID: {new_session_id}"
+        status_text = f"✅ Agent created successfully!\nSession ID: {new_session_id}\nWork Directory: {get_session_results_dir(new_session_id)}"
         return status_text, result[1], new_session_id
     
     # Data management event handlers
