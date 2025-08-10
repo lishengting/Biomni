@@ -1037,6 +1037,7 @@ def read_module2api():
         "systems_biology",
         "support_tools",
         "database",
+        "document_processing",  # 新增文档处理工具模块
     ]
 
     module2api = {}
