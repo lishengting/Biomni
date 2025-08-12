@@ -133,64 +133,68 @@ def setup_session_workspace(session_id: str, data_path: str) -> tuple:
             target_data_path = Path(original_dir) / data_path
             target_data_path = target_data_path.resolve()
         
+        ## 不清空了，存在就用同一个目录，可以访问上一步的结果文件
         # 清空并重新创建会话目录
-        if os.path.exists(session_dir):
-            print(f"[LOG] 清空会话目录: {session_dir}")
-            import shutil
+        # if os.path.exists(session_dir):
+        #     print(f"[LOG] 清空会话目录: {session_dir}")
+        #     import shutil
             
-            # 安全检查：确保不会删除数据目录
-            session_path = Path(session_dir)
-            if session_path.exists():
-                # 检查是否有data符号链接，如果有先删除它
-                data_link = session_path / "data"
-                if data_link.exists() and data_link.is_symlink():
-                    print(f"[LOG] 删除数据目录符号链接: {data_link}")
-                    data_link.unlink()  # 只删除符号链接，不删除实际数据
+        #     # 安全检查：确保不会删除数据目录
+        #     session_path = Path(session_dir)
+        #     if session_path.exists():
+        #         # 检查是否有data符号链接，如果有先删除它
+        #         data_link = session_path / "data"
+        #         if data_link.exists() and data_link.is_symlink():
+        #             print(f"[LOG] 删除数据目录符号链接: {data_link}")
+        #             data_link.unlink()  # 只删除符号链接，不删除实际数据
                 
-                # 检查是否有save_folder符号链接，如果有先删除它
-                save_folder_link = session_path / "save_folder"
-                if save_folder_link.exists() and save_folder_link.is_symlink():
-                    print(f"[LOG] 删除save_folder目录符号链接: {save_folder_link}")
-                    save_folder_link.unlink()  # 只删除符号链接，不删除实际数据
+        #         # 检查是否有save_folder符号链接，如果有先删除它
+        #         save_folder_link = session_path / "save_folder"
+        #         if save_folder_link.exists() and save_folder_link.is_symlink():
+        #             print(f"[LOG] 删除save_folder目录符号链接: {save_folder_link}")
+        #             save_folder_link.unlink()  # 只删除符号链接，不删除实际数据
 
-            # 删除原因：不再直接删除session目录，改为先备份再重建，保留_upload_内容
-            # shutil.rmtree(session_dir)
-            # print(f"[LOG] 会话目录已删除: {session_dir}")
+        #     # 删除原因：不再直接删除session目录，改为先备份再重建，保留_upload_内容
+        #     # shutil.rmtree(session_dir)
+        #     # print(f"[LOG] 会话目录已删除: {session_dir}")
 
-            # 新流程：mv -> mkdir -> 恢复_upload_ -> 删除备份
-            try:
-                bak_dir = f"{session_dir}.bak"
-                if os.path.exists(bak_dir):
-                    print(f"[LOG] 发现历史备份目录，先删除: {bak_dir}")
-                    shutil.rmtree(bak_dir)
+        #     # 新流程：mv -> mkdir -> 恢复_upload_ -> 删除备份
+        #     try:
+        #         bak_dir = f"{session_dir}.bak"
+        #         if os.path.exists(bak_dir):
+        #             print(f"[LOG] 发现历史备份目录，先删除: {bak_dir}")
+        #             shutil.rmtree(bak_dir)
 
-                print(f"[LOG] 备份当前会话目录 -> {bak_dir}")
-                shutil.move(session_dir, bak_dir)
+        #         print(f"[LOG] 备份当前会话目录 -> {bak_dir}")
+        #         shutil.move(session_dir, bak_dir)
 
-                print(f"[LOG] 创建新的会话目录: {session_dir}")
-                Path(session_dir).mkdir(parents=True, exist_ok=True)
+        #         print(f"[LOG] 创建新的会话目录: {session_dir}")
+        #         Path(session_dir).mkdir(parents=True, exist_ok=True)
 
-                upload_src = os.path.join(bak_dir, "__upload__")
-                if os.path.exists(upload_src) and os.path.isdir(upload_src):
-                    dest_upload = os.path.join(session_dir, "__upload__")
-                    if os.path.exists(dest_upload):
-                        print(f"[LOG] 新目录中已存在_upload_，将先删除: {dest_upload}")
-                        shutil.rmtree(dest_upload)
-                    print(f"[LOG] 恢复上传目录: {upload_src} -> {dest_upload}")
-                    shutil.move(upload_src, dest_upload)
-                else:
-                    print(f"[LOG] 备份中未发现上传目录'__upload__'，跳过恢复")
+        #         upload_src = os.path.join(bak_dir, "__upload__")
+        #         if os.path.exists(upload_src) and os.path.isdir(upload_src):
+        #             dest_upload = os.path.join(session_dir, "__upload__")
+        #             if os.path.exists(dest_upload):
+        #                 print(f"[LOG] 新目录中已存在_upload_，将先删除: {dest_upload}")
+        #                 shutil.rmtree(dest_upload)
+        #             print(f"[LOG] 恢复上传目录: {upload_src} -> {dest_upload}")
+        #             shutil.move(upload_src, dest_upload)
+        #         else:
+        #             print(f"[LOG] 备份中未发现上传目录'__upload__'，跳过恢复")
 
-                print(f"[LOG] 删除备份目录: {bak_dir}")
-                shutil.rmtree(bak_dir)
-                print(f"[LOG] 备份目录已删除: {bak_dir}")
-            except Exception as e:
-                print(f"[LOG] 基于备份的会话目录重建失败: {e}")
-                # 删除原因：保底措施仅记录错误，不回退为直接删除，避免与新需求冲突
+        #         print(f"[LOG] 删除备份目录: {bak_dir}")
+        #         shutil.rmtree(bak_dir)
+        #         print(f"[LOG] 备份目录已删除: {bak_dir}")
+        #     except Exception as e:
+        #         print(f"[LOG] 基于备份的会话目录重建失败: {e}")
+        #         # 删除原因：保底措施仅记录错误，不回退为直接删除，避免与新需求冲突
         
         # 创建会话目录
-        Path(session_dir).mkdir(parents=True, exist_ok=True)
-        print(f"[LOG] 重新创建会话目录: {session_dir}")
+        if os.path.exists(session_dir):
+            print(f"[LOG] 会话目录已存在: {session_dir}")
+        else:
+            Path(session_dir).mkdir(parents=True, exist_ok=True)
+            print(f"[LOG] 创建会话目录: {session_dir}")
         
         # 切换工作目录
         os.chdir(session_dir)
