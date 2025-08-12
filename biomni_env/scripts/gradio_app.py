@@ -1077,9 +1077,9 @@ def ask_biomni_stream(question: str, session_id: str = "", data_path: str = "./d
                             last_output_index = current_index
                         else:
                             # 没有新内容，保持上次的输出
-                            intermediate_text = "⏳ 处理中... 请等待中间结果。"
+                            intermediate_text = "⏳ 处理中，请等待..."
                     else:
-                        intermediate_text = "⏳ 处理中... 请等待中间结果。"
+                        intermediate_text = "⏳ 处理中，请等待..."
                     
                     # plain模式下不追加token统计，因为API有专门的token_stats输出
                     
