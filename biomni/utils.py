@@ -17,6 +17,7 @@ import requests
 
 # Configure logger
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 # Global debug flag
 DEBUG_MODE = True
