@@ -773,11 +773,11 @@ class A1:
                 }
 
                 # Also add to the data_lake_dict for consistency
-                self.data_lake_dict[filename] = description
+                # self.data_lake_dict[filename] = description
 
                 print(f"Added data item '{filename}': {description}")
             self.configure()
-            print(f"Successfully added {len(data)} data item(s) to the data lake")
+            print(f"Successfully added {len(data)} data item(s)") # to the data lake
             return True
 
         except Exception as e:
