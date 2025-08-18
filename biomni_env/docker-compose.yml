@@ -171,6 +171,7 @@ services:
       - biomni_cache:/home/biomni/.cache
       - ./notebooks:/opt/biomni/notebooks
       - ./downloads:/opt/biomni/downloads
+      #- /data_A002:/data_A002:ro
     environment:
       - JUPYTER_ENABLE_LAB=yes
       - JUPYTER_ALLOW_REMOTE_ACCESS=true
