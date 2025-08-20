@@ -482,10 +482,16 @@ def load_pickle(file):
 
 
 def pretty_print(message, printout=True):
+    # 获取当前时间，精确到毫秒
+    from datetime import datetime
+    current_time = datetime.now().strftime("%Y.%m.%d %H:%M:%S.%f")[:-3]  # 去掉微秒的最后3位，保留毫秒
+    
     if isinstance(message, tuple):
         title = message
     elif isinstance(message.content, list):
         title = get_msg_title_repr(message.type.title().upper() + " Message", bold=is_interactive_env())
+        # 在标题后添加时间戳
+        title = title.replace("==================================", f"========[{current_time}]")
         if message.name is not None:
             title += f"\nName: {message.name}"
 
@@ -499,6 +505,8 @@ def pretty_print(message, printout=True):
             print(f"{title}")
     else:
         title = get_msg_title_repr(message.type.title() + " Message", bold=is_interactive_env())
+        # 在标题后添加时间戳
+        title = title.replace("==================================", f"========[{current_time}]")
         if message.name is not None:
             title += f"\nName: {message.name}"
         title += f"\n\n{message.content}"
