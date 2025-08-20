@@ -160,7 +160,7 @@ services:
       dockerfile: Dockerfile.1
     container_name: biomni-full.1
     ports:
-      - "0.0.0.0:9999:8888"  # Jupyter notebook (避免端口冲突)
+      - "0.0.0.0:9997:8888"  # Jupyter notebook (避免端口冲突)
       - "0.0.0.0:9861:7860"  # Gradio
     volumes:
       - ../biomni:/opt/biomni/biomni
@@ -189,7 +189,7 @@ services:
         echo '启动Gradio App...' &&
         cd /opt/biomni && python scripts/gradio_app.py &
         echo '服务启动成功！' &&
-        echo 'Jupyter Notebook: http://localhost:9999' &&
+        echo 'Jupyter Notebook: http://localhost:9997' &&
         echo 'Gradio App: http://localhost:9861' &&
         echo 'HOMER路径: /opt/biomni_tools/homer' &&
         echo 'CLI工具路径: /opt/biomni_tools/bin' &&
