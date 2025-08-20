@@ -490,8 +490,11 @@ def pretty_print(message, printout=True):
         title = message
     elif isinstance(message.content, list):
         title = get_msg_title_repr(message.type.title().upper() + " Message", bold=is_interactive_env())
-        # 在标题后添加时间戳
-        title = title.replace("==================================", f"========[{current_time}]")
+        # 在标题后添加时间戳，只替换右边的等号
+        # 找到最后一个"=================================="并替换
+        last_equals_pos = title.rfind("==================================")
+        if last_equals_pos != -1:
+            title = title[:last_equals_pos] + f"========[{current_time}]"
         if message.name is not None:
             title += f"\nName: {message.name}"
 
@@ -505,8 +508,11 @@ def pretty_print(message, printout=True):
             print(f"{title}")
     else:
         title = get_msg_title_repr(message.type.title() + " Message", bold=is_interactive_env())
-        # 在标题后添加时间戳
-        title = title.replace("==================================", f"========[{current_time}]")
+        # 在标题后添加时间戳，只替换右边的等号
+        # 找到最后一个"=================================="并替换
+        last_equals_pos = title.rfind("==================================")
+        if last_equals_pos != -1:
+            title = title[:last_equals_pos] + f"========[{current_time}]"
         if message.name is not None:
             title += f"\nName: {message.name}"
         title += f"\n\n{message.content}"
